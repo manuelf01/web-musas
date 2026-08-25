@@ -1,0 +1,66 @@
+{% extends "admin/main.html" %} {% block titulo %} Discos {% endblock %} {%
+block contenido %}
+
+<section class="section m-3">
+  <div class="columns">
+    <div class="column">
+      <h3 class="is-size-3 m-3 fs-5 fw-bold">Productos</h3>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Categoría</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Precio</th>
+            <th>Existencias</th>
+            <th>Editar</th>
+            <th>Eliminar</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for producto in productos %}
+          <tr>
+            <td>{{ loop.index + pagination.skip }}</td>
+            <td>{{producto['nombreCategoria']}}</td>
+            <td>{{producto['nombre']}}</td>
+            <td>{{producto['descripcion']}}</td>
+            <td>{{producto['precio']}}</td>
+            <td>{{producto['existencias']}}</td>
+            <td>
+              {# Pasar el id (lo que hay en producto[0]) #}
+              <a
+                href="{{url_for('admin.productos.editar', id=producto['idProducto'])}}"
+                class="btn btn-info"
+                >Editar</a
+              >
+            </td>
+            <td>
+              <form
+                action="{{url_for('admin.productos.eliminar')}}"
+                method="POST"
+              >
+                <input
+                  type="hidden"
+                  name="id"
+                  value="{{producto['idProducto']}}"
+                />
+                <button class="btn btn-danger">Eliminar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <div class="text-end">
+        <a
+          href="{{url_for('admin.productos.formulario_agregar')}}"
+          class="btn btn-success"
+          >Agregar</a
+        >
+      </div>
+      {{ pagination.links }}
+    </div>
+  </div>
+</section>
+{% endblock %}

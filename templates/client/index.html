@@ -1,0 +1,77 @@
+{% extends "client/main.html" %} {% block contenido %}
+<section class="seccion-presentacion">
+  <div class="seccion-presentacion-content">
+    <div class="presentacion-logo">
+      <img
+        src="{{url_for('static', filename = 'img/logo.jpg')}}"
+        alt="Logo Musas"
+      />
+    </div>
+    <div class="presentacion-texto">
+      <h2>Las Musas</h2>
+      <p>6:00 p.m - 10:00 p.m</p>
+    </div>
+  </div>
+</section>
+<!-- Menú de categorias -->
+<div class="categorias-content">
+  <div class="categorias">
+    <div class="categorias-in">
+      {% for categoria in categorias %} {% if categoria[1] != "Cremas" %}
+      <a
+        href="{{url_for('cliente.productos_categoria', categoria = categoria[1])}}"
+        class="text-black"
+      >
+        <div class="categoria-item">
+          <!-- <div>
+            <img src="#" alt="Categoria" />
+          </div> -->
+          <p>{{categoria[1]}}</p>
+        </div>
+      </a>
+      {% endif %} {% endfor %}
+    </div>
+  </div>
+</div>
+
+<main class="productos">
+  {% for categoria in categorias %} {% if categoria[1] != "Cremas" %}
+  <div>
+    <div class="cabecera">
+      <h2>Productos {{categoria[1]}}</h2>
+      <a
+        href="{{url_for('cliente.productos_categoria', categoria=categoria[1])}}"
+      >
+        <button class="ver-mas">Ver más</button>
+      </a>
+    </div>
+    <div class="show-producto d-flex justify-content-around">
+      {% for producto in productos %} {% if producto["idCategoria"] ==
+      categoria[0] %}
+      <div class="card p-0" style="width: 300px">
+        <img
+          class="card-img-top"
+          src="{{url_for('static', filename = 'img/hamburguesas/ha-1.jpg')}}"
+          alt=""
+        />
+        <div class="card-body">
+          <h4 class="card-title">{{producto["nombre"]}}</h4>
+          <div>
+            <p class="card-text">{{producto["descripcion"]}}</p>
+            <p class="card-text">Precio: {{producto["precio"]}}</p>
+          </div>
+
+          <a
+            href="{{url_for('cliente.comprar_producto', id=producto['idProducto'])}}"
+            class="btn btn-primary w-100"
+            >Comprar</a
+          >
+        </div>
+      </div>
+
+      {% endif %} {% endfor %}
+    </div>
+  </div>
+  {% endif %} {% endfor %}
+</main>
+{% endblock %}
