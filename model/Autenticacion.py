@@ -104,6 +104,8 @@ class Autenticacion:
     def registro(dni, nombres, apellidos, correo, numTelf, contraseña):
         if not dni or not nombres or not apellidos or not correo or not numTelf or not contraseña:
             return "Campos obligatorios"
+        if Usuario.existe_dni(dni):
+            return "Ese DNI ya tiene una cuenta. Inicia sesión."
         # insertar_usuario hace el hash de la contraseña.
         return Usuario.insertar_usuario(dni, nombres, apellidos, correo, numTelf, contraseña, True)
 

@@ -64,6 +64,7 @@
     </header>
 
     <main>
+      {% block flash %}{% include "client/_flash.html" %}{% endblock %}
       {% block content %}{% endblock %}
     </main>
 

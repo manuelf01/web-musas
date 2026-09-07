@@ -4,6 +4,15 @@ from bd import obtener_conexion
 from datetime import datetime, timedelta, date
 
 
+class StockInsuficiente(Exception):
+    """Se lanza cuando un producto del carrito ya no tiene existencias suficientes."""
+
+    def __init__(self, nombre, disponible):
+        self.nombre = nombre
+        self.disponible = disponible
+        super().__init__(f"Sin stock suficiente de {nombre}")
+
+
 class Pedido:
 
     cont = 0
@@ -30,12 +39,16 @@ class Pedido:
         """
         ahora = datetime.now()
         limite = ahora + timedelta(minutes=Pedido.ANTICIPACION_MIN)
+        # Se usa la fecha del servidor de aplicacion (no CURDATE() de MySQL) para
+        # que el conteo de cupos y el corte por hora esten siempre alineados.
+        hoy = ahora.date()
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
                 "SELECT horaRecojo, COUNT(*) FROM registroPedido "
-                "WHERE fechaPedido = CURDATE() GROUP BY horaRecojo"
+                "WHERE fechaPedido = %s GROUP BY horaRecojo",
+                (hoy,),
             )
             filas = cursor.fetchall()
         conexion.close()
@@ -82,18 +95,36 @@ class Pedido:
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
+                # --- 1. Control de stock (bloquea las filas de producto) --------
+                unidades = {}
+                for it in items:
+                    unidades[it["idProducto"]] = unidades.get(it["idProducto"], 0) + it["cantidad"]
+                if unidades:
+                    marc = ",".join(["%s"] * len(unidades))
+                    cursor.execute(
+                        f"SELECT idProducto, nombre, existencias FROM producto "
+                        f"WHERE idProducto IN ({marc}) FOR UPDATE",
+                        list(unidades.keys()),
+                    )
+                    stock = {r[0]: (r[1], r[2] or 0) for r in cursor.fetchall()}
+                    for id_prod, pedidas in unidades.items():
+                        nombre_p, disp = stock.get(id_prod, ("Producto", 0))
+                        if pedidas > disp:
+                            raise StockInsuficiente(nombre_p, disp)
+
                 cursor.execute("SELECT COALESCE(MAX(idPedido), 0) + 1 FROM registroPedido")
                 id_pedido = cursor.fetchone()[0]
 
                 # keyPedido: 4 dígitos, único entre los pedidos aún no recogidos
-                for _ in range(30):
-                    key = random.randint(1000, 9999)
+                key = random.randint(1000, 9999)
+                for _ in range(40):
                     cursor.execute(
                         "SELECT 1 FROM registroPedido WHERE keyPedido = %s AND estadoRecojo = 0",
                         (key,),
                     )
                     if cursor.fetchone() is None:
                         break
+                    key = random.randint(1000, 9999)
 
                 cursor.execute(
                     """INSERT INTO registroPedido
@@ -125,6 +156,52 @@ class Pedido:
                                VALUES (%s, %s, %s)""",
                             (id_pedido, id_crema, siguiente_detalle),
                         )
+
+                # --- 2. Descuento de existencias ------------------------------
+                for id_prod, pedidas in unidades.items():
+                    cursor.execute(
+                        "UPDATE producto SET existencias = existencias - %s WHERE idProducto = %s",
+                        (pedidas, id_prod),
+                    )
+
+                # --- 3. Comprobante de venta (boleta / nota de venta) ---------
+                total = round(sum(it["precioTotal"] for it in items), 2)
+                sub_total = round(total / 1.18, 2)
+                igv = round(total - sub_total, 2)
+                ahora = datetime.now()
+                serie = "B001" if estado_boleta else "NV01"
+                cursor.execute(
+                    """INSERT INTO comprobante
+                       (idPedido, idUsuario, dniNoRegistrado, fechaComprobante,
+                        horaComprobante, subTotal, montoTotal, igv, numeroComprobante)
+                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                    (id_pedido, idUsuario, int(dni), ahora.date(),
+                     ahora.strftime("%H:%M:%S"), sub_total, total, igv, "PENDIENTE"),
+                )
+                id_comprobante = cursor.lastrowid
+                cursor.execute(
+                    "UPDATE comprobante SET numeroComprobante = %s WHERE idComprobante = %s",
+                    (f"{serie}-{id_comprobante:08d}", id_comprobante),
+                )
+
+                # detalleComprobante: PK (idComprobante, idProducto) -> se agrupa por producto
+                agrupado = {}
+                for it in items:
+                    g = agrupado.setdefault(
+                        it["idProducto"], {"nombre": it["nombre"], "cantidad": 0, "total": 0.0}
+                    )
+                    g["cantidad"] += it["cantidad"]
+                    g["total"] += it["precioTotal"]
+                for id_prod, g in agrupado.items():
+                    unidad = round(g["total"] / g["cantidad"], 2) if g["cantidad"] else 0
+                    cursor.execute(
+                        """INSERT INTO detalleComprobante
+                           (idComprobante, idProducto, nombreProducto, precioUnidad,
+                            cantidad, precioTotal)
+                           VALUES (%s, %s, %s, %s, %s, %s)""",
+                        (id_comprobante, id_prod, g["nombre"], unidad,
+                         g["cantidad"], round(g["total"], 2)),
+                    )
 
             conexion.commit()
             return id_pedido, key
@@ -217,22 +294,27 @@ class Pedido:
     @staticmethod
     def marcar_recogido(id_pedido, key):
         """'ok' | 'clave_mal' | 'no_existe' (ya recogido o inexistente)."""
+        key = str(key).strip()
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT keyPedido FROM registroPedido WHERE idPedido = %s AND estadoRecojo = 0",
+                    "SELECT keyPedido, estadoRecojo FROM registroPedido WHERE idPedido = %s",
                     (id_pedido,),
                 )
                 fila = cursor.fetchone()
-                if fila is None:
+                if fila is None or fila[1] == 1:
                     return "no_existe"
-                if str(fila[0]).strip() != str(key).strip():
+                if str(fila[0]).strip() != key:
                     return "clave_mal"
+                # Update guardado: solo pasa si sigue sin recoger y la clave coincide.
                 cursor.execute(
-                    "UPDATE registroPedido SET estadoRecojo = 1 WHERE idPedido = %s",
-                    (id_pedido,),
+                    "UPDATE registroPedido SET estadoRecojo = 1 "
+                    "WHERE idPedido = %s AND estadoRecojo = 0 AND keyPedido = %s",
+                    (id_pedido, key),
                 )
+                if cursor.rowcount != 1:
+                    return "no_existe"
             conexion.commit()
             return "ok"
         finally:
@@ -356,8 +438,9 @@ class Pedido:
 
     @staticmethod
     def historial_cliente(id_usuario):
-        """Pedidos del cliente (más reciente primero), cada uno con sus líneas
-        y cremas usando los datos ACTUALES del producto (para 'repetir pedido')."""
+        """Pedidos del cliente (más reciente primero). El total mostrado es el que
+        el cliente pagó (snapshot en detalleOrden); el precio/disponibilidad ACTUAL
+        del producto solo se usa para 'repetir pedido'."""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
@@ -375,7 +458,7 @@ class Pedido:
             marc = ",".join(["%s"] * len(ids))
             cursor.execute(
                 f"SELECT dor.idPedido, dor.idDetalleOrden, dor.idProducto, dor.cantidad, "
-                f"dor.nombreProducto, p.precio, p.imagen "
+                f"dor.nombreProducto, p.precio, p.imagen, dor.precioTotal "
                 f"FROM detalleOrden dor LEFT JOIN producto p ON p.idProducto = dor.idProducto "
                 f"WHERE dor.idPedido IN ({marc}) ORDER BY dor.idPedido, dor.idDetalleOrden",
                 ids,
@@ -399,11 +482,12 @@ class Pedido:
             })
 
         lineas_idx = {}
-        for ped, det, idp, cant, nom_snap, precio, imagen in lineas:
+        for ped, det, idp, cant, nom_snap, precio, imagen, pagado in lineas:
             lineas_idx.setdefault(ped, []).append({
                 "idProducto": idp,
                 "nombre": nom_snap,
                 "precio": float(precio) if precio is not None else None,
+                "pagado": float(pagado or 0),
                 "imagen": imagen,
                 "cantidad": cant,
                 "disponible": precio is not None,
@@ -415,10 +499,7 @@ class Pedido:
             hora = str(timedelta(seconds=c[2].seconds))[:5] if hasattr(c[2], "seconds") else str(c[2])[:5]
             fecha = c[3].strftime("%d/%m/%Y") if hasattr(c[3], "strftime") else str(c[3])
             its = lineas_idx.get(c[0], [])
-            total = sum(
-                ((it["precio"] or 0) + sum(x["precio"] for x in it["cremas"])) * it["cantidad"]
-                for it in its
-            )
+            total = sum(it["pagado"] for it in its)
             salida.append({
                 "idPedido": c[0],
                 "recogido": bool(c[1]),

@@ -1,0 +1,14 @@
+{# Avisos flash globales de la tienda. Se muestra en todas las páginas del
+   cliente salvo las que sobre-escriben {% block flash %} (login, registro, compra). #}
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% if mensajes %}
+    <div class="musa-shell" style="padding-top: 18px; padding-bottom: 0;">
+      {% for categoria, mensaje in mensajes %}
+        <div class="musa-alert {{ 'musa-alert--ok' if categoria == 'ok' }} d-flex gap-2 mb-2">
+          <i class="bi {{ 'bi-check-circle-fill' if categoria == 'ok' else 'bi-exclamation-circle-fill' }} mt-1"></i>
+          <div class="small">{{ mensaje }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}

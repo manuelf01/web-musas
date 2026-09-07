@@ -4,8 +4,11 @@ import re
 from flask import Blueprint, render_template, session, redirect, url_for, request, flash
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
-from model.Pedido import Pedido
+from model.Pedido import Pedido, StockInsuficiente
 cliente = Blueprint('cliente', __name__)
+
+# Categorías cuyo producto admite cremas adicionales.
+CATEGORIAS_CON_CREMAS = ("Hamburguesas", "Salchipapas")
 
 RE_DNI = re.compile(r"^\d{8}$")
 RE_TEL = re.compile(r"^\d{9}$")
@@ -104,7 +107,11 @@ def comprar_producto(id):
     producto = Producto.obtener_producto_por_id(id)
     if producto is None:
         return redirect(url_for("cliente.home"))
-    cremas = Producto.getProductosCategoria("Cremas")
+    cremas = (
+        Producto.getProductosCategoria("Cremas")
+        if producto["nombreCategoria"] in CATEGORIAS_CON_CREMAS
+        else []
+    )
     return render_template(
         "client/seleccion-producto.html",
         cliente=_cliente_nombre(),
@@ -132,6 +139,18 @@ def pag_compra():
     )
 
 
+def _recotizar(user, mensaje):
+    """Vuelve a mostrar el checkout conservando lo que el usuario ya escribió."""
+    flash(mensaje, "error")
+    return render_template(
+        "client/compra.html",
+        cliente=_cliente_nombre(),
+        sesion=user,
+        form=request.form.to_dict(),
+        franjas=Pedido.franjas_recojo(),
+    )
+
+
 def _procesar_compra(user):
     # --- items del carrito (vienen del localStorage, se re-cotizan contra la BD) ---
     try:
@@ -139,8 +158,7 @@ def _procesar_compra(user):
     except ValueError:
         carrito = []
     if not carrito:
-        flash("Tu carrito está vacío.", "error")
-        return redirect(url_for("cliente.pag_carrito"))
+        return _recotizar(user, "Tu carrito está vacío. Agrega algo de la carta.")
 
     ids_prod = [it.get("idProducto") for it in carrito]
     ids_crema = [c for it in carrito for c in (it.get("cremas") or [])]
@@ -169,8 +187,7 @@ def _procesar_compra(user):
         })
 
     if not items:
-        flash("No pudimos procesar los productos del carrito.", "error")
-        return redirect(url_for("cliente.pag_carrito"))
+        return _recotizar(user, "No pudimos procesar los productos del carrito.")
 
     # --- datos del formulario (editables aunque haya sesión: puede recoger otra persona) ---
     dni = (request.form.get("dni") or "").strip()
@@ -196,18 +213,21 @@ def _procesar_compra(user):
         error = "Esa franja se llenó o ya pasó. Elige otra."
 
     if error:
-        flash(error, "error")
-        return render_template(
-            "client/compra.html",
-            cliente=_cliente_nombre(),
-            sesion=user,
-            franjas=Pedido.franjas_recojo(),
-        )
+        return _recotizar(user, error)
 
-    id_pedido, key = Pedido.crear_pedido_completo(
-        id_usuario, dni, nombres, telefono, hora, boleta, pago_digital, notas, items
-    )
-    session["ultimo_pedido"] = id_pedido
+    try:
+        id_pedido, key = Pedido.crear_pedido_completo(
+            id_usuario, dni, nombres, telefono, hora, boleta, pago_digital, notas, items
+        )
+    except StockInsuficiente as e:
+        if e.disponible <= 0:
+            return _recotizar(user, f"«{e.nombre}» se agotó. Quítalo del carrito para continuar.")
+        return _recotizar(user, f"Solo quedan {e.disponible} de «{e.nombre}». Ajusta la cantidad.")
+
+    # Recordar qué pedidos puede ver este visitante (registrado o invitado).
+    propios = session.get("pedidos_propios", [])
+    propios.append(id_pedido)
+    session["pedidos_propios"] = propios[-20:]
     return redirect(url_for("cliente.pedido_confirmado", id_pedido=id_pedido))
 
 
@@ -216,6 +236,15 @@ def pedido_confirmado(id_pedido):
     pedido = Pedido.obtener_pedido_completo(id_pedido)
     if pedido is None:
         return redirect(url_for("cliente.home"))
+
+    # La palabra clave de recojo es sensible: solo la ve quien hizo el pedido
+    # (invitado con el pedido en su sesión) o el cliente dueño de la cuenta.
+    user = session.get("cliente.auth", None)
+    es_propio = id_pedido in session.get("pedidos_propios", [])
+    es_dueno = user is not None and pedido.get("idUsuario") == user["idUsuario"]
+    if not (es_propio or es_dueno):
+        return redirect(url_for("cliente.mis_pedidos"))
+
     return render_template(
         "client/pedido-confirmado.html",
         cliente=_cliente_nombre(),

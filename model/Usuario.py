@@ -105,6 +105,15 @@ class Usuario:
         conexion.commit()
         conexion.close()
 
+    def existe_dni(dni):
+        """True si el DNI ya está registrado con cualquier tipo de usuario."""
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM usuario WHERE DNI = %s", (dni,))
+            total = cursor.fetchone()[0]
+        conexion.close()
+        return total > 0
+
     def obtener_usuario_dni_tipo(dni, tipo):
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:

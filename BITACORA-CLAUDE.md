@@ -39,6 +39,33 @@
 | 2026-09-06 | **Login + registro rediseñados (Neo-brasa), fieles a las plantillas de Stitch.** Ver detalle abajo. Controladores **sin tocar** (se respetan rutas y `name` de campos). | `git checkout` de los archivos |
 | 2026-09-06 | Añadidos `requirements.txt` (`pip freeze`) y `cfg.example.py`. | Borrar archivos |
 | 2026-09-06 | **Datos de prueba** en `db_musuas.usuario`: admin DNI `12345678` / `admin123` (tipoUsuario 0), cliente DNI `87654321` / `cliente123` (tipoUsuario 1). | `DELETE FROM usuario WHERE dni IN ('12345678','87654321');` |
+| 2026-09-07 | **Auditoría del flujo completo + tanda de correcciones** (18 hallazgos). Ver sección "Auditoría 2026-09-07" abajo. | `git revert` de los commits |
+
+### Auditoría 2026-09-07 — flujo revisado de punta a punta y corregido
+
+Se probó E2E (cliente + invitado + admin) con `test_client`. Correcciones aplicadas:
+
+**Seguridad / lógica (crítico)**
+1. **Fuga de la palabra clave.** `GET /pedido-confirmado/<id>` era público → cualquiera enumeraba IDs y leía la `keyPedido` + DNI/teléfono de otros clientes. Ahora `pedido_confirmado` exige que el pedido esté en `session['pedidos_propios']` (invitado) o que el `idUsuario` logueado sea el dueño; si no, redirige a `/mis-pedidos`.
+2. **"Mis pedidos" mostraba total con precios ACTUALES.** `Pedido.historial_cliente` ahora suma el snapshot `detalleOrden.precioTotal` (lo que el cliente pagó); el precio/imagen actual solo se usa para "repetir pedido". Se añadió campo `pagado` por línea.
+3. **Módulo Ventas desconectado.** `Pedido.crear_pedido_completo` ahora inserta `comprobante` + `detalleComprobante` (agrupado por producto, PK es `idComprobante+idProducto`) dentro de la misma transacción. `numeroComprobante` = `B001-<id>` (boleta) o `NV01-<id>`. subTotal = total/1.18, igv = resto. `/admin/ventas/` ya lista ventas reales.
+4. **Sin control de stock.** `crear_pedido_completo` bloquea las filas de `producto` (`FOR UPDATE`), valida `existencias >= cantidad` (lanza `StockInsuficiente(nombre, disponible)`) y descuenta `existencias` al confirmar. `_procesar_compra` captura la excepción y re-muestra el checkout con el aviso.
+5. **`marcar_recogido` no atómico.** El `UPDATE` ahora lleva `WHERE idPedido=%s AND estadoRecojo=0 AND keyPedido=%s` y se valida `rowcount == 1`.
+6. **Flashes invisibles.** `carrito/carta/index/mis-pedidos/productos` no renderizaban `get_flashed_messages`. Nuevo `templates/client/_flash.html` incluido en `base.html` vía `{% block flash %}`. `login/registro/compra` lo sobre-escriben (tienen su alerta propia dentro de la tarjeta).
+7. **Race en IDs** (`SELECT MAX+1` para `idPedido`/`idDetalleOrden`): documentado, sin cambio (bajo volumen real no colisiona; `comprobante` sí usa `AUTO_INCREMENT` + `lastrowid`).
+
+**Navegación / UX**
+8. Breadcrumb "Carta" y botón "Volver a la carta" en `productos.html` ahora apuntan a `cliente.carta` (antes a `/`).
+9. Errores de validación en checkout/registro/login **conservan lo escrito** (`form=request.form.to_dict()` → prefill de dni/nombres/apellidos/teléfono/notas/hora/pago/boleta).
+10. "Repetir pedido" ahora **suma** al carrito en vez de reemplazarlo (`mis-pedidos.js`).
+11. El selector de cremas solo aparece para `Hamburguesas` y `Salchipapas` (`CATEGORIAS_CON_CREMAS` en `controllers/cliente.py`).
+12. **Migración 005**: `producto.precio` y `producto.existencias` → `NOT NULL DEFAULT 0`. Plantillas con `precio or 0` por si acaso.
+13. Login: link muerto "¿Olvidaste tu contraseña?" → texto ("Recupérala en el local").
+14. Registro bloquea DNI ya existente con **cualquier** tipo de usuario (`Usuario.existe_dni`).
+15. `Token/usuario.py`: ya no consulta la BD en el import (rompía el arranque si MySQL no estaba listo); `authenticate`/`identity` consultan al vuelo con `try/except`.
+16. **Pantallas admin viejas migradas** a `admin/base.html` (Productos, Categorías, Usuarios, Ventas + sus formularios). Ver commit aparte.
+17. `SECRET_KEY` ahora viene de `cfg.py` (`secret_key`, con fallback). Eliminado el doble `app.secret_key`. Añadido a `cfg.example.py`.
+18. `Pedido.franjas_recojo` usa `date.today()` de la app (no `CURDATE()` de MySQL) para alinear el conteo de cupos con la hora de corte. Resto de queries por fecha siguen con `CURDATE()` (consistentes entre sí; solo importa si el server de app y MySQL tienen distinta zona horaria).
 
 ### Archivos del login/registro (2026-09-06, 2ª iteración — fieles a Stitch)
 | Archivo | Qué es |

@@ -11,7 +11,9 @@
 <div class="musa-shell carta-wrap">
   <!-- Breadcrumb -->
   <nav class="carta-breadcrumb" aria-label="Ruta">
-    <a href="{{ url_for('cliente.home') }}">Carta</a>
+    <a href="{{ url_for('cliente.home') }}">Inicio</a>
+    <span>/</span>
+    <a href="{{ url_for('cliente.carta') }}">Carta</a>
     <span>/</span>
     <span class="actual">{{ categoria }}</span>
   </nav>
@@ -51,7 +53,7 @@
       <div class="carta-empty__ico"><i class="bi bi-egg-fried"></i></div>
       <h2>No hay productos en esta categoría</h2>
       <p>Por el momento no tenemos opciones disponibles aquí. Explora nuestras otras especialidades nocturnas.</p>
-      <a href="{{ url_for('cliente.home') }}" class="btn-contorno">
+      <a href="{{ url_for('cliente.carta') }}" class="btn-contorno">
         <i class="bi bi-arrow-left"></i> Volver a la carta
       </a>
     </div>

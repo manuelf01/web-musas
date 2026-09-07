@@ -9,7 +9,7 @@
      id="detalle-producto"
      data-id="{{ producto.idProducto }}"
      data-nombre="{{ producto.nombre }}"
-     data-precio="{{ producto.precio }}"
+     data-precio="{{ producto.precio or 0 }}"
      data-imagen="{{ producto.imagen or '' }}"
      data-carrito-url="{{ url_for('cliente.pag_carrito') }}">
 
@@ -76,7 +76,7 @@
 
       <h1 class="dp-titulo">{{ producto.nombre }}</h1>
       <div class="d-flex align-items-baseline gap-2 mt-2">
-        <span class="dp-precio">S/ {{ '%.2f'|format(producto.precio) }}</span>
+        <span class="dp-precio">S/ {{ '%.2f'|format(producto.precio or 0) }}</span>
         <span class="small" style="color: var(--musa-texto-suave);">Precio base</span>
       </div>
       <p class="dp-desc">{{ producto.descripcion }}</p>
@@ -100,7 +100,7 @@
                   {% endif %}
                   <span>
                     <span class="crema-card__nombre d-block">{{ crema.nombre }}</span>
-                    <span class="crema-card__precio">+ S/ {{ '%.2f'|format(crema.precio) }}</span>
+                    <span class="crema-card__precio">+ S/ {{ '%.2f'|format(crema.precio or 0) }}</span>
                   </span>
                 </span>
                 <input
@@ -108,7 +108,7 @@
                   type="checkbox"
                   value="{{ crema.idProducto }}"
                   data-nombre="{{ crema.nombre }}"
-                  data-precio="{{ crema.precio }}"
+                  data-precio="{{ crema.precio or 0 }}"
                 />
               </label>
             {% endfor %}
@@ -126,7 +126,7 @@
           </div>
           <button type="button" class="btn-brasa flex-grow-1" data-agregar {{ 'disabled' if agotado }}>
             <i class="bi bi-bag-plus"></i>
-            <span data-dp-btn-texto>Agregar al carrito — S/ {{ '%.2f'|format(producto.precio) }}</span>
+            <span data-dp-btn-texto>Agregar al carrito — S/ {{ '%.2f'|format(producto.precio or 0) }}</span>
           </button>
         </div>
 
@@ -145,7 +145,7 @@
         <span class="musa-cart-count" id="dp-mob-qty">1</span> Agregar
       </span>
       <span class="d-flex align-items-center gap-1">
-        <span id="dp-mob-precio">S/ {{ '%.2f'|format(producto.precio) }}</span>
+        <span id="dp-mob-precio">S/ {{ '%.2f'|format(producto.precio or 0) }}</span>
         <i class="bi bi-arrow-right"></i>
       </span>
     </button>

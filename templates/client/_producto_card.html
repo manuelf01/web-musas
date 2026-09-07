@@ -20,7 +20,7 @@
     <p class="producto-card__desc">{{ p.descripcion }}</p>
     <div class="producto-card__foot">
       <div class="producto-card__precio-row">
-        <span class="producto-card__precio">S/ {{ '%.2f'|format(p.precio) }}</span>
+        <span class="producto-card__precio">S/ {{ '%.2f'|format(p.precio or 0) }}</span>
         {% if p.nota %}
           <span class="producto-card__nota {% if p.nota == 'Brasas' %}is-brasa{% endif %}">
             {% if p.nota == 'Brasas' %}<i class="bi bi-fire"></i>{% endif %}{{ p.nota }}

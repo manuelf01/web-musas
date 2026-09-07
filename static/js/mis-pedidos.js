@@ -45,7 +45,9 @@
         return;
       }
       if (!items || !items.length) return;
-      window.MusasCarrito.guardar(items);
+      // Se suma al carrito actual (no lo reemplaza).
+      var actual = window.MusasCarrito.leer();
+      window.MusasCarrito.guardar(actual.concat(items));
       window.location.href = "/carrito";
     });
   });

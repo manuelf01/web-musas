@@ -52,15 +52,15 @@ def login():
 
         if not RE_DNI.match(dni):
             flash("El DNI debe tener 8 dígitos.", "error")
-            return render_template("client/login.html")
+            return render_template("client/login.html", form=request.form.to_dict())
         if not contraseña:
             flash("Ingresa tu contraseña.", "error")
-            return render_template("client/login.html")
+            return render_template("client/login.html", form=request.form.to_dict())
 
         resultado = Autenticacion.login_unificado(dni, contraseña)
         if isinstance(resultado, str):
             flash(resultado, "error")
-            return render_template("client/login.html")
+            return render_template("client/login.html", form=request.form.to_dict())
 
         fila, tipo = resultado
 
@@ -73,7 +73,7 @@ def login():
             ingresado = (request.form.get("captcha") or "").strip().upper()
             if not esperado or ingresado != esperado:
                 flash("El código de verificación no coincide. Intenta de nuevo.", "error")
-                return render_template("client/login.html")
+                return render_template("client/login.html", form=request.form.to_dict())
 
             session.pop("cliente.auth", None)
             session["admin.auth"] = _datos_sesion(fila)
@@ -140,7 +140,7 @@ def registro():
             return redirect(url_for("cliente.auth.login"))
 
         flash(error, "error")
-        return render_template("client/registro.html")
+        return render_template("client/registro.html", form=request.form.to_dict())
 
     if session.get("cliente.auth"):
         return redirect(url_for("cliente.home"))

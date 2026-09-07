@@ -1,5 +1,6 @@
 {% extends "client/base.html" %}
 {% block title %}Crear cuenta · Las Musas{% endblock %}
+{% block flash %}{% endblock %}
 
 {% block content %}
 <div class="auth-split">
@@ -104,6 +105,7 @@
                 id="dni"
                 name="dni"
                 placeholder="Ej. 74829103"
+                value="{{ form.dni if form else '' }}"
                 required
               />
             </div>
@@ -114,12 +116,12 @@
               <label for="nombres" class="musa-field-label">Nombres</label>
               <div class="musa-input-icon">
                 <i class="bi bi-person"></i>
-                <input type="text" class="musa-input" id="nombres" name="nombres" placeholder="Ej. Rodrigo" required />
+                <input type="text" class="musa-input" id="nombres" name="nombres" placeholder="Ej. Rodrigo" value="{{ form.nombres if form else '' }}" required />
               </div>
             </div>
             <div class="col-sm-6 musa-field">
               <label for="apellidos" class="musa-field-label">Apellidos</label>
-              <input type="text" class="musa-input" id="apellidos" name="apellidos" placeholder="Ej. Carranza Vega" required />
+              <input type="text" class="musa-input" id="apellidos" name="apellidos" placeholder="Ej. Carranza Vega" value="{{ form.apellidos if form else '' }}" required />
             </div>
           </div>
 
@@ -128,7 +130,7 @@
               <label for="correo" class="musa-field-label">Correo electrónico</label>
               <div class="musa-input-icon">
                 <i class="bi bi-envelope"></i>
-                <input type="email" class="musa-input" id="correo" name="correo" placeholder="rodrigo@ejemplo.pe" required />
+                <input type="email" class="musa-input" id="correo" name="correo" placeholder="rodrigo@ejemplo.pe" value="{{ form.correo if form else '' }}" required />
               </div>
             </div>
             <div class="col-sm-5 musa-field">
@@ -145,6 +147,7 @@
                   name="telefono"
                   placeholder="987 654 321"
                   style="padding-left: 54px;"
+                  value="{{ form.telefono if form else '' }}"
                   required
                 />
               </div>

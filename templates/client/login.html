@@ -1,5 +1,6 @@
 {% extends "client/base.html" %}
 {% block title %}Iniciar sesión · Las Musas{% endblock %}
+{% block flash %}{% endblock %}
 
 {% block content %}
 <div class="auth-split">
@@ -115,6 +116,7 @@
               name="usuario"
               placeholder="Ej. 74829103"
               autocomplete="off"
+              value="{{ form.usuario if form else '' }}"
               required
             />
           </div>
@@ -123,7 +125,7 @@
         <div class="musa-field">
           <label for="contrasena" class="musa-field-label">
             Contraseña
-            <a href="#" class="musa-field-hint text-decoration-none">¿Olvidaste tu contraseña?</a>
+            <span class="musa-field-hint">¿La olvidaste? Recupérala en el local</span>
           </label>
           <div class="musa-input-icon">
             <i class="bi bi-lock"></i>

@@ -85,12 +85,15 @@
   });
 
   // método de pago (radios estilizados)
+  function syncYape() {
+    var yape = document.getElementById("ck-yape-info");
+    var sel = document.querySelector('input[name="pago"]:checked');
+    if (yape && sel) yape.hidden = sel.value !== "digital";
+  }
   document.querySelectorAll('input[name="pago"]').forEach(function (r) {
-    r.addEventListener("change", function () {
-      var yape = document.getElementById("ck-yape-info");
-      if (yape) yape.hidden = document.querySelector('input[name="pago"]:checked').value !== "digital";
-    });
+    r.addEventListener("change", syncYape);
   });
+  syncYape();
 
   form.addEventListener("submit", function (e) {
     if (!window.MusasCarrito.leer().length) {

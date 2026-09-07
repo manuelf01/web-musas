@@ -1,7 +1,9 @@
 {% extends "client/base.html" %}
 {% block title %}Finalizar pedido · Las Musas{% endblock %}
+{% block flash %}{% endblock %}
 
 {% block content %}
+{% set d = form if form else (sesion if sesion else None) %}
 <div class="cx-wrap">
   <nav class="carta-breadcrumb" aria-label="Ruta">
     <a href="{{ url_for('cliente.home') }}">Inicio</a>
@@ -69,23 +71,23 @@
               <label for="dni" class="musa-field-label">DNI</label>
               <input type="text" inputmode="numeric" maxlength="8" pattern="[0-9]{8}"
                      class="musa-input" id="dni" name="dni" placeholder="8 dígitos" required
-                     value="{{ sesion.dni if sesion else '' }}" />
+                     value="{{ d.dni if d else '' }}" />
             </div>
             <div class="col-sm-4 musa-field">
               <label for="nombres" class="musa-field-label">Nombres</label>
               <input type="text" class="musa-input" id="nombres" name="nombres" placeholder="Ej. Rodrigo" required
-                     value="{{ sesion.nombres if sesion else '' }}" />
+                     value="{{ d.nombres if d else '' }}" />
             </div>
             <div class="col-sm-4 musa-field">
               <label for="apellidos" class="musa-field-label">Apellidos</label>
               <input type="text" class="musa-input" id="apellidos" name="apellidos" placeholder="Ej. Carranza" required
-                     value="{{ sesion.apellidos if sesion else '' }}" />
+                     value="{{ d.apellidos if d else '' }}" />
             </div>
             <div class="col-12 musa-field">
               <label for="telefono" class="musa-field-label">Teléfono de contacto / WhatsApp</label>
               <input type="tel" inputmode="numeric" maxlength="9" pattern="[0-9]{9}"
                      class="musa-input" id="telefono" name="telefono" placeholder="987 654 321" required
-                     value="{{ sesion.telefono if sesion else '' }}" />
+                     value="{{ d.telefono if d else '' }}" />
             </div>
           </div>
 
@@ -96,11 +98,12 @@
             </label>
 
             {% set libres = franjas | selectattr("disponible") | list %}
+            {% set hora_sel = form.hora_recojo if (form and form.hora_recojo) else (libres[0].hora if libres else '') %}
             {% if libres %}
               <div class="ck-horas mt-1">
                 {% for f in franjas %}
                   <button type="button"
-                          class="ck-hora {% if not f.disponible %}is-off{% endif %} {% if f.hora == libres[0].hora %}is-active{% endif %}"
+                          class="ck-hora {% if not f.disponible %}is-off{% endif %} {% if f.hora == hora_sel %}is-active{% endif %}"
                           data-hora="{{ f.hora }}"
                           {% if not f.disponible %}disabled{% endif %}>
                     <strong>{{ f.label }}</strong>
@@ -113,7 +116,7 @@
                   </button>
                 {% endfor %}
               </div>
-              <input type="hidden" name="hora_recojo" id="hora_recojo" value="{{ libres[0].hora }}" />
+              <input type="hidden" name="hora_recojo" id="hora_recojo" value="{{ hora_sel }}" />
             {% else %}
               <div class="musa-alert mt-1">
                 <i class="bi bi-clock-history"></i>
@@ -133,7 +136,7 @@
               <strong>Emitir boleta electrónica</strong>
               <span>Te la entregamos al recoger tu pedido</span>
             </div>
-            <input type="checkbox" name="boleta" value="1" />
+            <input type="checkbox" name="boleta" value="1" {{ 'checked' if form and form.boleta }} />
           </label>
 
           <p class="musa-field-label mt-3 mb-2">Forma de pago</p>
@@ -143,7 +146,7 @@
               <strong>Billetera digital (Yape / Plin)</strong>
               <span>Coordinamos el pago al confirmar</span>
             </div>
-            <input type="radio" name="pago" value="digital" checked />
+            <input type="radio" name="pago" value="digital" {{ 'checked' if not (form and form.pago == 'tienda') }} />
           </label>
           <div class="ck-yape" id="ck-yape-info">
             <strong>Yape / Plin a Las Musas:</strong> 987 654 321<br />
@@ -155,13 +158,13 @@
               <strong>Pagar al recoger</strong>
               <span>Efectivo o tarjeta en el local</span>
             </div>
-            <input type="radio" name="pago" value="tienda" />
+            <input type="radio" name="pago" value="tienda" {{ 'checked' if form and form.pago == 'tienda' }} />
           </label>
 
           <div class="musa-field mt-3">
             <label for="notas" class="musa-field-label">Instrucciones para cocina (opcional)</label>
             <textarea class="musa-input" id="notas" name="notas" rows="2"
-              placeholder="Ej. sin cebolla en la smash, empaque separado."></textarea>
+              placeholder="Ej. sin cebolla en la smash, empaque separado.">{{ form.notas if form else '' }}</textarea>
           </div>
         </div>
       </div>

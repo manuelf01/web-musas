@@ -26,8 +26,14 @@ from APIS.detalleComprobante import api_detalleComprobante
 from APIS.detalleCremas import api_detalleCremas
 from APIS.comprobante import api_comprobante
 from APIS.transacciones import transaccion
+
+try:
+    from cfg import secret_key as _SECRET_KEY
+except ImportError:
+    _SECRET_KEY = "dev-musas-cambia-esto"
+
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "secret-key"
+app.config["SECRET_KEY"] = _SECRET_KEY
 jwt = JWT(app, authenticate, identity)
 
 # swagger
@@ -76,7 +82,6 @@ app.register_blueprint(api_detalleCremas)
 app.register_blueprint(api_comprobante)
 app.register_blueprint(transaccion)
 
-app.secret_key = "mysecretkey"
 # "Recordar sesión en este equipo": duración de la sesión permanente
 app.permanent_session_lifetime = timedelta(days=30)
 # Iniciar el servidor
