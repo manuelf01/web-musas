@@ -1,10 +1,13 @@
 import json
 import re
 
-from flask import Blueprint, render_template, session, redirect, url_for, request, flash
+from flask import (
+    Blueprint, render_template, session, redirect, url_for, request, flash, send_file,
+)
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
-from model.Pedido import Pedido, StockInsuficiente
+from model.Pedido import Pedido, StockInsuficiente, LimitePedidos
+from seguridad import generar_texto_captcha, generar_imagen_captcha
 cliente = Blueprint('cliente', __name__)
 
 # Categorías cuyo producto admite cremas adicionales.
@@ -81,6 +84,29 @@ def mis_pedidos():
     )
 
 
+@cliente.route("/mis-pedidos/<int:id_pedido>/cancelar", methods=["POST"])
+def cancelar_pedido(id_pedido):
+    user = session.get("cliente.auth", None)
+    propios = session.get("pedidos_propios", [])
+    por_sesion = id_pedido in propios
+    if not user and not por_sesion:
+        flash("No pudimos identificar ese pedido.", "error")
+        return redirect(url_for("cliente.mis_pedidos"))
+
+    resultado = Pedido.cancelar_pedido(
+        id_pedido,
+        id_usuario=user["idUsuario"] if user else None,
+        saltar_dueno=por_sesion,
+    )
+    if resultado == "ok":
+        flash(f"Pedido N° {id_pedido} cancelado. Se liberó tu cupo.", "ok")
+    elif resultado == "no_permitido":
+        flash("Ese pedido no está a tu nombre.", "error")
+    else:
+        flash("Ese pedido ya no se puede cancelar (en preparación, recogido o vencido).", "error")
+    return redirect(url_for("cliente.mis_pedidos"))
+
+
 @cliente.route("/nosotros")
 def nosotros():
     return render_template("client/nosotros.html", cliente=_cliente_nombre())
@@ -135,8 +161,19 @@ def pag_compra():
         "client/compra.html",
         cliente=_cliente_nombre(),
         sesion=user,
+        invitado=user is None,
         franjas=Pedido.franjas_recojo(),
     )
+
+
+@cliente.route("/compra/captcha")
+def compra_captcha():
+    """Imagen del captcha para el checkout de invitados."""
+    texto = generar_texto_captcha()
+    session["captcha_compra"] = texto
+    resp = send_file(generar_imagen_captcha(texto), mimetype="image/png")
+    resp.headers["Cache-Control"] = "no-store, max-age=0"
+    return resp
 
 
 def _recotizar(user, mensaje):
@@ -146,6 +183,7 @@ def _recotizar(user, mensaje):
         "client/compra.html",
         cliente=_cliente_nombre(),
         sesion=user,
+        invitado=user is None,
         form=request.form.to_dict(),
         franjas=Pedido.franjas_recojo(),
     )
@@ -211,6 +249,12 @@ def _procesar_compra(user):
         error = "Elige una hora de recojo."
     elif not Pedido.franja_disponible(hora):
         error = "Esa franja se llenó o ya pasó. Elige otra."
+    elif user is None:
+        # Invitado: se exige el captcha para frenar pedidos automatizados.
+        esperado = session.pop("captcha_compra", None)
+        ingresado = (request.form.get("captcha") or "").strip().upper()
+        if not esperado or ingresado != esperado:
+            error = "El código de verificación no coincide. Escríbelo de nuevo."
 
     if error:
         return _recotizar(user, error)
@@ -223,6 +267,12 @@ def _procesar_compra(user):
         if e.disponible <= 0:
             return _recotizar(user, f"«{e.nombre}» se agotó. Quítalo del carrito para continuar.")
         return _recotizar(user, f"Solo quedan {e.disponible} de «{e.nombre}». Ajusta la cantidad.")
+    except LimitePedidos:
+        return _recotizar(
+            user,
+            f"Ya tienes {Pedido.MAX_PEDIDOS_ACTIVOS} pedidos sin recoger. "
+            "Recoge o cancela alguno antes de hacer otro.",
+        )
 
     # Recordar qué pedidos puede ver este visitante (registrado o invitado).
     propios = session.get("pedidos_propios", [])

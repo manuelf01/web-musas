@@ -44,14 +44,18 @@
           }) %}
         {% endfor %}
 
-        <article class="mp-card" data-estado="{{ 'recogido' if p.recogido else 'pendiente' }}">
+        <article class="mp-card" data-estado="{{ p.estado }}">
           <div class="mp-card__head">
             <div>
               <strong>Pedido N° {{ p.idPedido }}</strong>
               <span class="mp-card__fecha">{{ p.fecha }} · recojo {{ p.hora }}</span>
             </div>
-            {% if p.recogido %}
+            {% if p.estado == 'recogido' %}
               <span class="mp-estado recogido"><i class="bi bi-check-circle-fill"></i> Recogido</span>
+            {% elif p.estado == 'cancelado' %}
+              <span class="mp-estado cancelado"><i class="bi bi-x-circle-fill"></i> Cancelado</span>
+            {% elif p.estado == 'no_show' %}
+              <span class="mp-estado cancelado"><i class="bi bi-exclamation-circle-fill"></i> No recogido</span>
             {% else %}
               <span class="mp-estado pendiente"><i class="bi bi-clock-fill"></i> Pendiente</span>
             {% endif %}
@@ -74,11 +78,20 @@
               <strong class="mp-total">S/ {{ '%.2f'|format(p.total) }}</strong>
             </div>
             <div class="mp-acciones">
-              {% if not p.recogido %}
+              {% if p.estado == 'pendiente' %}
                 <button class="btn-contorno mp-verclave" type="button"
                         data-clave="{{ p.keyPedido }}" data-hora="{{ p.hora }}">
                   <i class="bi bi-key"></i> Ver palabra clave
                 </button>
+              {% endif %}
+              {% if p.cancelable %}
+                <form method="post" action="{{ url_for('cliente.cancelar_pedido', id_pedido=p.idPedido) }}"
+                      onsubmit="return confirm('¿Cancelar el pedido N° {{ p.idPedido }}? Se liberará tu cupo.');">
+                  {{ campo_csrf() }}
+                  <button class="btn-contorno" type="submit" style="color: var(--musa-peligro); border-color: var(--musa-peligro);">
+                    <i class="bi bi-x-lg"></i> Cancelar
+                  </button>
+                </form>
               {% endif %}
               {% if repetir %}
                 <button class="btn-brasa mp-repetir" type="button"

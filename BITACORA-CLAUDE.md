@@ -40,6 +40,34 @@
 | 2026-09-06 | Añadidos `requirements.txt` (`pip freeze`) y `cfg.example.py`. | Borrar archivos |
 | 2026-09-06 | **Datos de prueba** en `db_musuas.usuario`: admin DNI `12345678` / `admin123` (tipoUsuario 0), cliente DNI `87654321` / `cliente123` (tipoUsuario 1). | `DELETE FROM usuario WHERE dni IN ('12345678','87654321');` |
 | 2026-09-07 | **Auditoría del flujo completo + tanda de correcciones** (18 hallazgos). Ver sección "Auditoría 2026-09-07" abajo. | `git revert` de los commits |
+| 2026-09-07 | **2ª auditoría**: seguridad (CSRF/cabeceras/throttle), responsive (nav inferior móvil, desbordes), captcha admin solo si el DNI es admin. | `git revert` |
+| 2026-09-07 | **Cancelación de pedidos + anti no-show** (migración 006). Ver "No-show 2026-09-07" abajo. | `git revert` + revertir 006 |
+
+### Seguridad 2026-09-07
+- **CSRF**: token de sesión propio (`seguridad.py` → `campo_csrf()` / `csrf_valido()`), validado en `app.before_request` para todo POST de formulario. APIs JSON (JWT, `/api/*`) exentas por content-type. `{{ campo_csrf() }}` en los 15 formularios.
+- Cabeceras: `X-Frame-Options=SAMEORIGIN`, `X-Content-Type-Options=nosniff`, `Referrer-Policy=same-origin` (`after_request`).
+- Cookie de sesión: `HttpOnly`, `SameSite=Lax`, `Secure` cuando no hay debug.
+- `debug` → `FLASK_DEBUG` (1 por defecto en local; **apagar en producción**, el depurador de Werkzeug ejecuta código).
+- Login: bloqueo por IP tras 6 fallos en 5 min (`_intentos_login` en memoria del proceso).
+- Captcha admin: se muestra **solo si el DNI es de administrador** (`mostrar_captcha` desde el servidor). Antes salía tras cualquier login fallido.
+- `SECRET_KEY` desde `cfg.py` (`secret_key`, con fallback).
+
+### Responsive 2026-09-07
+- **Tienda móvil (≤768px)**: barra de navegación inferior (Inicio · Carta · Carrito · Pedidos) — antes los enlaces del navbar desaparecían sin reemplazo. `overflow-x` contenido; `min-width:0` en contenedores flex con scroll (`.musa-catbar__chips`, `.dp-badges`); filas de acción con `flex-wrap`. Se retira `.dp-mobile-bar` en móvil.
+- **Backoffice**: enlaces del sidebar en `<span>` → el rail de 64px colapsa bien en tablet/móvil (antes las etiquetas se salían sobre el contenido).
+- ⚠️ Nota de testing: Edge headless renderiza a un mínimo de ~500px de ancho; para verificar <500px hay que usar un navegador real o emulación de dispositivo.
+
+### No-show 2026-09-07 (control "básico" elegido por el usuario)
+**Migración 006**: `registroPedido.cancelado` + `registroPedido.noShow` (TINYINT), `comprobante.dniNoRegistrado` → CHAR(8) (los DNI pueden empezar por 0), `usuario.noShows` (contador).
+
+- **Cancelar pedido** (cliente y admin): `Pedido.cancelar_pedido()` — solo si sigue pendiente; devuelve el stock y libera el cupo de la franja. Cliente: `POST /mis-pedidos/<id>/cancelar` (valida propiedad por sesión/idUsuario). Admin: botón en cada tarjeta de "Gestionar pedidos".
+- **Límite de pedidos activos**: máx. `Pedido.MAX_PEDIDOS_ACTIVOS = 2` sin recoger por DNI (registrado) o por DNI+fecha (invitado). Lanza `LimitePedidos`.
+- **Captcha en checkout de invitados**: `/compra/captcha` (imagen Pillow, `session['captcha_compra']`). Los clientes con cuenta se lo saltan.
+- **Auto no-show**: `Pedido._auto_no_show()` (llamado al leer franjas / panel / dashboard) marca `noShow=1` los pedidos de hoy vencidos > `GRACIA_NOSHOW_MIN = 45` min, devuelve stock y suma `usuario.noShows`.
+- **Admin**: botones "No recogió" y "Cancelar pedido" por tarjeta; aviso "N pedidos no recogidos antes" si el cliente tiene historial; contador de no-shows del día en el dashboard.
+- **Comprobante**: ahora se emite en `marcar_recogido()` (al cobrar), no al hacer el pedido. Serie `B001-` (con boleta) o `NV01-` (nota de venta). `/admin/ventas/` = ventas realmente cobradas.
+- Franjas, KPIs, dashboard, "top productos" y "ventas 7 días" **excluyen** cancelados y no-shows.
+- **Ideas NO implementadas** (necesitan servicios externos): OTP por SMS/WhatsApp, prepago real / pasarela, depósito reembolsable, bloqueo por reputación (3 strikes → solo prepago), confirmación "voy en camino" antes de cocinar.
 
 ### Auditoría 2026-09-07 — flujo revisado de punta a punta y corregido
 

@@ -13,6 +13,17 @@ class StockInsuficiente(Exception):
         super().__init__(f"Sin stock suficiente de {nombre}")
 
 
+class LimitePedidos(Exception):
+    """Se lanza cuando quien pide ya tiene demasiados pedidos sin recoger."""
+
+
+# Pedido "activo" = hecho, aún no recogido, ni cancelado, ni marcado como no-show.
+_ACTIVO = "estadoRecojo = 0 AND cancelado = 0 AND noShow = 0"
+# Pedido que ocupa cupo de una franja = todo lo que no se canceló ni fue no-show
+# (los ya recogidos sí ocuparon cocina, cuentan).
+_OCUPA_CUPO = "cancelado = 0 AND noShow = 0"
+
+
 class Pedido:
 
     cont = 0
@@ -23,6 +34,54 @@ class Pedido:
     FRANJA_MINUTOS = 30     # duración de cada franja
     CUPO_POR_FRANJA = 8     # pedidos máximos por franja
     ANTICIPACION_MIN = 20   # la cocina necesita este tiempo mínimo
+    GRACIA_NOSHOW_MIN = 45  # min. tras la franja para marcar "no recogió"
+    MAX_PEDIDOS_ACTIVOS = 2  # pedidos sin recoger simultáneos por DNI
+
+    @staticmethod
+    def _auto_no_show():
+        """Marca como 'no recogió' los pedidos de hoy muy vencidos, devuelve stock
+        y suma al contador del cliente. Se llama antes de leer franjas / panel."""
+        ahora = datetime.now()
+        corte = (ahora - timedelta(minutes=Pedido.GRACIA_NOSHOW_MIN)).strftime("%H:%M:%S")
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    f"SELECT idPedido, idUsuario FROM registroPedido "
+                    f"WHERE fechaPedido = %s AND {_ACTIVO} AND horaRecojo < %s",
+                    (ahora.date(), corte),
+                )
+                vencidos = cursor.fetchall()
+                for id_pedido, id_usuario in vencidos:
+                    cursor.execute(
+                        "UPDATE registroPedido SET noShow = 1 WHERE idPedido = %s AND " + _ACTIVO,
+                        (id_pedido,),
+                    )
+                    if cursor.rowcount != 1:
+                        continue
+                    Pedido._devolver_stock(cursor, id_pedido)
+                    if id_usuario:
+                        cursor.execute(
+                            "UPDATE usuario SET noShows = noShows + 1 WHERE idUsuario = %s",
+                            (id_usuario,),
+                        )
+            conexion.commit()
+        finally:
+            conexion.close()
+
+    @staticmethod
+    def _devolver_stock(cursor, id_pedido):
+        """Suma de vuelta a `producto.existencias` lo que consumió un pedido."""
+        cursor.execute(
+            "SELECT idProducto, SUM(cantidad) FROM detalleOrden "
+            "WHERE idPedido = %s GROUP BY idProducto",
+            (id_pedido,),
+        )
+        for id_prod, cant in cursor.fetchall():
+            cursor.execute(
+                "UPDATE producto SET existencias = existencias + %s WHERE idProducto = %s",
+                (cant, id_prod),
+            )
 
     @staticmethod
     def _label_hora(hh, mm):
@@ -37,6 +96,8 @@ class Pedido:
         [ { hora:'18:30', label:'6:30 p.m', disponible:bool,
             restantes:int, motivo:'pasada'|'llena'|None } ]
         """
+        Pedido._auto_no_show()
+
         ahora = datetime.now()
         limite = ahora + timedelta(minutes=Pedido.ANTICIPACION_MIN)
         # Se usa la fecha del servidor de aplicacion (no CURDATE() de MySQL) para
@@ -46,8 +107,8 @@ class Pedido:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT horaRecojo, COUNT(*) FROM registroPedido "
-                "WHERE fechaPedido = %s GROUP BY horaRecojo",
+                f"SELECT horaRecojo, COUNT(*) FROM registroPedido "
+                f"WHERE fechaPedido = %s AND {_OCUPA_CUPO} GROUP BY horaRecojo",
                 (hoy,),
             )
             filas = cursor.fetchall()
@@ -95,6 +156,21 @@ class Pedido:
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
+                # --- 0. Límite de pedidos activos por persona -------------------
+                if idUsuario:
+                    cursor.execute(
+                        f"SELECT COUNT(*) FROM registroPedido WHERE idUsuario = %s AND {_ACTIVO}",
+                        (idUsuario,),
+                    )
+                else:
+                    cursor.execute(
+                        f"SELECT COUNT(*) FROM registroPedido "
+                        f"WHERE dniNoRegistrado = %s AND fechaPedido = %s AND {_ACTIVO}",
+                        (dni, datetime.now().date()),
+                    )
+                if cursor.fetchone()[0] >= Pedido.MAX_PEDIDOS_ACTIVOS:
+                    raise LimitePedidos()
+
                 # --- 1. Control de stock (bloquea las filas de producto) --------
                 unidades = {}
                 for it in items:
@@ -157,51 +233,14 @@ class Pedido:
                             (id_pedido, id_crema, siguiente_detalle),
                         )
 
-                # --- 2. Descuento de existencias ------------------------------
+                # --- 2. Descuento de existencias (se reserva el stock) --------
                 for id_prod, pedidas in unidades.items():
                     cursor.execute(
                         "UPDATE producto SET existencias = existencias - %s WHERE idProducto = %s",
                         (pedidas, id_prod),
                     )
-
-                # --- 3. Comprobante de venta (boleta / nota de venta) ---------
-                total = round(sum(it["precioTotal"] for it in items), 2)
-                sub_total = round(total / 1.18, 2)
-                igv = round(total - sub_total, 2)
-                ahora = datetime.now()
-                serie = "B001" if estado_boleta else "NV01"
-                cursor.execute(
-                    """INSERT INTO comprobante
-                       (idPedido, idUsuario, dniNoRegistrado, fechaComprobante,
-                        horaComprobante, subTotal, montoTotal, igv, numeroComprobante)
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-                    (id_pedido, idUsuario, int(dni), ahora.date(),
-                     ahora.strftime("%H:%M:%S"), sub_total, total, igv, "PENDIENTE"),
-                )
-                id_comprobante = cursor.lastrowid
-                cursor.execute(
-                    "UPDATE comprobante SET numeroComprobante = %s WHERE idComprobante = %s",
-                    (f"{serie}-{id_comprobante:08d}", id_comprobante),
-                )
-
-                # detalleComprobante: PK (idComprobante, idProducto) -> se agrupa por producto
-                agrupado = {}
-                for it in items:
-                    g = agrupado.setdefault(
-                        it["idProducto"], {"nombre": it["nombre"], "cantidad": 0, "total": 0.0}
-                    )
-                    g["cantidad"] += it["cantidad"]
-                    g["total"] += it["precioTotal"]
-                for id_prod, g in agrupado.items():
-                    unidad = round(g["total"] / g["cantidad"], 2) if g["cantidad"] else 0
-                    cursor.execute(
-                        """INSERT INTO detalleComprobante
-                           (idComprobante, idProducto, nombreProducto, precioUnidad,
-                            cantidad, precioTotal)
-                           VALUES (%s, %s, %s, %s, %s, %s)""",
-                        (id_comprobante, id_prod, g["nombre"], unidad,
-                         g["cantidad"], round(g["total"], 2)),
-                    )
+                # El comprobante NO se emite aquí: el pago es al recoger, así que
+                # se genera en marcar_recogido() (venta realmente cobrada).
 
             conexion.commit()
             return id_pedido, key
@@ -211,24 +250,142 @@ class Pedido:
         finally:
             conexion.close()
 
+    # ------------------------------------------------------------------
+    # Comprobante: se emite al entregar el pedido (cuando se cobra).
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _emitir_comprobante(cursor, id_pedido):
+        cursor.execute(
+            "SELECT idUsuario, dniNoRegistrado, estadoBoleta FROM registroPedido WHERE idPedido = %s",
+            (id_pedido,),
+        )
+        id_usuario, dni, boleta = cursor.fetchone()
+
+        cursor.execute(
+            "SELECT idProducto, nombreProducto, SUM(cantidad), SUM(precioTotal) "
+            "FROM detalleOrden WHERE idPedido = %s GROUP BY idProducto, nombreProducto",
+            (id_pedido,),
+        )
+        lineas = cursor.fetchall()
+        total = round(sum(float(l[3] or 0) for l in lineas), 2)
+        sub_total = round(total / 1.18, 2)
+        igv = round(total - sub_total, 2)
+        ahora = datetime.now()
+        serie = "B001" if boleta else "NV01"
+
+        cursor.execute(
+            """INSERT INTO comprobante
+               (idPedido, idUsuario, dniNoRegistrado, fechaComprobante, horaComprobante,
+                subTotal, montoTotal, igv, numeroComprobante)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+            (id_pedido, id_usuario, dni, ahora.date(), ahora.strftime("%H:%M:%S"),
+             sub_total, total, igv, "PENDIENTE"),
+        )
+        id_comp = cursor.lastrowid
+        cursor.execute(
+            "UPDATE comprobante SET numeroComprobante = %s WHERE idComprobante = %s",
+            (f"{serie}-{id_comp:08d}", id_comp),
+        )
+        for id_prod, nombre, cant, sub in lineas:
+            cant = int(cant or 0)
+            sub = round(float(sub or 0), 2)
+            cursor.execute(
+                """INSERT INTO detalleComprobante
+                   (idComprobante, idProducto, nombreProducto, precioUnidad, cantidad, precioTotal)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                (id_comp, id_prod, nombre, round(sub / cant, 2) if cant else 0, cant, sub),
+            )
+        return id_comp
+
+    @staticmethod
+    def cancelar_pedido(id_pedido, id_usuario=None, dni=None, saltar_dueno=False):
+        """Cancela un pedido pendiente: libera el cupo y devuelve el stock.
+        `saltar_dueno=True` cuando el llamador ya verificó la propiedad (admin o
+        pedido de invitado presente en la sesión).
+        Devuelve 'ok' | 'no_permitido' | 'no_cancelable'."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "SELECT idUsuario, dniNoRegistrado, estadoRecojo, cancelado, noShow "
+                    "FROM registroPedido WHERE idPedido = %s",
+                    (id_pedido,),
+                )
+                fila = cursor.fetchone()
+                if fila is None:
+                    return "no_cancelable"
+                if not saltar_dueno:
+                    mismo = (id_usuario and fila[0] == id_usuario) or (dni and fila[1] == dni)
+                    if not mismo:
+                        return "no_permitido"
+                if fila[2] == 1 or fila[3] == 1 or fila[4] == 1:
+                    return "no_cancelable"
+
+                cursor.execute(
+                    "UPDATE registroPedido SET cancelado = 1 WHERE idPedido = %s AND " + _ACTIVO,
+                    (id_pedido,),
+                )
+                if cursor.rowcount != 1:
+                    return "no_cancelable"
+                Pedido._devolver_stock(cursor, id_pedido)
+            conexion.commit()
+            return "ok"
+        finally:
+            conexion.close()
+
+    @staticmethod
+    def marcar_no_show(id_pedido):
+        """El admin marca que el cliente no vino. Libera cupo, devuelve stock y
+        suma al contador del cliente. Devuelve bool."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "SELECT idUsuario FROM registroPedido WHERE idPedido = %s AND " + _ACTIVO,
+                    (id_pedido,),
+                )
+                fila = cursor.fetchone()
+                if fila is None:
+                    return False
+                cursor.execute(
+                    "UPDATE registroPedido SET noShow = 1 WHERE idPedido = %s AND " + _ACTIVO,
+                    (id_pedido,),
+                )
+                if cursor.rowcount != 1:
+                    return False
+                Pedido._devolver_stock(cursor, id_pedido)
+                if fila[0]:
+                    cursor.execute(
+                        "UPDATE usuario SET noShows = noShows + 1 WHERE idUsuario = %s",
+                        (fila[0],),
+                    )
+            conexion.commit()
+            return True
+        finally:
+            conexion.close()
+
     @staticmethod
     def pedidos_de_hoy(estado=None):
         """Pedidos de hoy con líneas + cremas, para el panel de Pedidos.
-        estado: None | 'pendiente' | 'recogido'."""
-        cond = ""
+        estado: None | 'pendiente' | 'recogido'. No incluye cancelados ni no-shows."""
+        Pedido._auto_no_show()
+
+        cond = " AND rp.cancelado = 0 AND rp.noShow = 0"
         if estado == "pendiente":
-            cond = " AND rp.estadoRecojo = 0"
+            cond += " AND rp.estadoRecojo = 0"
         elif estado == "recogido":
-            cond = " AND rp.estadoRecojo = 1"
+            cond += " AND rp.estadoRecojo = 1"
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
                 "SELECT rp.idPedido, rp.dniNoRegistrado, rp.nombres, rp.numeroTelefono, "
                 "rp.estadoRecojo, rp.horaRecojo, rp.estadoBoleta, rp.billeteraDigital, "
-                "rp.keyPedido, rp.notas "
-                f"FROM registroPedido rp WHERE rp.fechaPedido = CURDATE(){cond} "
-                "ORDER BY rp.estadoRecojo, rp.horaRecojo, rp.idPedido"
+                "rp.keyPedido, rp.notas, COALESCE(u.noShows, 0) "
+                "FROM registroPedido rp LEFT JOIN usuario u ON u.idUsuario = rp.idUsuario "
+                f"WHERE rp.fechaPedido = %s{cond} "
+                "ORDER BY rp.estadoRecojo, rp.horaRecojo, rp.idPedido",
+                (date.today(),),
             )
             cab = cursor.fetchall()
             if not cab:
@@ -286,6 +443,7 @@ class Pedido:
                 "digital": bool(c[7]),
                 "keyPedido": c[8],
                 "notas": c[9],
+                "noShows": int(c[10] or 0),
                 "lineas": its,
                 "total": round(sum(i["precioTotal"] for i in its), 2),
             })
@@ -293,28 +451,31 @@ class Pedido:
 
     @staticmethod
     def marcar_recogido(id_pedido, key):
-        """'ok' | 'clave_mal' | 'no_existe' (ya recogido o inexistente)."""
+        """'ok' | 'clave_mal' | 'no_existe' (ya recogido, cancelado o inexistente).
+        Al entregar se emite el comprobante (la venta se cobra en este momento)."""
         key = str(key).strip()
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT keyPedido, estadoRecojo FROM registroPedido WHERE idPedido = %s",
+                    "SELECT keyPedido, estadoRecojo, cancelado, noShow "
+                    "FROM registroPedido WHERE idPedido = %s",
                     (id_pedido,),
                 )
                 fila = cursor.fetchone()
-                if fila is None or fila[1] == 1:
+                if fila is None or fila[1] == 1 or fila[2] == 1 or fila[3] == 1:
                     return "no_existe"
                 if str(fila[0]).strip() != key:
                     return "clave_mal"
-                # Update guardado: solo pasa si sigue sin recoger y la clave coincide.
+                # Update guardado: solo pasa si sigue activo y la clave coincide.
                 cursor.execute(
                     "UPDATE registroPedido SET estadoRecojo = 1 "
-                    "WHERE idPedido = %s AND estadoRecojo = 0 AND keyPedido = %s",
+                    "WHERE idPedido = %s AND " + _ACTIVO + " AND keyPedido = %s",
                     (id_pedido, key),
                 )
                 if cursor.rowcount != 1:
                     return "no_existe"
+                Pedido._emitir_comprobante(cursor, id_pedido)
             conexion.commit()
             return "ok"
         finally:
@@ -326,7 +487,8 @@ class Pedido:
         with conexion.cursor() as cursor:
             cursor.execute(
                 "SELECT COUNT(*), COALESCE(SUM(estadoRecojo = 0), 0), COALESCE(SUM(estadoRecojo = 1), 0) "
-                "FROM registroPedido WHERE fechaPedido = CURDATE()"
+                "FROM registroPedido WHERE fechaPedido = %s AND cancelado = 0 AND noShow = 0",
+                (date.today(),),
             )
             t, p, r = cursor.fetchone()
         conexion.close()
@@ -335,27 +497,32 @@ class Pedido:
     @staticmethod
     def resumen_dashboard():
         """KPIs + pedidos recientes + top productos + ventas 7 días para el panel."""
+        Pedido._auto_no_show()
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT COUNT(*), COALESCE(SUM(estadoRecojo = 0), 0) "
-                "FROM registroPedido WHERE fechaPedido = CURDATE()"
+                "SELECT COUNT(*), COALESCE(SUM(estadoRecojo = 0), 0), COALESCE(SUM(noShow = 1), 0) "
+                "FROM registroPedido WHERE fechaPedido = %s AND cancelado = 0",
+                (date.today(),),
             )
-            n_hoy, pendientes = cursor.fetchone()
+            n_hoy, pendientes, no_shows_hoy = cursor.fetchone()
             n_hoy = int(n_hoy or 0)
             pendientes = int(pendientes or 0)
+            no_shows_hoy = int(no_shows_hoy or 0)
 
             cursor.execute(
                 "SELECT COALESCE(SUM(dor.precioTotal), 0) FROM detalleOrden dor "
                 "INNER JOIN registroPedido r ON r.idPedido = dor.idPedido "
-                "WHERE r.fechaPedido = CURDATE()"
+                "WHERE r.fechaPedido = %s AND r.cancelado = 0 AND r.noShow = 0",
+                (date.today(),),
             )
             ventas_hoy = float(cursor.fetchone()[0] or 0)
             ticket = ventas_hoy / n_hoy if n_hoy else 0.0
 
             cursor.execute(
                 "SELECT idPedido, dniNoRegistrado, nombres, horaRecojo, estadoRecojo "
-                "FROM registroPedido ORDER BY idPedido DESC LIMIT 6"
+                "FROM registroPedido WHERE cancelado = 0 AND noShow = 0 "
+                "ORDER BY idPedido DESC LIMIT 6"
             )
             cabeceras = cursor.fetchall()
             recientes = []
@@ -387,7 +554,7 @@ class Pedido:
                 "FROM detalleOrden dor "
                 "INNER JOIN registroPedido r ON r.idPedido = dor.idPedido "
                 "LEFT JOIN producto p ON p.idProducto = dor.idProducto "
-                "WHERE r.fechaPedido >= CURDATE() - INTERVAL 7 DAY "
+                "WHERE r.fechaPedido >= CURDATE() - INTERVAL 7 DAY AND r.cancelado = 0 AND r.noShow = 0 "
                 "GROUP BY dor.idProducto, p.nombre, p.precio, p.imagen "
                 "ORDER BY uds DESC LIMIT 5"
             )
@@ -405,7 +572,7 @@ class Pedido:
                 "SELECT r.fechaPedido, COALESCE(SUM(dor.precioTotal), 0) "
                 "FROM registroPedido r "
                 "LEFT JOIN detalleOrden dor ON dor.idPedido = r.idPedido "
-                "WHERE r.fechaPedido >= CURDATE() - INTERVAL 6 DAY "
+                "WHERE r.fechaPedido >= CURDATE() - INTERVAL 6 DAY AND r.cancelado = 0 AND r.noShow = 0 "
                 "GROUP BY r.fechaPedido"
             )
             por_dia = {str(row[0]): float(row[1] or 0) for row in cursor.fetchall()}
@@ -428,6 +595,7 @@ class Pedido:
         return {
             "pedidos_hoy": n_hoy,
             "pendientes": pendientes,
+            "no_shows_hoy": no_shows_hoy,
             "ventas_hoy": round(ventas_hoy, 2),
             "ticket": round(ticket, 2),
             "recientes": recientes,
@@ -441,11 +609,12 @@ class Pedido:
         """Pedidos del cliente (más reciente primero). El total mostrado es el que
         el cliente pagó (snapshot en detalleOrden); el precio/disponibilidad ACTUAL
         del producto solo se usa para 'repetir pedido'."""
+        Pedido._auto_no_show()
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
                 "SELECT idPedido, estadoRecojo, horaRecojo, fechaPedido, estadoBoleta, "
-                "billeteraDigital, keyPedido FROM registroPedido "
+                "billeteraDigital, keyPedido, cancelado, noShow FROM registroPedido "
                 "WHERE idUsuario = %s ORDER BY idPedido DESC",
                 (id_usuario,),
             )
@@ -500,9 +669,20 @@ class Pedido:
             fecha = c[3].strftime("%d/%m/%Y") if hasattr(c[3], "strftime") else str(c[3])
             its = lineas_idx.get(c[0], [])
             total = sum(it["pagado"] for it in its)
+            recogido, cancelado, no_show = bool(c[1]), bool(c[7]), bool(c[8])
+            if recogido:
+                estado = "recogido"
+            elif cancelado:
+                estado = "cancelado"
+            elif no_show:
+                estado = "no_show"
+            else:
+                estado = "pendiente"
             salida.append({
                 "idPedido": c[0],
-                "recogido": bool(c[1]),
+                "recogido": recogido,
+                "estado": estado,
+                "cancelable": estado == "pendiente",
                 "hora": hora,
                 "fecha": fecha,
                 "boleta": bool(c[4]),
@@ -518,7 +698,12 @@ class Pedido:
         """Pedido + sus líneas + cremas, para la página de confirmación."""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute("SELECT * FROM registroPedido WHERE idPedido = %s", (id_pedido,))
+            cursor.execute(
+                "SELECT idPedido, idUsuario, dniNoRegistrado, nombres, numeroTelefono, "
+                "estadoRecojo, cancelado, noShow, horaRecojo, estadoBoleta, billeteraDigital, "
+                "keyPedido, notas FROM registroPedido WHERE idPedido = %s",
+                (id_pedido,),
+            )
             p = cursor.fetchone()
             if p is None:
                 conexion.close()
@@ -540,7 +725,7 @@ class Pedido:
         for id_det, nombre, precio in cremas_raw:
             cremas_por_detalle.setdefault(id_det, []).append({"nombre": nombre, "precio": precio})
 
-        hora = str(timedelta(seconds=p[6].seconds)) if hasattr(p[6], "seconds") else str(p[6])
+        hora = str(timedelta(seconds=p[8].seconds)) if hasattr(p[8], "seconds") else str(p[8])
         items = [
             {
                 "nombre": f[2],
@@ -558,11 +743,13 @@ class Pedido:
             "nombres": p[3],
             "telefono": p[4],
             "estadoRecojo": p[5],
+            "cancelado": bool(p[6]),
+            "noShow": bool(p[7]),
             "horaRecojo": hora[:5] if len(hora) >= 5 else hora,
-            "estadoBoleta": p[8],
-            "billeteraDigital": p[9],
-            "keyPedido": p[10],
-            "notas": p[11],
+            "estadoBoleta": p[9],
+            "billeteraDigital": p[10],
+            "keyPedido": p[11],
+            "notas": p[12],
             "lineas": items,
             "total": sum(i["precioTotal"] for i in items),
         }
@@ -627,24 +814,35 @@ class Pedido:
 
     @staticmethod
     def diccionario_pedidos(pedidos):
+        # Orden de columnas de registroPedido (tras migraciones 004 y 006):
+        # 0 idPedido 1 idUsuario 2 dniNoRegistrado 3 nombres 4 numeroTelefono
+        # 5 estadoRecojo 6 cancelado 7 noShow 8 horaRecojo 9 fechaPedido
+        # 10 estadoBoleta 11 billeteraDigital 12 keyPedido 13 notas
         list = []
         for pedido in pedidos:
             diccionario = dict()
-            horaRecojo = str(timedelta(seconds=pedido[6].seconds))
+            horaRecojo = str(timedelta(seconds=pedido[8].seconds))
             fechaPedido = str(
-                date(year=pedido[7].year, month=pedido[7].month, day=pedido[7].day))
+                date(year=pedido[9].year, month=pedido[9].month, day=pedido[9].day))
 
             diccionario['idPedido'] = pedido[0]
             diccionario["idUsuario"] = pedido[1]
             diccionario["dniNoRegistrado"] = pedido[2]
             diccionario["nombres"] = pedido[3]
             diccionario["numeroTelefono"] = pedido[4]
-            diccionario["estadoRecojo"] = "Recogido" if pedido[5] == 1 else "En proceso"
+            if pedido[6] == 1:
+                diccionario["estadoRecojo"] = "Cancelado"
+            elif pedido[7] == 1:
+                diccionario["estadoRecojo"] = "No recogido"
+            elif pedido[5] == 1:
+                diccionario["estadoRecojo"] = "Recogido"
+            else:
+                diccionario["estadoRecojo"] = "En proceso"
             diccionario["horaRecojo"] = horaRecojo
             diccionario["fechaPedido"] = fechaPedido
-            diccionario["estadoBoleta"] = "Si" if pedido[8] == 1 else "No"
-            diccionario["billeteraDigital"] = "Si" if pedido[9] == 1 else "No"
-            diccionario["keyPedido"] = pedido[10]
+            diccionario["estadoBoleta"] = "Si" if pedido[10] == 1 else "No"
+            diccionario["billeteraDigital"] = "Si" if pedido[11] == 1 else "No"
+            diccionario["keyPedido"] = pedido[12]
             list.append(diccionario)
         return list
 

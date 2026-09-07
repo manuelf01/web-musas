@@ -1523,6 +1523,7 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 }
 .mp-estado.pendiente { background: rgba(219, 66, 0, 0.12); color: var(--musa-brasa); }
 .mp-estado.recogido { background: rgba(46, 125, 91, 0.14); color: var(--musa-exito); }
+.mp-estado.cancelado { background: rgba(196, 51, 29, 0.12); color: var(--musa-peligro); }
 
 .mp-card__items { padding: 14px 20px; display: flex; flex-direction: column; gap: 8px; }
 .mp-linea { font-size: 14px; }
@@ -1920,6 +1921,35 @@ body.adm { background: var(--musa-crema); }
   border-radius: 6px;
 }
 .ped-nada-busqueda { text-align: center; color: var(--musa-texto-suave); padding: 40px 0; }
+
+.ped-aviso {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--musa-peligro);
+}
+.ped-secundarias {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  padding: 10px 16px 14px;
+}
+.ped-link-btn {
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--musa-texto-suave);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ped-link-btn:hover { color: var(--musa-peligro); }
 
 /* ============================================================
    ADMIN · CRUD genérico (productos, categorías, usuarios, ventas)

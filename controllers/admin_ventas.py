@@ -34,7 +34,8 @@ def show_detalle(idComprobante):
     idPedido = info_comprobante[1]
     datos_comprobante = Pedido.get_pedido_por_id_pedido(idPedido)
 
-    forma_pago = datos_comprobante[9]
+    # registroPedido: 11 = billeteraDigital (tras migraciones 004 y 006)
+    forma_pago = datos_comprobante[11]
     nombre_forma = "Efectivo"
     if forma_pago == 1:
         nombre_forma = "Billetera digital"

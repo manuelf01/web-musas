@@ -30,10 +30,33 @@ def confirmar():
 
     resultado = Pedido.marcar_recogido(id_pedido, key)
     if resultado == "ok":
-        flash(f"Pedido N° {id_pedido} entregado. Estado actualizado a recogido.", "ok")
+        flash(f"Pedido N° {id_pedido} entregado. Comprobante emitido.", "ok")
     elif resultado == "clave_mal":
         flash(f"La palabra clave no coincide con el pedido N° {id_pedido}.", "error")
     else:
-        flash(f"El pedido N° {id_pedido} ya fue recogido o no existe.", "error")
+        flash(f"El pedido N° {id_pedido} ya fue recogido, cancelado o no existe.", "error")
 
+    return redirect(url_for("admin.pedidos.home", estado=estado))
+
+
+@pedidos.route("/no-show", methods=["POST"])
+def no_show():
+    id_pedido = request.form.get("idPedido")
+    estado = request.form.get("estado", "pendiente")
+    if Pedido.marcar_no_show(id_pedido):
+        flash(f"Pedido N° {id_pedido} marcado como «no recogió». Se liberó el cupo y el stock.", "ok")
+    else:
+        flash(f"El pedido N° {id_pedido} ya no está pendiente.", "error")
+    return redirect(url_for("admin.pedidos.home", estado=estado))
+
+
+@pedidos.route("/cancelar", methods=["POST"])
+def cancelar():
+    id_pedido = request.form.get("idPedido")
+    estado = request.form.get("estado", "pendiente")
+    resultado = Pedido.cancelar_pedido(id_pedido, saltar_dueno=True)
+    if resultado == "ok":
+        flash(f"Pedido N° {id_pedido} cancelado. Se devolvió el stock y se liberó el cupo.", "ok")
+    else:
+        flash(f"El pedido N° {id_pedido} ya no se puede cancelar.", "error")
     return redirect(url_for("admin.pedidos.home", estado=estado))

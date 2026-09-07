@@ -169,6 +169,25 @@
               placeholder="Ej. sin cebolla en la smash, empaque separado.">{{ form.notas if form else '' }}</textarea>
           </div>
         </div>
+
+        {% if invitado %}
+        <div class="ck-card">
+          <h2><span class="ck-num">3</span> Verificación</h2>
+          <p class="dp-card__sub">Confirma que no eres un robot. Con una cuenta te saltas este paso.</p>
+          <div class="d-flex align-items-center gap-2">
+            <img id="compra-captcha-img" alt="Código de verificación" width="220" height="80"
+                 src="{{ url_for('cliente.compra_captcha') }}?t=0"
+                 style="border: 1px solid var(--musa-borde); border-radius: var(--musa-radio-control); background: #fff;" />
+            <button type="button" id="compra-captcha-refresh" class="btn-contorno"
+                    style="min-height: 44px; padding: 0 12px;" aria-label="Generar otro código">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+          <input type="text" class="musa-input mt-2" name="captcha" maxlength="6" autocomplete="off"
+                 placeholder="Escribe los 6 caracteres"
+                 style="letter-spacing: 0.3em; text-transform: uppercase;" required />
+        </div>
+        {% endif %}
       </div>
 
       <!-- Columna derecha: resumen -->
@@ -196,4 +215,17 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
+{% if invitado %}
+<script>
+  (function () {
+    var img = document.getElementById("compra-captcha-img");
+    var btn = document.getElementById("compra-captcha-refresh");
+    function recargar() {
+      img.src = "{{ url_for('cliente.compra_captcha') }}?t=" + Date.now();
+    }
+    if (btn) btn.addEventListener("click", recargar);
+    recargar();
+  })();
+</script>
+{% endif %}
 {% endblock %}

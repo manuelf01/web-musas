@@ -57,6 +57,9 @@
             <div class="ped-card__cliente">
               <strong>{{ p.cliente }} <span class="ped-card__id">Pedido #{{ p.idPedido }}</span></strong>
               <span>DNI {{ p.dni }} · {{ p.telefono }}</span>
+              {% if p.noShows %}
+                <span class="ped-aviso"><i class="bi bi-exclamation-triangle-fill"></i> {{ p.noShows }} pedido(s) no recogido(s) antes</span>
+              {% endif %}
             </div>
             <span class="ped-hora"><i class="bi bi-clock"></i> {{ p.hora }}</span>
           </div>
@@ -88,6 +91,23 @@
               <button type="submit" class="btn-brasa"><i class="bi bi-check2-all"></i> Entregar pedido</button>
             </div>
           </form>
+
+          <div class="ped-secundarias">
+            <form method="post" action="{{ url_for('admin.pedidos.no_show') }}"
+                  onsubmit="return confirm('¿Marcar el pedido #{{ p.idPedido }} como NO recogido? Devuelve el stock.');">
+              {{ campo_csrf() }}
+              <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
+              <input type="hidden" name="estado" value="{{ estado }}" />
+              <button type="submit" class="ped-link-btn"><i class="bi bi-person-x"></i> No recogió</button>
+            </form>
+            <form method="post" action="{{ url_for('admin.pedidos.cancelar') }}"
+                  onsubmit="return confirm('¿Cancelar el pedido #{{ p.idPedido }}? Devuelve el stock y libera el cupo.');">
+              {{ campo_csrf() }}
+              <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
+              <input type="hidden" name="estado" value="{{ estado }}" />
+              <button type="submit" class="ped-link-btn"><i class="bi bi-x-circle"></i> Cancelar pedido</button>
+            </form>
+          </div>
         </article>
       {% endfor %}
     </div>

@@ -6,7 +6,14 @@
 <div class="adm-head">
   <div>
     <h1>Resumen <span class="adm-badge-vivo">En vivo</span></h1>
-    <p><i class="bi bi-calendar3"></i> Resumen de hoy</p>
+    <p>
+      <i class="bi bi-calendar3"></i> Resumen de hoy
+      {% if resumen.no_shows_hoy %}
+        · <span style="color: var(--musa-peligro); font-weight: 600;">
+          <i class="bi bi-person-x"></i> {{ resumen.no_shows_hoy }} no recogido(s)
+        </span>
+      {% endif %}
+    </p>
   </div>
   <a href="{{ url_for('admin.productos.formulario_agregar') }}" class="btn-brasa">
     <i class="bi bi-plus-lg"></i> Nuevo producto
