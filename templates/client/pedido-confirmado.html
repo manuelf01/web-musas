@@ -1,0 +1,82 @@
+{% extends "client/base.html" %}
+{% block title %}Pedido confirmado · Las Musas{% endblock %}
+
+{% block content %}
+<div class="conf-wrap">
+  <div class="conf-card">
+    <div class="conf-ok"><i class="bi bi-check-lg"></i></div>
+    <h1>¡Pedido confirmado!</h1>
+    <p>Guarda este número para recoger tu pedido en el mostrador.</p>
+
+    <div class="conf-clave">
+      <span>Palabra clave de recojo</span>
+      <strong>{{ pedido.keyPedido }}</strong>
+      <p>Dísela al personal cuando llegues al local.</p>
+    </div>
+
+    <div class="conf-datos">
+      <div>Pedido <b>N° {{ pedido.idPedido }}</b></div>
+      <div>Recojo hoy a las <b>{{ pedido.horaRecojo }}</b></div>
+      <div>Local <b>Calle Schell 385, Miraflores</b></div>
+    </div>
+
+    <div class="conf-pago">
+      {% if pedido.billeteraDigital %}
+        <i class="bi bi-qr-code"></i>
+        <div>
+          <strong>Pago con Yape / Plin.</strong>
+          Yapea o Plinea <b>S/ {{ '%.2f'|format(pedido.total) }}</b> al <b>987 654 321</b>
+          y muestra la confirmación al recoger.
+        </div>
+      {% else %}
+        <i class="bi bi-cash-coin"></i>
+        <div>
+          <strong>Pago al recoger.</strong>
+          Paga <b>S/ {{ '%.2f'|format(pedido.total) }}</b> en caja al momento de recoger tu pedido
+          (efectivo o tarjeta).
+        </div>
+      {% endif %}
+    </div>
+
+    {% if pedido.estadoBoleta %}
+      <p class="small" style="color: var(--musa-texto-suave);">
+        <i class="bi bi-receipt"></i> Te entregaremos tu boleta electrónica al recoger.
+      </p>
+    {% endif %}
+
+    <details class="conf-detalle">
+      <summary>Ver detalle del pedido</summary>
+      <table>
+        {% for it in pedido.lineas %}
+          <tr>
+            <td>{{ it.cantidad }} × {{ it.nombre }}
+              {% if it.cremas %}<br /><span style="font-size:11px;">
+                {{ it.cremas | map(attribute='nombre') | join(', ') }}
+              </span>{% endif %}
+            </td>
+            <td>S/ {{ '%.2f'|format(it.precioTotal) }}</td>
+          </tr>
+        {% endfor %}
+        <tr>
+          <td><b>Total (IGV incluido)</b></td>
+          <td><b>S/ {{ '%.2f'|format(pedido.total) }}</b></td>
+        </tr>
+      </table>
+    </details>
+
+    <div class="conf-acciones">
+      {% if cliente %}
+        <a href="{{ url_for('cliente.mis_pedidos') }}" class="btn-brasa">Ver mis pedidos</a>
+      {% endif %}
+      <a href="{{ url_for('cliente.carta') }}" class="btn-contorno">Volver a la carta</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // El pedido ya está en la BD: vaciamos el carrito local.
+  try { if (window.MusasCarrito) window.MusasCarrito.vaciar(); } catch (e) {}
+</script>
+{% endblock %}

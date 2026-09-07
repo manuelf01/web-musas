@@ -1,0 +1,27 @@
+{# Barra pegajosa de categorías.
+   Espera: categorias (lista de tuplas), modo ("anclas" | "links"), activa (nombre o None) #}
+{% set _emojis = {
+  "Hamburguesas": "🍔", "Salchipapas": "🍟", "Bebidas": "🍹",
+  "Combos": "🔥", "Postres": "🍰"
+} %}
+<div class="musa-catbar"{% if modo == 'anclas' %} id="carta"{% endif %}>
+  <div class="musa-catbar__inner">
+    <div class="musa-catbar__chips">
+      {% for c in categorias if c[1] != "Cremas" %}
+        {% if modo == 'anclas' %}
+          <a href="#cat-{{ c[0] }}" class="musa-chip {% if loop.first %}is-active{% endif %}">
+        {% else %}
+          <a href="{{ url_for('cliente.productos_categoria', categoria=c[1]) }}"
+             class="musa-chip {% if c[1] == activa %}is-active{% endif %}">
+        {% endif %}
+          <span>{{ _emojis.get(c[1], "🍴") }}</span>
+          <span>{{ c[1] }}</span>
+        </a>
+      {% endfor %}
+    </div>
+    <span class="musa-catbar__lugar">
+      <i class="bi bi-geo-alt-fill" style="color: var(--musa-brasa);"></i>
+      Recojo en: <strong>Miraflores, Lima</strong>
+    </span>
+  </div>
+</div>

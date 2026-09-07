@@ -1,0 +1,35 @@
+{# Tarjeta de producto de la carta.
+   Espera: p (dict con idProducto, nombre, descripcion, precio, imagen, destacado, nota) #}
+{% set _tonos = {
+  "Nueva": "mint",
+  "Especial de la casa": "peach", "Para compartir": "peach", "Barril": "peach"
+} %}
+<article class="producto-card">
+  <div class="producto-card__media">
+    {% if p.imagen %}
+      <img src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="{{ p.nombre }}" loading="lazy" />
+    {% else %}
+      <div class="producto-card__ph"><i class="bi bi-fire"></i></div>
+    {% endif %}
+    {% if p.destacado %}
+      <span class="producto-card__badge" data-tono="{{ _tonos.get(p.destacado, 'mostaza') }}">{{ p.destacado }}</span>
+    {% endif %}
+  </div>
+  <div class="producto-card__body">
+    <h3>{{ p.nombre }}</h3>
+    <p class="producto-card__desc">{{ p.descripcion }}</p>
+    <div class="producto-card__foot">
+      <div class="producto-card__precio-row">
+        <span class="producto-card__precio">S/ {{ '%.2f'|format(p.precio) }}</span>
+        {% if p.nota %}
+          <span class="producto-card__nota {% if p.nota == 'Brasas' %}is-brasa{% endif %}">
+            {% if p.nota == 'Brasas' %}<i class="bi bi-fire"></i>{% endif %}{{ p.nota }}
+          </span>
+        {% endif %}
+      </div>
+      <a href="{{ url_for('cliente.comprar_producto', id=p.idProducto) }}" class="btn-brasa w-100">
+        <i class="bi bi-bag-plus"></i> Comprar
+      </a>
+    </div>
+  </div>
+</article>

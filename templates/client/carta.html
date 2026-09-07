@@ -1,0 +1,74 @@
+{% extends "client/base.html" %}
+{% block title %}Carta completa — Las Musas{% endblock %}
+{% block nav_carta %}active{% endblock %}
+
+{% set eyebrows = {
+  "Hamburguesas": "Hechas al momento", "Salchipapas": "Tradición y sabor limeño",
+  "Bebidas": "Para acompañar", "Combos": "Rinden para la noche", "Postres": "El cierre dulce"
+} %}
+
+{% block content %}
+{% if categorias %}
+{% set visibles = [] %}
+{% for c in categorias if c[1] != "Cremas" %}{% set _ = visibles.append(c) %}{% endfor %}
+
+{% with modo = "anclas", activa = None %}
+  {% include "client/_catbar.html" %}
+{% endwith %}
+
+<div class="musa-shell carta-wrap">
+  <div class="carta-head">
+    <div class="carta-head__titulo">
+      <h1>Nuestra carta</h1>
+      <span class="carta-head__conteo">{{ productos|length }} productos · retiro en tienda</span>
+    </div>
+  </div>
+
+  {% for categoria in visibles %}
+    {% set items = productos | selectattr("idCategoria", "equalto", categoria[0]) | list %}
+    <section class="musa-cat-section" id="cat-{{ categoria[0] }}">
+      <div class="musa-cat-head">
+        <div>
+          <span class="eyebrow">{{ eyebrows.get(categoria[1], "De la carta") }}</span>
+          <h2>{{ categoria[1] }}</h2>
+          {% if categoria[2] %}<p>{{ categoria[2] }}</p>{% endif %}
+        </div>
+      </div>
+
+      {% if items %}
+        <div class="producto-grid">
+          {% for p in items %}
+            {% include "client/_producto_card.html" %}
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color: var(--musa-texto-suave);">Pronto agregaremos productos a esta categoría.</p>
+      {% endif %}
+    </section>
+  {% endfor %}
+
+  <section class="musa-pilares">
+    <div class="musa-pilar">
+      <span class="musa-pilar__ico"><i class="bi bi-patch-check"></i></span>
+      <div><h4>Carne Angus 100%</h4><p>Cortes madurados sin conservantes, moldeados cada tarde en cocina.</p></div>
+    </div>
+    <div class="musa-pilar">
+      <span class="musa-pilar__ico"><i class="bi bi-basket3"></i></span>
+      <div><h4>Brioche de Masa Madre</h4><p>Horneado a diario con mantequilla pura y fermentación lenta.</p></div>
+    </div>
+    <div class="musa-pilar">
+      <span class="musa-pilar__ico"><i class="bi bi-fire"></i></span>
+      <div><h4>Brasas de Carbón &amp; Leña</h4><p>Sabor ahumado con doble caramelizado sobre hierro fundido.</p></div>
+    </div>
+  </section>
+</div>
+{% else %}
+<div class="musa-shell">
+  <div class="musa-vacio">
+    <i class="bi bi-fire d-block mb-3"></i>
+    <h2 class="fw-bold">La carta se está preparando</h2>
+    <p>Vuelve en un momento, estamos encendiendo las brasas.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,52 +1,85 @@
-{% extends "client/main.html" %} {% block titulo %} Registrarse {% endblock %}
-{% block contenido %}
-<div class="categorias-content pt-5">
-  <div class="categorias">
-    <div class="categorias-in">
-      {% for categoria in categorias %} {% if categoria[1] != "Cremas" %}
-      <a
-        href="{{url_for('cliente.productos_categoria', categoria = categoria[1])}}"
-        class="text-black"
-      >
-        <div class="categoria-item">
-          <!-- <div>
-            <img src="#" alt="Categoria" />
-          </div> -->
-          <p>{{categoria[1]}}</p>
-        </div>
-      </a>
-      {% endif %} {% endfor %}
+{% extends "client/base.html" %}
+{% block title %}{{ categoria }} · Carta — Las Musas{% endblock %}
+{% block nav_carta %}active{% endblock %}
+
+{% block content %}
+<!-- BARRA DE CATEGORÍAS PEGAJOSA -->
+{% with modo = "links", activa = categoria %}
+  {% include "client/_catbar.html" %}
+{% endwith %}
+
+<div class="musa-shell carta-wrap">
+  <!-- Breadcrumb -->
+  <nav class="carta-breadcrumb" aria-label="Ruta">
+    <a href="{{ url_for('cliente.home') }}">Carta</a>
+    <span>/</span>
+    <span class="actual">{{ categoria }}</span>
+  </nav>
+
+  <!-- Encabezado -->
+  <div class="carta-head">
+    <div class="carta-head__titulo">
+      <h1>{{ categoria }}</h1>
+      <span class="carta-head__conteo">
+        {{ productos|length }} producto{{ '' if productos|length == 1 else 's' }}
+      </span>
     </div>
+
+    {% if productos %}
+      <form method="get" class="carta-orden">
+        <select name="orden" onchange="this.form.submit()" aria-label="Ordenar productos">
+          <option value="recomendados" {{ 'selected' if orden == 'recomendados' }}>Ordenar por: Recomendados</option>
+          <option value="precio-asc"  {{ 'selected' if orden == 'precio-asc' }}>Ordenar por: Menor precio</option>
+          <option value="precio-desc" {{ 'selected' if orden == 'precio-desc' }}>Ordenar por: Mayor precio</option>
+          <option value="nombre"      {{ 'selected' if orden == 'nombre' }}>Ordenar por: Nombre (A–Z)</option>
+        </select>
+        <i class="bi bi-chevron-down"></i>
+      </form>
+    {% endif %}
   </div>
-</div>
-<section class="mt-1 mb-3">
-  <h3>Productos {{categoria}}</h3>
 
-  <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
-    {% for producto in productos %}
-    <div class="card" style="width: 300px">
-      <img
-        class="card-img-top"
-        src="{{url_for('static', filename = 'img/hamburguesas/ha-1.jpg')}}"
-        alt=""
-      />
-      <div class="card-body">
-        <h4 class="card-title">{{producto["nombre"]}}</h4>
-        <div>
-          <p class="card-text">{{producto["descripcion"]}}</p>
-          <p class="card-text">Precio: {{producto["precio"]}}</p>
-        </div>
+  {% if productos %}
+    <!-- Grilla de productos -->
+    <div class="producto-grid">
+      {% for p in productos %}
+        {% include "client/_producto_card.html" %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Estado vacío -->
+    <div class="carta-empty">
+      <div class="carta-empty__ico"><i class="bi bi-egg-fried"></i></div>
+      <h2>No hay productos en esta categoría</h2>
+      <p>Por el momento no tenemos opciones disponibles aquí. Explora nuestras otras especialidades nocturnas.</p>
+      <a href="{{ url_for('cliente.home') }}" class="btn-contorno">
+        <i class="bi bi-arrow-left"></i> Volver a la carta
+      </a>
+    </div>
+  {% endif %}
 
-        <a
-          href="{{url_for('cliente.comprar_producto', id=producto['idProducto'])}}"
-          class="btn btn-primary w-100"
-          >Comprar</a
-        >
+  <!-- FRANJA DE GARANTÍAS -->
+  <section class="musa-pilares">
+    <div class="musa-pilar">
+      <span class="musa-pilar__ico"><i class="bi bi-patch-check"></i></span>
+      <div>
+        <h4>Carne Angus 100%</h4>
+        <p>Cortes madurados sin conservantes, picados y moldeados cada tarde en cocina.</p>
       </div>
     </div>
-
-    {% endfor %}
-  </div>
-</section>
-
+    <div class="musa-pilar">
+      <span class="musa-pilar__ico"><i class="bi bi-basket3"></i></span>
+      <div>
+        <h4>Brioche de Masa Madre</h4>
+        <p>Horneado a diario con mantequilla pura y fermentación lenta.</p>
+      </div>
+    </div>
+    <div class="musa-pilar">
+      <span class="musa-pilar__ico"><i class="bi bi-fire"></i></span>
+      <div>
+        <h4>Brasas de Carbón &amp; Leña</h4>
+        <p>Sabor ahumado inconfundible con sellado crujiente sobre hierro fundido.</p>
+      </div>
+    </div>
+  </section>
+</div>
 {% endblock %}

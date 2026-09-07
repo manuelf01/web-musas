@@ -1,70 +1,159 @@
-{% extends "client/main.html" %} {% block titulo %} Registrarse {% endblock %}
-{% block contenido %}
-<section class="mt-5 mb-3 container">
-  <h2 class="">{{producto["nombre"]}}</h2>
-  <div class="w-auto m-auto">
-    <div class="row align-items-center justify-content-md-center m-auto">
-      <div class="col-sm-6 text-center">
-        <img
-          src="{{url_for('static', filename = 'img/hamburguesas/h-2.jpg')}}"
-          alt=""
-          class="rounded"
-          style="width: 250px"
-        />
+{% extends "client/base.html" %}
+{% block title %}{{ producto.nombre }} · Las Musas{% endblock %}
+{% block nav_carta %}active{% endblock %}
+
+{% set agotado = not producto.existencias or producto.existencias <= 0 %}
+
+{% block content %}
+<div class="dp-wrap"
+     id="detalle-producto"
+     data-id="{{ producto.idProducto }}"
+     data-nombre="{{ producto.nombre }}"
+     data-precio="{{ producto.precio }}"
+     data-imagen="{{ producto.imagen or '' }}"
+     data-carrito-url="{{ url_for('cliente.pag_carrito') }}">
+
+  <!-- Breadcrumb -->
+  <nav class="carta-breadcrumb" aria-label="Ruta">
+    <a href="{{ url_for('cliente.home') }}">Inicio</a>
+    <span>/</span>
+    <a href="{{ url_for('cliente.productos_categoria', categoria=producto.nombreCategoria) }}">{{ producto.nombreCategoria }}</a>
+    <span>/</span>
+    <span class="actual">{{ producto.nombre }}</span>
+  </nav>
+
+  <div class="dp-grid">
+    <!-- Columna imagen -->
+    <div>
+      <div class="dp-media">
+        {% if producto.imagen %}
+          <img src="{{ url_for('static', filename='img/' ~ producto.imagen) }}" alt="{{ producto.nombre }}" />
+        {% else %}
+          <div class="producto-card__ph"><i class="bi bi-fire"></i></div>
+        {% endif %}
+        {% if producto.destacado %}
+          <span class="dp-media__flag"><i class="bi bi-fire"></i> {{ producto.destacado }}</span>
+        {% endif %}
       </div>
 
-      <div class="col-sm-6 text-center">
-        <div class="informacion-producto-ingredientes">
-          <p>{{producto["descripcion"]}}</p>
+      <div class="dp-badges">
+        <div class="dp-badge">
+          <i class="bi bi-fire"></i>
+          <strong>A las brasas</strong>
+          <span>Carbón y leña</span>
         </div>
+        <div class="dp-badge">
+          <i class="bi bi-clock-history"></i>
+          <strong>Al momento</strong>
+          <span>Nada precocido</span>
+        </div>
+        <div class="dp-badge">
+          <i class="bi bi-basket3"></i>
+          <strong>De la casa</strong>
+          <span>Insumos frescos</span>
+        </div>
+      </div>
 
-        <p class="informacion-producto-precio">
-          <span>S/.</span>{{producto["precio"]}}
-        </p>
+      <div class="dp-nota">
+        <i class="bi bi-lightbulb"></i>
+        <div>
+          <strong>El secreto de la casa</strong>
+          <p>Sellado en plancha de hierro fundido para una costra caramelizada que retiene todo el jugo.</p>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="main-content-personalizar">
-    <h3 class="text-start">Personaliza</h3>
-    <div class="personalizar-salsas">
-      <h4>Elegir salsas</h4>
-      <div class="d-flex justify-content-around">
-        {% for crema in cremas %}
-        <div class="custom-item">
-          <div class="custom-item__img">
-            <img
-              src="{{url_for('static', filename = 'img/personalizar/mayonesa.jpg')}}"
-              alt=""
-              width="68"
-              height="68"
-            />
+    <!-- Columna info + personalizar -->
+    <div>
+      <div class="d-flex align-items-center justify-content-between gap-3">
+        <span class="dp-eyebrow">{{ producto.nombreCategoria }}</span>
+        {% if agotado %}
+          <span class="dp-disp agotado"><i class="bi bi-x-circle-fill"></i> Agotado</span>
+        {% else %}
+          <span class="dp-disp"><i class="bi bi-check-circle-fill"></i> Disponible ahora</span>
+        {% endif %}
+      </div>
+
+      <h1 class="dp-titulo">{{ producto.nombre }}</h1>
+      <div class="d-flex align-items-baseline gap-2 mt-2">
+        <span class="dp-precio">S/ {{ '%.2f'|format(producto.precio) }}</span>
+        <span class="small" style="color: var(--musa-texto-suave);">Precio base</span>
+      </div>
+      <p class="dp-desc">{{ producto.descripcion }}</p>
+
+      <!-- Personalizar -->
+      <div class="dp-card">
+        <div class="dp-card__head">
+          <h2>Personaliza tu pedido</h2>
+          <span>Opcional</span>
+        </div>
+        {% if cremas %}
+          <p class="dp-card__sub">Elige las cremas artesanales que quieras agregar.</p>
+          <div class="crema-grid">
+            {% for crema in cremas %}
+              <label class="crema-card">
+                <span class="crema-card__info">
+                  {% if crema.imagen %}
+                    <img class="crema-card__img" src="{{ url_for('static', filename='img/' ~ crema.imagen) }}" alt="{{ crema.nombre }}" />
+                  {% else %}
+                    <span class="crema-card__img"></span>
+                  {% endif %}
+                  <span>
+                    <span class="crema-card__nombre d-block">{{ crema.nombre }}</span>
+                    <span class="crema-card__precio">+ S/ {{ '%.2f'|format(crema.precio) }}</span>
+                  </span>
+                </span>
+                <input
+                  class="crema-check"
+                  type="checkbox"
+                  value="{{ crema.idProducto }}"
+                  data-nombre="{{ crema.nombre }}"
+                  data-precio="{{ crema.precio }}"
+                />
+              </label>
+            {% endfor %}
           </div>
-          <p>{{crema["nombre"]}}</p>
-          <p class="precio-agregar"><span>S/.</span>{{crema["precio"]}}</p>
-          <input
-            type="checkbox"
-            name="crema"
-            value="{{crema['idProducto']}}"
-            class="valores"
-          />
+        {% else %}
+          <p class="dp-card__sub mb-0">Este producto no admite cremas adicionales.</p>
+        {% endif %}
+
+        <!-- Cantidad + agregar -->
+        <div class="dp-accion">
+          <div class="dp-stepper">
+            <button type="button" data-step="-1" aria-label="Quitar uno">−</button>
+            <span id="dp-qty">1</span>
+            <button type="button" data-step="1" aria-label="Agregar uno">+</button>
+          </div>
+          <button type="button" class="btn-brasa flex-grow-1" data-agregar {{ 'disabled' if agotado }}>
+            <i class="bi bi-bag-plus"></i>
+            <span data-dp-btn-texto>Agregar al carrito — S/ {{ '%.2f'|format(producto.precio) }}</span>
+          </button>
         </div>
-        {% endfor %}
+
+        <div class="dp-reassure">
+          <i class="bi bi-shop"></i> Listo para recoger en ~20 min · retiro en tienda
+        </div>
       </div>
     </div>
   </div>
-  <div class="text-end">
-    <a
-      id="agregar-carrito"
-      href="{{url_for('cliente.pag_carrito')}}"
-      class="btn btn-success text-center"
-      >Agregar al carrito</a
-    >
-  </div>
 
-  <script
-    src="{{url_for('static', filename = 'js/guardarProductos.js')}}"
-    type="module"
-  ></script>
-</section>
+  <!-- Barra flotante móvil -->
+  {% if not agotado %}
+  <div class="dp-mobile-bar">
+    <button type="button" data-agregar>
+      <span class="d-flex align-items-center gap-2">
+        <span class="musa-cart-count" id="dp-mob-qty">1</span> Agregar
+      </span>
+      <span class="d-flex align-items-center gap-1">
+        <span id="dp-mob-precio">S/ {{ '%.2f'|format(producto.precio) }}</span>
+        <i class="bi bi-arrow-right"></i>
+      </span>
+    </button>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/detalle-producto.js') }}"></script>
 {% endblock %}

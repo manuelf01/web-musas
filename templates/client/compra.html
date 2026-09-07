@@ -1,135 +1,194 @@
-{% extends "client/main.html" %} {% block titulo %} Comprar producto {% endblock
-%} {% block contenido %}
+{% extends "client/base.html" %}
+{% block title %}Finalizar pedido · Las Musas{% endblock %}
 
-<section class="mt-5 mb-3 row m-auto">
-  <div class="col-lg-6">
-    <h3 class="m-3 fs-5 fw-bold">Productos</h3>
-    <div class="productos-comprar"></div>
+{% block content %}
+<div class="cx-wrap">
+  <nav class="carta-breadcrumb" aria-label="Ruta">
+    <a href="{{ url_for('cliente.home') }}">Inicio</a>
+    <span>/</span>
+    <a href="{{ url_for('cliente.pag_carrito') }}">Carrito</a>
+    <span>/</span>
+    <span class="actual">Finalizar pedido</span>
+  </nav>
+
+  <div class="cx-head">
+    <div>
+      <span class="dp-eyebrow">Retiro en mostrador</span>
+      <h1>Finalizar pedido</h1>
+      <p class="conteo">
+        <i class="bi bi-geo-alt-fill" style="color: var(--musa-brasa);"></i>
+        Retiro en local: <b>Calle Schell 385, Miraflores</b> · 6:00 p.m – 10:00 p.m
+      </p>
+    </div>
   </div>
-  <div class="col-lg-6">
-    <h3 class="m-3 fs-5 fw-bold">Datos compra</h3>
-    <form
-      action=""
-      method="post"
-      class="d-flex flex-column justify-content-center m-5"
-    >
-      {% if sesion %}
-      <input
-        type="hidden"
-        name="idUsuario"
-        value="{{idUsuario}}"
-        id="idUsuario"
-      />
-      {% endif %}
-      <div class="mb-3">
-        <label for="dni" class="form-label">Dni:</label>
-        {% if sesion %}
-        <input
-          required
-          disabled
-          type="number"
-          class="form-control"
-          name="dni"
-          id="dni"
-          value="{{dni}}"
-        />
-        {% else %}
-        <input
-          required
-          type="number"
-          class="form-control"
-          name="dni"
-          id="dni"
-        />
-        {% endif %}
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="musa-alert {{ 'musa-alert--ok' if category == 'ok' }} d-flex gap-2 mb-4">
+        <i class="bi bi-exclamation-circle-fill mt-1"></i><div class="small">{{ message }}</div>
       </div>
-      <div class="mb-3">
-        <label for="nombres" class="form-label">Nombres:</label>
-        {% if sesion %}
-        <input
-          required
-          disabled
-          type="text"
-          class="form-control"
-          name="nombres"
-          id="nombres"
-          value="{{cliente + ' ' + apellidos}}"
-        />
-        {% else %}
-        <input
-          required
-          type="text"
-          class="form-control"
-          name="nombres"
-          id="nombres"
-        />
-        {% endif %}
-      </div>
-      <div class="mb-3">
-        <label for="telefono" class="form-label">Número telefono:</label>
-        {% if sesion %}
-        <input
-          disabled
-          type="number"
-          class="form-control"
-          name="telefono"
-          id="telefono"
-          value="{{telefono}}"
-        />
-        {% else %}
-        <input
-          type="number"
-          class="form-control"
-          name="telefono"
-          id="telefono"
-        />
-        {% endif %}
-      </div>
-      <div class="mb-3">
-        <label for="hora-recojo" class="form-label">Hora recojo:</label>
-        <input
-          type="time"
-          class="form-control"
-          name="hora-recojo"
-          id="hora-recojo"
-        />
-      </div>
-      <div class="form-check">
-        <input
-          type="checkbox"
-          class="form-check-input"
-          id="boleta"
-          name="boleta"
-        />
-        <label class="form-check-label" for="exampleCheck1">Boleta</label>
-      </div>
-      <div class="form-check">
-        <input
-          type="checkbox"
-          class="form-check-input"
-          id="billetera-digital"
-          name="billeteraDigital"
-        />
-        <label class="form-check-label" for="exampleCheck1"
-          >Billetera digital</label
-        >
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Aviso carrito vacío -->
+  <div id="ck-vacio" class="cx-empty" hidden>
+    <i class="bi bi-bag"></i>
+    <h2>No hay nada que pedir</h2>
+    <p>Tu carrito está vacío.</p>
+    <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">Ver la carta</a>
+  </div>
+
+  <div id="ck-contenido" hidden>
+    <form method="post" id="checkout-form" class="ck-grid">
+      <input type="hidden" name="carrito_json" id="carrito_json" value="[]" />
+
+      <!-- Columna izquierda -->
+      <div>
+        <div class="ck-modo">
+          <i class="bi bi-shop"></i>
+          <div>
+            <strong>Modalidad: Retiro en tienda</strong>
+            <span>Sede Miraflores · cocina abierta y brasas listas</span>
+          </div>
+          <span class="gratis">Sin costo</span>
+        </div>
+
+        <!-- Datos de quien recoge -->
+        <div class="ck-card">
+          <h2><span class="ck-num">1</span> Datos de quien recoge</h2>
+
+          {% if sesion %}
+            <div class="musa-alert musa-alert--ok d-flex gap-2 mb-3">
+              <i class="bi bi-person-check-fill mt-1"></i>
+              <div class="small">Datos de tu cuenta. Puedes editarlos si recoge otra persona.</div>
+            </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-sm-4 musa-field">
+              <label for="dni" class="musa-field-label">DNI</label>
+              <input type="text" inputmode="numeric" maxlength="8" pattern="[0-9]{8}"
+                     class="musa-input" id="dni" name="dni" placeholder="8 dígitos" required
+                     value="{{ sesion.dni if sesion else '' }}" />
+            </div>
+            <div class="col-sm-4 musa-field">
+              <label for="nombres" class="musa-field-label">Nombres</label>
+              <input type="text" class="musa-input" id="nombres" name="nombres" placeholder="Ej. Rodrigo" required
+                     value="{{ sesion.nombres if sesion else '' }}" />
+            </div>
+            <div class="col-sm-4 musa-field">
+              <label for="apellidos" class="musa-field-label">Apellidos</label>
+              <input type="text" class="musa-input" id="apellidos" name="apellidos" placeholder="Ej. Carranza" required
+                     value="{{ sesion.apellidos if sesion else '' }}" />
+            </div>
+            <div class="col-12 musa-field">
+              <label for="telefono" class="musa-field-label">Teléfono de contacto / WhatsApp</label>
+              <input type="tel" inputmode="numeric" maxlength="9" pattern="[0-9]{9}"
+                     class="musa-input" id="telefono" name="telefono" placeholder="987 654 321" required
+                     value="{{ sesion.telefono if sesion else '' }}" />
+            </div>
+          </div>
+
+          <div class="mt-3 musa-field">
+            <label class="musa-field-label">
+              <span><i class="bi bi-clock"></i> ¿A qué hora pasas a recoger?</span>
+              <span class="musa-field-hint">Franjas de 30 min · cupo limitado</span>
+            </label>
+
+            {% set libres = franjas | selectattr("disponible") | list %}
+            {% if libres %}
+              <div class="ck-horas mt-1">
+                {% for f in franjas %}
+                  <button type="button"
+                          class="ck-hora {% if not f.disponible %}is-off{% endif %} {% if f.hora == libres[0].hora %}is-active{% endif %}"
+                          data-hora="{{ f.hora }}"
+                          {% if not f.disponible %}disabled{% endif %}>
+                    <strong>{{ f.label }}</strong>
+                    <span>
+                      {% if f.motivo == 'llena' %}Agotada
+                      {% elif f.motivo == 'pasada' %}—
+                      {% elif f.hora == libres[0].hora %}Antes posible
+                      {% else %}{{ f.restantes }} cupos{% endif %}
+                    </span>
+                  </button>
+                {% endfor %}
+              </div>
+              <input type="hidden" name="hora_recojo" id="hora_recojo" value="{{ libres[0].hora }}" />
+            {% else %}
+              <div class="musa-alert mt-1">
+                <i class="bi bi-clock-history"></i>
+                No hay franjas disponibles para hoy (cocina llena o fuera de horario 6–10 p.m). Intenta más tarde.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Comprobante y pago -->
+        <div class="ck-card">
+          <h2><span class="ck-num">2</span> Comprobante y forma de pago</h2>
+
+          <label class="ck-opcion">
+            <i class="bi bi-receipt"></i>
+            <div>
+              <strong>Emitir boleta electrónica</strong>
+              <span>Te la entregamos al recoger tu pedido</span>
+            </div>
+            <input type="checkbox" name="boleta" value="1" />
+          </label>
+
+          <p class="musa-field-label mt-3 mb-2">Forma de pago</p>
+          <label class="ck-opcion">
+            <i class="bi bi-qr-code"></i>
+            <div>
+              <strong>Billetera digital (Yape / Plin)</strong>
+              <span>Coordinamos el pago al confirmar</span>
+            </div>
+            <input type="radio" name="pago" value="digital" checked />
+          </label>
+          <div class="ck-yape" id="ck-yape-info">
+            <strong>Yape / Plin a Las Musas:</strong> 987 654 321<br />
+            <span style="color: var(--musa-texto-suave);">Muestra la confirmación del pago al recoger.</span>
+          </div>
+          <label class="ck-opcion">
+            <i class="bi bi-cash-coin"></i>
+            <div>
+              <strong>Pagar al recoger</strong>
+              <span>Efectivo o tarjeta en el local</span>
+            </div>
+            <input type="radio" name="pago" value="tienda" />
+          </label>
+
+          <div class="musa-field mt-3">
+            <label for="notas" class="musa-field-label">Instrucciones para cocina (opcional)</label>
+            <textarea class="musa-input" id="notas" name="notas" rows="2"
+              placeholder="Ej. sin cebolla en la smash, empaque separado."></textarea>
+          </div>
+        </div>
       </div>
 
-      <div class="text-end mt-2">
-        <button id="comprar-producto" type="submit" class="btn btn-success">
-          Comprar
+      <!-- Columna derecha: resumen -->
+      <aside class="ck-summary">
+        <h2>Tu pedido para llevar <span id="ck-conteo">0 ítems</span></h2>
+        <div id="ck-items"></div>
+        <div class="ck-tot">
+          <div class="ck-tot__row"><span>Subtotal neto</span><span id="ck-subtotal">S/ 0.00</span></div>
+          <div class="ck-tot__row"><span>IGV (18% incluido)</span><span id="ck-igv">S/ 0.00</span></div>
+          <div class="ck-tot__row"><span>Preparación y recojo</span><span style="color: var(--musa-exito); font-weight: 600;">Gratis</span></div>
+          <div class="ck-tot__row total"><span>Total a pagar</span><strong id="ck-total">S/ 0.00</strong></div>
+        </div>
+        <button type="submit" class="btn-brasa w-100 mt-3">
+          <span id="ck-btn-texto">Confirmar pedido</span> <i class="bi bi-arrow-right"></i>
         </button>
-      </div>
+        <p class="small text-center mt-3 mb-0" style="color: var(--musa-texto-suave);">
+          <i class="bi bi-shield-check" style="color: var(--musa-exito);"></i>
+          Te avisaremos por WhatsApp cuando esté listo para recoger.
+        </p>
+      </aside>
     </form>
   </div>
-</section>
+</div>
+{% endblock %}
 
-<script
-  src="{{url_for('static', filename = 'js/mostrarProductosCompra.js')}}"
-  type="module"
-></script>
-<script
-  src="{{url_for('static', filename= 'js/comprarProductos.js')}}"
-  type="module"
-></script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
 {% endblock %}

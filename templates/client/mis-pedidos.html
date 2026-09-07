@@ -1,0 +1,120 @@
+{% extends "client/base.html" %}
+{% block title %}Mis pedidos · Las Musas{% endblock %}
+{% block nav_pedidos %}active{% endblock %}
+
+{% block content %}
+<div class="cx-wrap" id="mis-pedidos">
+  <div class="cx-head">
+    <div>
+      <h1>Mis pedidos</h1>
+      <p class="conteo">Repite tu pedido favorito en un toque.</p>
+    </div>
+  </div>
+
+  {% if not logueado %}
+    <div class="cx-empty">
+      <i class="bi bi-person-lock"></i>
+      <h2>Inicia sesión para ver tu historial</h2>
+      <p>Con tu cuenta guardas tus pedidos y los repites cuando quieras.</p>
+      <a href="{{ url_for('cliente.auth.login') }}" class="btn-brasa">Iniciar sesión</a>
+    </div>
+
+  {% elif not pedidos %}
+    <div class="cx-empty">
+      <i class="bi bi-bag-heart"></i>
+      <h2>Aún no tienes pedidos</h2>
+      <p>Cuando hagas tu primer pedido aparecerá acá.</p>
+      <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">Ver la carta</a>
+    </div>
+
+  {% else %}
+    <div class="mp-filtros">
+      <button class="musa-chip is-active" data-filtro="todos" type="button">Todos</button>
+      <button class="musa-chip" data-filtro="pendiente" type="button">Pendientes de recojo</button>
+      <button class="musa-chip" data-filtro="recogido" type="button">Recogidos</button>
+    </div>
+
+    <div class="mp-lista">
+      {% for p in pedidos %}
+        {% set repetir = [] %}
+        {% for l in p.lineas if l.disponible %}
+          {% set _ = repetir.append({
+            'idProducto': l.idProducto, 'nombre': l.nombre, 'precio': l.precio,
+            'imagen': l.imagen, 'cantidad': l.cantidad, 'cremas': l.cremas
+          }) %}
+        {% endfor %}
+
+        <article class="mp-card" data-estado="{{ 'recogido' if p.recogido else 'pendiente' }}">
+          <div class="mp-card__head">
+            <div>
+              <strong>Pedido N° {{ p.idPedido }}</strong>
+              <span class="mp-card__fecha">{{ p.fecha }} · recojo {{ p.hora }}</span>
+            </div>
+            {% if p.recogido %}
+              <span class="mp-estado recogido"><i class="bi bi-check-circle-fill"></i> Recogido</span>
+            {% else %}
+              <span class="mp-estado pendiente"><i class="bi bi-clock-fill"></i> Pendiente</span>
+            {% endif %}
+          </div>
+
+          <div class="mp-card__items">
+            {% for l in p.lineas %}
+              <div class="mp-linea">
+                <span>{{ l.cantidad }} × {{ l.nombre }}{% if not l.disponible %} <em>(ya no está en carta)</em>{% endif %}</span>
+                {% if l.cremas %}
+                  <span class="mp-linea__cremas">{{ l.cremas | map(attribute='nombre') | join(', ') }}</span>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="mp-card__foot">
+            <div>
+              <span class="mp-total-label">Total</span>
+              <strong class="mp-total">S/ {{ '%.2f'|format(p.total) }}</strong>
+            </div>
+            <div class="mp-acciones">
+              {% if not p.recogido %}
+                <button class="btn-contorno mp-verclave" type="button"
+                        data-clave="{{ p.keyPedido }}" data-hora="{{ p.hora }}">
+                  <i class="bi bi-key"></i> Ver palabra clave
+                </button>
+              {% endif %}
+              {% if repetir %}
+                <button class="btn-brasa mp-repetir" type="button"
+                        data-repetir='{{ repetir | tojson }}'>
+                  <i class="bi bi-arrow-repeat"></i> Repetir pedido
+                </button>
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+
+    <p class="mp-vacio-filtro" hidden>No tienes pedidos en esta categoría.</p>
+  {% endif %}
+</div>
+
+<!-- Modal palabra clave -->
+<div class="modal fade" id="modalClave" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border: 0; border-radius: var(--musa-radio-card);">
+      <div class="modal-body text-center p-4">
+        <span class="small text-uppercase" style="letter-spacing: 0.12em; color: var(--musa-texto-suave);">
+          Palabra clave de recojo
+        </span>
+        <div style="font-family: 'Space Grotesk', monospace; font-size: 52px; font-weight: 700; letter-spacing: 0.12em; color: var(--musa-brasa);" id="clave-num">0000</div>
+        <p class="small mb-3" style="color: var(--musa-texto-suave);">
+          Dísela al personal al recoger. Recojo hoy a las <span id="clave-hora">--:--</span>.
+        </p>
+        <button class="btn-brasa w-100" data-bs-dismiss="modal">Entendido</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/mis-pedidos.js') }}"></script>
+{% endblock %}

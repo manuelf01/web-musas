@@ -1,0 +1,108 @@
+{% extends "client/base.html" %}
+{% block title %}Conócenos — Las Musas{% endblock %}
+
+{% block content %}
+<section class="pagina-hero">
+  <div class="pagina-hero__inner">
+    <span class="eyebrow">Conócenos</span>
+    <h1>Brasas nocturnas hechas en Lima</h1>
+    <p>
+      Nacimos en Miraflores en 2021 con una idea simple: la mejor hamburguesa
+      de la ciudad, servida cuando el resto ya cerró.
+    </p>
+  </div>
+</section>
+
+<div class="pagina-body">
+  <section id="historia">
+    <h2>Historia</h2>
+    <p>
+      Las Musas empezó como un carrito de brasas en una esquina de Barranco.
+      La receta era de la abuela: carne madurada, pan brioche horneado el
+      mismo día y salsas emulsionadas a mano. En pocos meses la cola daba la
+      vuelta a la manzana.
+    </p>
+    <p>
+      Hoy tenemos local propio en Calle Schell 385, Miraflores, con cocina
+      abierta hasta pasada la medianoche. Seguimos moliendo la carne cada
+      tarde y horneando el pan a diario.
+    </p>
+  </section>
+
+  <section id="locales">
+    <h2>Locales y horarios</h2>
+    <div class="info-grid">
+      <div class="info-card">
+        <h3><i class="bi bi-shop" style="color: var(--musa-brasa);"></i> Miraflores (Central)</h3>
+        <p class="muted">Calle Schell 385, a espaldas del Parque Kennedy.</p>
+        <p><strong>Martes a domingo · 6:00 p.m – 10:00 p.m</strong></p>
+        <p class="muted">Solo retiro en tienda. Estacionamiento para recojo rápido.</p>
+      </div>
+      <div class="info-card">
+        <h3><i class="bi bi-geo-alt" style="color: var(--musa-brasa);"></i> Barranco (Origen)</h3>
+        <p class="muted">Av. Grau 280, cerca al puente de los suspiros.</p>
+        <p><strong>Viernes y sábado · 7:00 p.m – 12:00 a.m</strong></p>
+        <p class="muted">Punto de brasas y cervezas artesanales.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="sostenibilidad">
+    <h2>Sostenibilidad</h2>
+    <p>
+      Trabajamos con proveedores locales de carne y verduras para acortar la
+      cadena de transporte. El empaque de retiro es de cartón reciclado y
+      papel encerado sin plástico.
+    </p>
+    <p class="muted">
+      El aceite usado se entrega a una planta de biodiésel y las brasas
+      provienen de carbón de descarte de aserraderos certificados.
+    </p>
+  </section>
+
+  <section id="faq">
+    <h2>Preguntas frecuentes</h2>
+
+    <details class="faq-item">
+      <summary>¿Hacen delivery?</summary>
+      <div class="faq-body">Por ahora no. Todos los pedidos son para <strong>retiro en tienda</strong>. Al confirmar tu pedido recibes una palabra clave que muestras en el mostrador para recogerlo.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>¿Cómo pago?</summary>
+      <div class="faq-body">Al momento de recoger, con billetera digital (Yape / Plin), efectivo o tarjeta. Si eliges "billetera digital" al ordenar, coordinamos el pago al confirmar.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>¿Necesito crear una cuenta?</summary>
+      <div class="faq-body">No es obligatorio, puedes pedir como invitado. Con cuenta se autocompletan tus datos y puedes repetir pedidos anteriores en un toque.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>¿En cuánto tiempo está listo mi pedido?</summary>
+      <div class="faq-body">Entre 20 y 35 minutos según la carga de cocina. Te avisamos por WhatsApp cuando esté listo para recoger.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>¿Puedo cancelar un pedido?</summary>
+      <div class="faq-body">Sí, mientras no haya entrado a cocina. Una vez iniciada la preparación no se aceptan cancelaciones.</div>
+    </details>
+
+    <details class="faq-item">
+      <summary>¿Tienen opciones sin gluten o vegetarianas?</summary>
+      <div class="faq-body">Tenemos pan sin gluten a pedido y una hamburguesa de hongos. Consúltanos al recoger o escríbenos por WhatsApp.</div>
+    </details>
+  </section>
+
+  <section id="reclamaciones">
+    <h2>Libro de Reclamaciones</h2>
+    <p>
+      Conforme al Código de Protección y Defensa del Consumidor (Ley N° 29571),
+      contamos con Libro de Reclamaciones virtual.
+    </p>
+    <a href="{{ url_for('cliente.libro_reclamaciones') }}" class="btn-brasa">
+      <i class="bi bi-journal-text"></i> Ir al Libro de Reclamaciones
+    </a>
+  </section>
+</div>
+{% endblock %}

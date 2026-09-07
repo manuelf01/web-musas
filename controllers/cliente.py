@@ -1,25 +1,99 @@
-from flask import Blueprint, render_template, session, redirect, url_for
+import json
+import re
+
+from flask import Blueprint, render_template, session, redirect, url_for, request, flash
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
+from model.Pedido import Pedido
 cliente = Blueprint('cliente', __name__)
+
+RE_DNI = re.compile(r"^\d{8}$")
+RE_TEL = re.compile(r"^\d{9}$")
+RE_HORA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def _cliente_nombre():
+    user = session.get("cliente.auth", None)
+    return user["nombres"] if user else None
 
 @cliente.route("/")
 def home():
     user = session.get("cliente.auth", None)
     categorias = CategoriaProducto.obtener_categorias()
     productos = Producto.obtener_productos_limite()
-    if user:
-        return render_template("client/index.html", cliente = user["nombres"], categorias = categorias, productos=productos)
-    return render_template("client/index.html", categorias = categorias, productos=productos)
+    totales = Producto.contar_por_categoria()
+    cliente_nombre = user["nombres"] if user else None
+    return render_template(
+        "client/index.html",
+        cliente=cliente_nombre,
+        categorias=categorias,
+        productos=productos,
+        totales=totales,
+    )
 
 @cliente.route("/productos/<string:categoria>")
 def productos_categoria(categoria):
     user = session.get("cliente.auth", None)
     categorias = CategoriaProducto.obtener_categorias()
     productos = Producto.getProductosCategoria(categoria)
-    if user:
-        return render_template("client/productos.html", cliente = user["nombres"], productos = productos, categoria = categoria, categorias = categorias)
-    return render_template("client/productos.html", productos = productos, categoria = categoria, categorias = categorias)
+
+    orden = request.args.get("orden", "recomendados")
+    if orden == "precio-asc":
+        productos.sort(key=lambda p: p["precio"])
+    elif orden == "precio-desc":
+        productos.sort(key=lambda p: p["precio"], reverse=True)
+    elif orden == "nombre":
+        productos.sort(key=lambda p: p["nombre"].lower())
+
+    return render_template(
+        "client/productos.html",
+        cliente=user["nombres"] if user else None,
+        productos=productos,
+        categoria=categoria,
+        categorias=categorias,
+        orden=orden,
+    )
+
+@cliente.route("/carta")
+def carta():
+    categorias = CategoriaProducto.obtener_categorias()
+    productos = Producto.obtener_productos()
+    return render_template(
+        "client/carta.html",
+        cliente=_cliente_nombre(),
+        categorias=categorias,
+        productos=productos,
+    )
+
+
+@cliente.route("/mis-pedidos")
+def mis_pedidos():
+    user = session.get("cliente.auth", None)
+    pedidos = Pedido.historial_cliente(user["idUsuario"]) if user else []
+    return render_template(
+        "client/mis-pedidos.html",
+        cliente=_cliente_nombre(),
+        logueado=bool(user),
+        pedidos=pedidos,
+    )
+
+
+@cliente.route("/nosotros")
+def nosotros():
+    return render_template("client/nosotros.html", cliente=_cliente_nombre())
+
+
+@cliente.route("/libro-de-reclamaciones", methods=["GET", "POST"])
+def libro_reclamaciones():
+    if request.method == "POST":
+        # No se persiste (no hay tabla). Se registra el envío y se confirma.
+        if not (request.form.get("nombres") and request.form.get("dni") and request.form.get("detalle")):
+            flash("Completa tu nombre, DNI y el detalle del reclamo.", "error")
+        else:
+            flash("Tu reclamo fue registrado. Te contactaremos en un plazo máximo de 15 días hábiles.", "ok")
+            return redirect(url_for("cliente.libro_reclamaciones"))
+    return render_template("client/reclamaciones.html", cliente=_cliente_nombre())
+
 
 @cliente.route("/formulario_registro_cliente")
 def formulario_registro_cliente():
@@ -27,28 +101,126 @@ def formulario_registro_cliente():
 
 @cliente.route("/producto/<int:id>")
 def comprar_producto(id):
-    user = session.get("cliente.auth", None)
     producto = Producto.obtener_producto_por_id(id)
-    cremas = Producto.getProductosCategoria("Cremas")
     if producto is None:
         return redirect(url_for("cliente.home"))
-    if user:
-        return render_template("client/seleccion-producto.html", cliente = user["nombres"], producto=producto, cremas = cremas)
-    return render_template("client/seleccion-producto.html", producto=producto, cremas = cremas)
+    cremas = Producto.getProductosCategoria("Cremas")
+    return render_template(
+        "client/seleccion-producto.html",
+        cliente=_cliente_nombre(),
+        producto=producto,
+        cremas=cremas,
+    )
 
 @cliente.route("/carrito")
 def pag_carrito():
-    user = session.get("cliente.auth", None)
-    if user:
-        return render_template("client/carrito.html", cliente = user["nombres"])
-    return render_template("client/carrito.html")
+    return render_template("client/carrito.html", cliente=_cliente_nombre())
 
-@cliente.route("/compra")
+
+@cliente.route("/compra", methods=["GET", "POST"])
 def pag_compra():
     user = session.get("cliente.auth", None)
-    if user:
-        return render_template("client/compra.html", sesion = user, cliente = user["nombres"], apellidos = user["apellidos"], telefono = user["telefono"], dni= user["dni"], idUsuario = user["idUsuario"])
-    return render_template("client/compra.html")
+
+    if request.method == "POST":
+        return _procesar_compra(user)
+
+    return render_template(
+        "client/compra.html",
+        cliente=_cliente_nombre(),
+        sesion=user,
+        franjas=Pedido.franjas_recojo(),
+    )
+
+
+def _procesar_compra(user):
+    # --- items del carrito (vienen del localStorage, se re-cotizan contra la BD) ---
+    try:
+        carrito = json.loads(request.form.get("carrito_json") or "[]")
+    except ValueError:
+        carrito = []
+    if not carrito:
+        flash("Tu carrito está vacío.", "error")
+        return redirect(url_for("cliente.pag_carrito"))
+
+    ids_prod = [it.get("idProducto") for it in carrito]
+    ids_crema = [c for it in carrito for c in (it.get("cremas") or [])]
+    precios = Producto.precios_por_ids(ids_prod + ids_crema)
+
+    items = []
+    for it in carrito:
+        p = precios.get(int(it.get("idProducto", 0)))
+        if not p:
+            continue
+        cantidad = max(1, int(it.get("cantidad", 1)))
+        cremas_ids, cremas_extra = [], 0.0
+        for cid in (it.get("cremas") or []):
+            c = precios.get(int(cid))
+            if c:
+                cremas_ids.append(int(cid))
+                cremas_extra += c["precio"]
+        precio_unidad = round(p["precio"] + cremas_extra, 2)
+        items.append({
+            "idProducto": int(it["idProducto"]),
+            "nombre": p["nombre"],
+            "precioUnidad": precio_unidad,
+            "cantidad": cantidad,
+            "precioTotal": round(precio_unidad * cantidad, 2),
+            "cremas": cremas_ids,
+        })
+
+    if not items:
+        flash("No pudimos procesar los productos del carrito.", "error")
+        return redirect(url_for("cliente.pag_carrito"))
+
+    # --- datos del formulario (editables aunque haya sesión: puede recoger otra persona) ---
+    dni = (request.form.get("dni") or "").strip()
+    nombres = ((request.form.get("nombres") or "") + " " + (request.form.get("apellidos") or "")).strip()
+    telefono = (request.form.get("telefono") or "").strip()
+    id_usuario = user["idUsuario"] if user else None
+
+    hora = (request.form.get("hora_recojo") or "").strip()
+    boleta = bool(request.form.get("boleta"))
+    pago_digital = request.form.get("pago") == "digital"
+    notas = (request.form.get("notas") or "").strip()[:255]
+
+    error = None
+    if not RE_DNI.match(dni):
+        error = "El DNI debe tener 8 dígitos."
+    elif not nombres:
+        error = "Ingresa el nombre de quien recoge."
+    elif not RE_TEL.match(telefono):
+        error = "El teléfono debe tener 9 dígitos."
+    elif not RE_HORA.match(hora):
+        error = "Elige una hora de recojo."
+    elif not Pedido.franja_disponible(hora):
+        error = "Esa franja se llenó o ya pasó. Elige otra."
+
+    if error:
+        flash(error, "error")
+        return render_template(
+            "client/compra.html",
+            cliente=_cliente_nombre(),
+            sesion=user,
+            franjas=Pedido.franjas_recojo(),
+        )
+
+    id_pedido, key = Pedido.crear_pedido_completo(
+        id_usuario, dni, nombres, telefono, hora, boleta, pago_digital, notas, items
+    )
+    session["ultimo_pedido"] = id_pedido
+    return redirect(url_for("cliente.pedido_confirmado", id_pedido=id_pedido))
+
+
+@cliente.route("/pedido-confirmado/<int:id_pedido>")
+def pedido_confirmado(id_pedido):
+    pedido = Pedido.obtener_pedido_completo(id_pedido)
+    if pedido is None:
+        return redirect(url_for("cliente.home"))
+    return render_template(
+        "client/pedido-confirmado.html",
+        cliente=_cliente_nombre(),
+        pedido=pedido,
+    )
 # @cliente.route("/<tipo>")
 # def verMas(tipo):
 #     productos = []

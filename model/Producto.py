@@ -9,10 +9,10 @@ class Producto:
         with conexion.cursor() as cursor:
             if type(id) == str:
                 cursor.execute(
-                    "select * from producto p inner join categoriaProducto cp on cp.idCategoria = p.idCategoria where cp.nombreCategoria = %s", (id))
+                    "select p.* from producto p inner join categoriaProducto cp on cp.idCategoria = p.idCategoria where cp.nombreCategoria = %s order by p.idProducto", (id,))
             else:
                 cursor.execute(
-                    "select * from producto where idCategoria = %s", id)
+                    "select * from producto where idCategoria = %s order by idProducto", (id,))
             productos = cursor.fetchall()
         conexion.close()
 
@@ -23,10 +23,14 @@ class Producto:
         for producto in productos:
             diccionario = dict()
             diccionario["idProducto"] = producto[0]
+            diccionario["idCategoria"] = producto[1]
             diccionario["nombre"] = producto[2]
             diccionario["descripcion"] = producto[3]
             diccionario["precio"] = producto[4]
             diccionario["existencias"] = producto[5]
+            diccionario["imagen"] = producto[6] if len(producto) > 6 else None
+            diccionario["destacado"] = producto[7] if len(producto) > 7 else None
+            diccionario["nota"] = producto[8] if len(producto) > 8 else None
             lista_diccionarios.append(diccionario)
         return lista_diccionarios
 
@@ -51,29 +55,29 @@ class Producto:
         conexion.commit()
         conexion.close()
 
+    _COLS = ("p.idProducto, p.idCategoria, p.nombre, p.descripcion, p.precio, "
+             "p.existencias, p.imagen, p.destacado, p.nota, cp.nombreCategoria")
+
+    @staticmethod
+    def _fila_a_dict(f):
+        return {
+            "idProducto": f[0], "idCategoria": f[1], "nombre": f[2],
+            "descripcion": f[3], "precio": f[4], "existencias": f[5],
+            "imagen": f[6], "destacado": f[7], "nota": f[8], "nombreCategoria": f[9],
+        }
+
     @staticmethod
     def obtener_productos():
         conexion = obtener_conexion()
-        productos = []
-        query = "SELECT p.*, cp.nombreCategoria  FROM producto p INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria"
-
         with conexion.cursor() as cursor:
-            cursor.execute(query)
+            cursor.execute(
+                f"SELECT {Producto._COLS} FROM producto p "
+                "INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria "
+                "ORDER BY p.idCategoria, p.idProducto"
+            )
             productos = cursor.fetchall()
         conexion.close()
-
-        lista_diccionarios = []
-        for producto in productos:
-            diccionario = dict()
-            diccionario["idProducto"] = producto[0]
-            diccionario["idCategoria"] = producto[1]
-            diccionario["nombre"] = producto[2]
-            diccionario["descripcion"] = producto[3]
-            diccionario["precio"] = producto[4]
-            diccionario["existencias"] = producto[5]
-            diccionario["nombreCategoria"] = producto[6]
-            lista_diccionarios.append(diccionario)
-        return lista_diccionarios
+        return [Producto._fila_a_dict(f) for f in productos]
 
     @staticmethod
     def eliminar_producto(id):
@@ -89,22 +93,28 @@ class Producto:
         seleccion = None
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT p.idProducto, p.nombre, p.descripcion, p.precio, p.existencias, cp.nombreCategoria, p.idCategoria FROM producto p INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria WHERE idProducto = %s", (id))
+                "SELECT p.idProducto, p.nombre, p.descripcion, p.precio, p.existencias, "
+                "cp.nombreCategoria, p.idCategoria, p.imagen, p.destacado, p.nota "
+                "FROM producto p INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria "
+                "WHERE p.idProducto = %s", (id,))
             seleccion = cursor.fetchone()
         conexion.close()
 
         if seleccion is None:
             return seleccion
 
-        diccionario = dict()
-        diccionario["idProducto"] = seleccion[0]
-        diccionario["nombre"] = seleccion[1]
-        diccionario["descripcion"] = seleccion[2]
-        diccionario["precio"] = seleccion[3]
-        diccionario["existencias"] = seleccion[4]
-        diccionario["nombreCategoria"] = seleccion[5]
-        diccionario["idCategoria"] = seleccion[6]
-        return diccionario
+        return {
+            "idProducto": seleccion[0],
+            "nombre": seleccion[1],
+            "descripcion": seleccion[2],
+            "precio": seleccion[3],
+            "existencias": seleccion[4],
+            "nombreCategoria": seleccion[5],
+            "idCategoria": seleccion[6],
+            "imagen": seleccion[7],
+            "destacado": seleccion[8],
+            "nota": seleccion[9],
+        }
 
     @staticmethod
     def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria):
@@ -138,26 +148,66 @@ class Producto:
         conexion.commit()
         conexion.close()
 
-    def obtener_productos_limite():
+    def obtener_productos_limite(por_categoria=4):
         conexion = obtener_conexion()
-        productos = []
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM producto p WHERE (SELECT COUNT(*) FROM producto WHERE idCategoria = p.idCategoria AND idProducto <= p.idProducto) <= 3;")
+                """
+                SELECT p.idProducto, p.idCategoria, p.nombre, p.descripcion, p.precio,
+                       p.existencias, p.imagen, p.destacado, p.nota, cp.nombreCategoria
+                FROM producto p
+                INNER JOIN categoriaProducto cp ON cp.idCategoria = p.idCategoria
+                WHERE (SELECT COUNT(*) FROM producto x
+                       WHERE x.idCategoria = p.idCategoria
+                         AND x.idProducto <= p.idProducto) <= %s
+                ORDER BY p.idCategoria, p.idProducto
+                """,
+                (por_categoria,),
+            )
             productos = cursor.fetchall()
         conexion.close()
 
-        lista_diccionarios = []
-        for producto in productos:
-            diccionario = dict()
-            diccionario["idProducto"] = producto[0]
-            diccionario["idCategoria"] = producto[1]
-            diccionario["nombre"] = producto[2]
-            diccionario["descripcion"] = producto[3]
-            diccionario["precio"] = producto[4]
-            diccionario["existencias"] = producto[5]
-            lista_diccionarios.append(diccionario)
-        return lista_diccionarios
+        return [
+            {
+                "idProducto": p[0],
+                "idCategoria": p[1],
+                "nombre": p[2],
+                "descripcion": p[3],
+                "precio": p[4],
+                "existencias": p[5],
+                "imagen": p[6],
+                "destacado": p[7],
+                "nota": p[8],
+                "nombreCategoria": p[9],
+            }
+            for p in productos
+        ]
+
+    @staticmethod
+    def precios_por_ids(ids):
+        """{ idProducto: {'nombre':..., 'precio':...} } para los ids dados."""
+        ids = [int(i) for i in ids if str(i).isdigit()]
+        if not ids:
+            return {}
+        marcadores = ",".join(["%s"] * len(ids))
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                f"SELECT idProducto, nombre, precio FROM producto WHERE idProducto IN ({marcadores})",
+                ids,
+            )
+            filas = cursor.fetchall()
+        conexion.close()
+        return {f[0]: {"nombre": f[1], "precio": float(f[2])} for f in filas}
+
+    @staticmethod
+    def contar_por_categoria():
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT idCategoria, COUNT(*) FROM producto GROUP BY idCategoria")
+            filas = cursor.fetchall()
+        conexion.close()
+        return {idc: n for idc, n in filas}
 
     def obtener_total_productos():
         conexion = obtener_conexion()
@@ -169,22 +219,13 @@ class Producto:
 
     def obtener_productos_paginacion(limite, start_index):
         conexion = obtener_conexion()
-        productos = []
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT p.*, cp.nombreCategoria  FROM producto p INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria LIMIT %s OFFSET %s", (limite, (start_index-1)))
+                f"SELECT {Producto._COLS} FROM producto p "
+                "INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria "
+                "LIMIT %s OFFSET %s",
+                (limite, (start_index - 1)),
+            )
             productos = cursor.fetchall()
         conexion.close()
-
-        lista_diccionarios = []
-        for producto in productos:
-            diccionario = dict()
-            diccionario["idProducto"] = producto[0]
-            diccionario["idCategoria"] = producto[1]
-            diccionario["nombre"] = producto[2]
-            diccionario["descripcion"] = producto[3]
-            diccionario["precio"] = producto[4]
-            diccionario["existencias"] = producto[5]
-            diccionario["nombreCategoria"] = producto[6]
-            lista_diccionarios.append(diccionario)
-        return lista_diccionarios
+        return [Producto._fila_a_dict(f) for f in productos]

@@ -1,0 +1,96 @@
+{% extends "client/base.html" %}
+{% block title %}Libro de Reclamaciones — Las Musas{% endblock %}
+
+{% block content %}
+<section class="pagina-hero">
+  <div class="pagina-hero__inner">
+    <span class="eyebrow">Atención al cliente</span>
+    <h1>Libro de Reclamaciones</h1>
+    <p>Ley N° 29571 · Código de Protección y Defensa del Consumidor</p>
+  </div>
+</section>
+
+<div class="pagina-body" style="max-width: 720px;">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="musa-alert {{ 'musa-alert--ok' if category == 'ok' }} d-flex gap-2 mb-4">
+        <i class="bi {{ 'bi-check-circle-fill' if category == 'ok' else 'bi-exclamation-circle-fill' }} mt-1"></i>
+        <div class="small">{{ message }}</div>
+      </div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="reclamo-legal">
+    <strong>Las Musas Burger Joint SAC · RUC 20608945123</strong><br />
+    Calle Schell 385, Miraflores, Lima. El reclamo o queja registrado será
+    atendido en un plazo no mayor a 15 días hábiles. La formulación del reclamo
+    no impide acudir a otras vías de solución de controversias ni es requisito
+    previo para interponer una denuncia ante INDECOPI.
+  </div>
+
+  <form method="post" class="reclamo-form d-flex flex-column gap-3">
+    <div class="row g-3">
+      <div class="col-sm-7 musa-field">
+        <label for="nombres" class="musa-field-label">Nombres y apellidos</label>
+        <input type="text" class="musa-input" id="nombres" name="nombres" required />
+      </div>
+      <div class="col-sm-5 musa-field">
+        <label for="dni" class="musa-field-label">DNI</label>
+        <input type="text" inputmode="numeric" maxlength="8" class="musa-input" id="dni" name="dni" required />
+      </div>
+    </div>
+
+    <div class="row g-3">
+      <div class="col-sm-7 musa-field">
+        <label for="correo" class="musa-field-label">Correo electrónico</label>
+        <input type="email" class="musa-input" id="correo" name="correo" required />
+      </div>
+      <div class="col-sm-5 musa-field">
+        <label for="telefono" class="musa-field-label">Teléfono</label>
+        <input type="tel" inputmode="numeric" maxlength="9" class="musa-input" id="telefono" name="telefono" />
+      </div>
+    </div>
+
+    <div class="musa-field">
+      <label for="tipo" class="musa-field-label">Tipo</label>
+      <select class="musa-input" id="tipo" name="tipo">
+        <option value="reclamo">Reclamo (disconformidad con el producto o servicio)</option>
+        <option value="queja">Queja (malestar respecto a la atención)</option>
+      </select>
+    </div>
+
+    <div class="musa-field">
+      <label for="pedido" class="musa-field-label">N° de pedido (opcional)</label>
+      <input type="text" class="musa-input" id="pedido" name="pedido" placeholder="Ej. 8041" />
+    </div>
+
+    <div class="musa-field">
+      <label for="detalle" class="musa-field-label">Detalle</label>
+      <textarea class="musa-input" id="detalle" name="detalle" rows="5" required
+        placeholder="Describe lo ocurrido con la mayor claridad posible."></textarea>
+    </div>
+
+    <div class="musa-field">
+      <label for="pedido_cliente" class="musa-field-label">Lo que pides a Las Musas</label>
+      <textarea class="musa-input" id="pedido_cliente" name="pedido_cliente" rows="3"
+        placeholder="Ej. reembolso, cambio de producto, disculpas."></textarea>
+    </div>
+
+    <label class="d-flex align-items-start gap-2 small" style="color: var(--musa-texto-suave);">
+      <input type="checkbox" class="form-check-input mt-1" required />
+      <span>Declaro que los datos consignados son verdaderos y acepto la
+        <a href="#" data-bs-toggle="modal" data-bs-target="#modalPrivacidad" style="color: var(--musa-brasa); font-weight: 600;">Política de Privacidad</a>.
+      </span>
+    </label>
+
+    <button type="submit" class="btn-brasa w-100">
+      <i class="bi bi-send"></i> Enviar reclamo
+    </button>
+  </form>
+
+  <p class="small muted mt-3">
+    * Este registro es informativo para fines del proyecto y no reemplaza el
+    Libro de Reclamaciones físico exigido por ley en el establecimiento.
+  </p>
+</div>
+{% endblock %}

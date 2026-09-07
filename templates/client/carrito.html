@@ -1,32 +1,65 @@
-{% extends "client/main.html" %} {% block titulo %} Carrito de compras {%
-endblock %} {% block contenido %}
+{% extends "client/base.html" %}
+{% block title %}Carrito de compras · Las Musas{% endblock %}
 
-<section class="mt-5 mb-3">
-  <main class="mt-4 container">
-    <div class="bg-titulo p-2 mb-2">
-      <h1 class="mt-2 mb-2">Carrito de compras</h1>
-    </div>
+{% block content %}
+<div class="cx-wrap" id="carrito-pagina">
+  <nav class="carta-breadcrumb" aria-label="Ruta">
+    <a href="{{ url_for('cliente.home') }}">Inicio</a>
+    <span>/</span>
+    <a href="{{ url_for('cliente.carta') }}">Carta</a>
+    <span>/</span>
+    <span class="actual">Carrito de compras</span>
+  </nav>
 
-    <div class="productos-carrito mb-2 d-flex flex-column gap-3"></div>
-
-    <div id="precio-total" class="mt-4"></div>
-
-    <div class="d-flex justify-content-end gap-2">
-      <div class="btn-vaciar-carrito">
-        <a class="btn btn-danger" id="vaciar-carrito">Vaciar carrito</a>
-      </div>
+  <!-- Carrito con productos -->
+  <div id="carrito-lleno" hidden>
+    <div class="cx-head">
       <div>
-        <a href="{{url_for('cliente.pag_compra')}}" class="btn btn-success"
-          >Comprar</a
-        >
+        <h1>Carrito de compras</h1>
+        <p class="conteo"><span id="resumen-conteo">0 productos</span> · retiro en Calle Schell 385, Miraflores</p>
       </div>
+      <button class="cart-item__quitar d-inline-flex align-items-center gap-1 small" id="carrito-vaciar" type="button">
+        <i class="bi bi-trash3"></i> Vaciar todo
+      </button>
     </div>
-  </main>
-</section>
 
-<script
-  src="{{url_for('static', filename = 'js/mostrarProductos.js')}}"
-  type="module"
-></script>
+    <div class="cart-grid">
+      <div id="carrito-items"></div>
 
+      <aside class="cart-summary">
+        <h2>Resumen del pedido</h2>
+        <div class="cart-summary__row"><span>Subtotal neto</span><strong id="resumen-subtotal">S/ 0.00</strong></div>
+        <div class="cart-summary__row"><span>IGV (18% incluido)</span><strong id="resumen-igv">S/ 0.00</strong></div>
+        <div class="cart-summary__row"><span>Preparación y recojo</span><strong style="color: var(--musa-exito);">Gratis</strong></div>
+        <div class="cart-summary__total">
+          <span>Total</span>
+          <strong id="resumen-total">S/ 0.00</strong>
+        </div>
+        <a href="{{ url_for('cliente.pag_compra') }}" class="btn-brasa w-100" id="carrito-continuar">
+          Continuar al retiro <i class="bi bi-arrow-right"></i>
+        </a>
+        <a href="{{ url_for('cliente.carta') }}" class="d-flex align-items-center justify-content-center gap-1 small mt-3 text-decoration-none" style="color: var(--musa-texto-suave);">
+          <i class="bi bi-arrow-left"></i> Seguir explorando la carta
+        </a>
+        <p class="small text-center mt-3 mb-0" style="color: var(--musa-texto-suave);">
+          El pago se realiza al recoger o al confirmar (Yape / Plin).
+        </p>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Carrito vacío -->
+  <div id="carrito-vacio" hidden>
+    <div class="cx-empty">
+      <i class="bi bi-bag"></i>
+      <h2>Tu carrito está vacío</h2>
+      <p>Agrega algo rico de la carta para empezar tu pedido.</p>
+      <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">Ver la carta</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/carrito-pagina.js') }}"></script>
 {% endblock %}
