@@ -1,4 +1,4 @@
-from flask import Blueprint, request, render_template, redirect, url_for, g
+from flask import Blueprint, request, render_template, redirect, url_for, g, flash
 from controllers.admin import admin
 from model.CategoriaProducto import CategoriaProducto
 
@@ -21,14 +21,17 @@ def guardar():
     nombreCategoria = request.form["nombreCategoria"]
     descripcion = request.form["descripcion"]
     CategoriaProducto.insertar_categoria(nombreCategoria, descripcion)
-    # De cualquier modo, y si todo fue bien, redireccionar
+    flash("Categoría creada.", "ok")
     return redirect(url_for('admin.categoria.home'))
 
 
 @categoria_producto.route("/eliminar", methods=["POST"])
 def eliminar():
-    hecho = CategoriaProducto.eliminar_categoria(request.form["idCategoria"])
-
+    try:
+        CategoriaProducto.eliminar_categoria(request.form["idCategoria"])
+        flash("Categoría eliminada.", "ok")
+    except Exception:
+        flash("No se puede eliminar: hay productos en esa categoría. Muévelos primero.", "error")
     return redirect(url_for("admin.categoria.home"))
 
 
@@ -45,4 +48,5 @@ def actualizar():
     nombreCategoria = request.form["nombreCategoria"]
     descripcion = request.form["descripcion"]
     CategoriaProducto.actualizar_categoria(nombreCategoria, descripcion, id)
+    flash("Categoría actualizada.", "ok")
     return redirect(url_for("admin.categoria.home"))

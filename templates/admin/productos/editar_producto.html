@@ -1,75 +1,48 @@
-{% extends "admin/main.html" %} {% block titulo %} Editar disco {% endblock %}
-{% block contenido %}
-<section class="w-50 m-auto">
-  <h3 class="m-3 fs-5 fw-bold">Editar Producto</h3>
-  <form action="{{url_for('admin.productos.actualizar')}}" method="post">
-    {# Enviar el id en un campo oculto #}
-    <input type="hidden" name="idProducto" value="{{producto['idProducto']}}" />
-    <div class="mb-3">
-      <select class="form-select" name="categorias">
-        {% for categoria in categorias %} {% if categoria[1] ==
-        producto['nombreCategoria']: %}
-        <option value="{{categoria[0]}}" selected>{{categoria[1]}}</option>
-        {% else: %}
-        <option value="{{categoria[0]}}">{{categoria[1]}}</option>
-        {% endif %} {% endfor %}
+{% extends "admin/base.html" %}
+{% block title %}Editar producto · Backoffice Las Musas{% endblock %}
+{% block nav_productos %}is-active{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <div>
+    <h1>Editar producto</h1>
+    <p><i class="bi bi-pencil"></i> {{ producto['nombre'] }}</p>
+  </div>
+  <a href="{{ url_for('admin.productos.home') }}" class="adm-btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<section class="adm-card">
+  <form action="{{ url_for('admin.productos.actualizar') }}" method="post" class="adm-form">
+    <input type="hidden" name="idProducto" value="{{ producto['idProducto'] }}" />
+    <div class="musa-field">
+      <label class="musa-field-label" for="categorias">Categoría</label>
+      <select class="musa-input" name="categorias" id="categorias" required>
+        {% for categoria in categorias %}
+          <option value="{{ categoria[0] }}" {{ 'selected' if categoria[1] == producto['nombreCategoria'] }}>{{ categoria[1] }}</option>
+        {% endfor %}
       </select>
     </div>
-
-    <div class="mb-3">
-      <label for="codigo">Nombre:</label>
-      <input
-        value="{{producto['nombre']}}"
-        required
-        type="text"
-        class="form-control"
-        placeholder="Nombre"
-        name="nombre"
-        id="nombre"
-      />
+    <div class="musa-field">
+      <label class="musa-field-label" for="nombre">Nombre</label>
+      <input value="{{ producto['nombre'] }}" required type="text" class="musa-input" name="nombre" id="nombre" />
     </div>
-
-    <div class="mb-3">
-      <label for="artista">Descripción:</label>
-      <input
-        value="{{producto['descripcion']}}"
-        required
-        type="text"
-        class="form-control"
-        placeholder="Descripcion"
-        name="descripcion"
-        id="descripcion"
-      />
+    <div class="musa-field">
+      <label class="musa-field-label" for="descripcion">Descripción</label>
+      <input value="{{ producto['descripcion'] }}" required type="text" class="musa-input" name="descripcion" id="descripcion" />
     </div>
-    <div class="mb-3">
-      <label for="precio">Precio:</label>
-      <input
-        value="{{producto['precio']}}"
-        required
-        type="number"
-        class="form-control"
-        placeholder="Precio"
-        name="precio"
-        id="precio"
-      />
+    <div class="row g-3">
+      <div class="col-sm-6 musa-field">
+        <label class="musa-field-label" for="precio">Precio (S/)</label>
+        <input value="{{ producto['precio'] or 0 }}" required type="number" step="0.10" min="0" class="musa-input" name="precio" id="precio" />
+      </div>
+      <div class="col-sm-6 musa-field">
+        <label class="musa-field-label" for="existencias">Existencias</label>
+        <input value="{{ producto['existencias'] }}" required type="number" min="0" class="musa-input" name="existencias" id="existencias" />
+      </div>
     </div>
-    <div class="mb-3">
-      <label for="genero">Existencias:</label>
-      <input
-        value="{{producto['existencias']}}"
-        required
-        type="text"
-        class="form-control"
-        placeholder="Existencias"
-        name="existencias"
-        id="existencias"
-      />
-    </div>
-    <div class="d-flex gap-2 justify-content-end">
-      <button type="submit" class="btn btn-success mt-2">Guardar</button>
-      <a href="{{url_for('admin.productos.home')}}" class="btn btn-primary mt-2"
-        >Volver</a
-      >
+    <div class="adm-form__acciones">
+      <a href="{{ url_for('admin.productos.home') }}" class="adm-btn-sm">Cancelar</a>
+      <button type="submit" class="btn-brasa"><i class="bi bi-check-lg"></i> Guardar cambios</button>
     </div>
   </form>
 </section>

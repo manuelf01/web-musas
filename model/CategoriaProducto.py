@@ -35,10 +35,12 @@ class CategoriaProducto:
 
     def eliminar_categoria(idCategoria):
         conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute("DELETE FROM categoriaProducto WHERE idCategoria = %s", (idCategoria,))
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("DELETE FROM categoriaProducto WHERE idCategoria = %s", (idCategoria,))
             conexion.commit()
-        conexion.close()
+        finally:
+            conexion.close()
 
 
     def obtener_categoria_por_id(idCategoria):

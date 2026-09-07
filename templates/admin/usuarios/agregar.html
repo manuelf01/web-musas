@@ -1,67 +1,49 @@
-{% extends "admin/main.html" %} {% block titulo %} Agregar categoria {% endblock
-%} {% block contenido %}
-<section class="w-50 m-auto">
-  <h3 class="m-3 fs-5 fw-bold">Crear usuarios administradores</h3>
-  <form action="{{url_for('admin.usuarios.guardar')}}" method="post">
-    <div class="mb-3">
-      <label for="dni" class="form-label">Dni:</label>
-      <input required type="text" class="form-control" name="dni" id="dni" />
+{% extends "admin/base.html" %}
+{% block title %}Nuevo administrador · Backoffice Las Musas{% endblock %}
+{% block nav_usuarios %}is-active{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <div>
+    <h1>Nuevo administrador</h1>
+    <p><i class="bi bi-shield-lock"></i> Tendrá acceso al backoffice (captcha en el login)</p>
+  </div>
+  <a href="{{ url_for('admin.usuarios.home') }}" class="adm-btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<section class="adm-card">
+  <form action="{{ url_for('admin.usuarios.guardar') }}" method="post" class="adm-form">
+    <div class="musa-field">
+      <label class="musa-field-label" for="dni">DNI</label>
+      <input required type="text" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" class="musa-input" name="dni" id="dni" />
     </div>
-    <div class="mb-3">
-      <label for="nombres" class="form-label">Nombres:</label>
-      <input
-        required
-        type="text"
-        class="form-control"
-        name="nombres"
-        id="nombres"
-      />
+    <div class="row g-3">
+      <div class="col-sm-6 musa-field">
+        <label class="musa-field-label" for="nombres">Nombres</label>
+        <input required type="text" class="musa-input" name="nombres" id="nombres" />
+      </div>
+      <div class="col-sm-6 musa-field">
+        <label class="musa-field-label" for="apellidos">Apellidos</label>
+        <input required type="text" class="musa-input" name="apellidos" id="apellidos" />
+      </div>
     </div>
-    <div class="mb-3">
-      <label for="apellidos" class="form-label">Apellidos:</label>
-      <input
-        required
-        type="text"
-        class="form-control"
-        name="apellidos"
-        id="apellidos"
-      />
+    <div class="row g-3">
+      <div class="col-sm-7 musa-field">
+        <label class="musa-field-label" for="correo">Correo</label>
+        <input required type="email" class="musa-input" name="correo" id="correo" />
+      </div>
+      <div class="col-sm-5 musa-field">
+        <label class="musa-field-label" for="telefono">Teléfono</label>
+        <input required type="text" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" class="musa-input" name="telefono" id="telefono" />
+      </div>
     </div>
-    <div class="mb-3">
-      <label for="correo" class="form-label">Correo:</label>
-      <input
-        required
-        type="text"
-        class="form-control"
-        name="correo"
-        id="correo"
-      />
+    <div class="musa-field">
+      <label class="musa-field-label" for="contraseña">Contraseña</label>
+      <input required type="password" minlength="8" class="musa-input" name="contraseña" id="contraseña" />
     </div>
-    <div class="mb-3">
-      <label for="telefono" class="form-label">Teléfono:</label>
-      <input
-        required
-        type="text"
-        class="form-control"
-        name="telefono"
-        id="telefono"
-      />
-    </div>
-    <div class="mb-3">
-      <label for="contraseña" class="form-label">Contraseña:</label>
-      <input
-        required
-        type="password"
-        class="form-control"
-        name="contraseña"
-        id="contraseña"
-      />
-    </div>
-    <div class="d-flex gap-2 justify-content-end">
-      <button type="submit" class="btn btn-success mt-2">Guardar</button>
-      <a href="{{url_for('admin.usuarios.home')}}" class="btn btn-primary mt-2"
-        >Volver</a
-      >
+    <div class="adm-form__acciones">
+      <a href="{{ url_for('admin.usuarios.home') }}" class="adm-btn-sm">Cancelar</a>
+      <button type="submit" class="btn-brasa"><i class="bi bi-check-lg"></i> Crear administrador</button>
     </div>
   </form>
 </section>

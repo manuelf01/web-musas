@@ -1907,3 +1907,53 @@ body.adm { background: var(--musa-crema); }
   border-radius: 6px;
 }
 .ped-nada-busqueda { text-align: center; color: var(--musa-texto-suave); padding: 40px 0; }
+
+/* ============================================================
+   ADMIN · CRUD genérico (productos, categorías, usuarios, ventas)
+   ============================================================ */
+.adm-tabla-wrap { overflow-x: auto; }
+.adm-tabla { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.adm-tabla th {
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--musa-texto-suave);
+  border-bottom: 2px solid var(--musa-borde);
+  white-space: nowrap;
+}
+.adm-tabla td { padding: 12px 14px; border-bottom: 1px solid var(--musa-borde); vertical-align: middle; }
+.adm-tabla tr:last-child td { border-bottom: 0; }
+.adm-tabla tbody tr:hover { background: var(--musa-crema-baja); }
+.adm-tabla .num { text-align: right; font-family: "Space Grotesk", sans-serif; white-space: nowrap; }
+.adm-tabla .acciones { display: flex; gap: 8px; white-space: nowrap; }
+
+.adm-btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: "Space Grotesk", sans-serif;
+  text-decoration: none;
+  border: 1px solid var(--musa-borde);
+  background: #fff;
+  color: var(--musa-carbon);
+  cursor: pointer;
+}
+.adm-btn-sm:hover { border-color: var(--musa-brasa); color: var(--musa-brasa); }
+.adm-btn-sm--danger:hover { border-color: var(--musa-peligro); color: var(--musa-peligro); }
+
+.adm-form { max-width: 620px; }
+.adm-form .musa-field { margin-bottom: 16px; }
+.adm-form__acciones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+
+.adm-datos { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 24px; margin-bottom: 20px; }
+.adm-datos div span { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--musa-texto-suave); }
+.adm-datos div strong { font-size: 15px; }
+
+.adm-pag { margin-top: 22px; }
+.adm-pag .pagination { --bs-pagination-color: var(--musa-carbon); --bs-pagination-active-bg: var(--musa-brasa); --bs-pagination-active-border-color: var(--musa-brasa); }

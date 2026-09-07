@@ -82,10 +82,12 @@ class Producto:
     @staticmethod
     def eliminar_producto(id):
         conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute("DELETE FROM producto WHERE idProducto = %s", (id))
-        conexion.commit()
-        conexion.close()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("DELETE FROM producto WHERE idProducto = %s", (id,))
+            conexion.commit()
+        finally:
+            conexion.close()
 
     @staticmethod
     def obtener_producto_por_id(id):

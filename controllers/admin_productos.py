@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, request, url_for, g
+from flask import Blueprint, render_template, redirect, request, url_for, g, flash
 from flask_paginate import Pagination, get_page_parameter
 from controllers.admin import admin
 from model.Producto import Producto
@@ -39,15 +39,20 @@ def guardar():
     precio = request.form["precio"]
     existencias = request.form["existencias"]
     idCategoria = request.form.get("categorias")
-    Producto.insertar_producto(
-        nombre, descripcion, precio, existencias, idCategoria)
-
+    if Producto.insertar_producto(nombre, descripcion, precio, existencias, idCategoria) is False:
+        flash("Completa todos los campos del producto.", "error")
+        return redirect(url_for("admin.productos.formulario_agregar"))
+    flash("Producto agregado a la carta.", "ok")
     return redirect(url_for("admin.productos.home"))
 
 
 @productos.route("/eliminar_producto", methods=["POST"])
 def eliminar():
-    Producto.eliminar_producto(request.form["id"])
+    try:
+        Producto.eliminar_producto(request.form["id"])
+        flash("Producto eliminado.", "ok")
+    except Exception:
+        flash("No se puede eliminar: el producto aparece en pedidos. Ponle stock 0 para ocultarlo.", "error")
     return redirect(url_for("admin.productos.home"))
 
 
@@ -55,7 +60,7 @@ def eliminar():
 def editar(id):
     producto = Producto.obtener_producto_por_id(id)
     categorias = CategoriaProducto.obtener_categorias()
-    return render_template("admin/productos/editar_producto.html", producto=producto, categorias=categorias)
+    return render_template("admin/productos/editar_producto.html", producto=producto, categorias=categorias, usuario=g.user)
 
 
 @productos.route("/actualizar_producto", methods=["POST"])
@@ -68,4 +73,5 @@ def actualizar():
     idCategoria = request.form.get("categorias")
     Producto.actualizar_producto(
         nombre, descripcion, precio, existencias, id, idCategoria)
+    flash("Producto actualizado.", "ok")
     return redirect(url_for("admin.productos.home"))

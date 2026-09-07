@@ -34,15 +34,6 @@
   </div>
 </div>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% for category, message in messages %}
-    <div class="musa-alert {{ 'musa-alert--ok' if category == 'ok' }} d-flex gap-2 mb-3">
-      <i class="bi {{ 'bi-check-circle-fill' if category == 'ok' else 'bi-exclamation-triangle-fill' }} mt-1"></i>
-      <div class="small">{{ message }}</div>
-    </div>
-  {% endfor %}
-{% endwith %}
-
 <div class="ped-toolbar">
   <div class="ped-buscar">
     <i class="bi bi-search"></i>

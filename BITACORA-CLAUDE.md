@@ -279,6 +279,12 @@ Faltaban elementos del `code.html`. Agregados:
 
 ## 4. Redundancias / cosas a limpiar
 
+- **[2026-09-07 · HECHO]** Borrados por quedar huérfanos tras el rediseño:
+  `templates/admin/main.html`, `templates/client/main.html`, y los JS del flujo viejo
+  (`static/js/admin/pedidos.js`, `guardarProductos.js`, `mostrarProductos.js`,
+  `mostrarProductosCompra.js`, `comprarProductos.js`, `fetchApis.js`, `pedidosUsuario.js`,
+  `personalizar.js`, `categorias.js`, `header.js`). Ya nada los referenciaba.
+- Pendiente: limpiar `static/styles/*.css` (13 archivos del diseño viejo, ya sin uso salvo `admin/*`).
 - **CSS**: `static/styles/` tiene 13 archivos (`global.css`, `styles.css` comentado, `header.css`, `footer.css`, `button-carrito.css`, `categorias.css`, `seccion-presentacion.css`, `mostrar-productos.css`, `compra-producto.css`, `normalize.css`, `admin/global.css`, `admin/auth.css`). Consolidar en 2–3 al migrar a Bootstrap 5.
 - `static/styles/styles.css` ya está comentado en todos los `main.html` → candidato a borrar.
 - `animate.css` se carga por CDN en el cliente y casi no se usa.
