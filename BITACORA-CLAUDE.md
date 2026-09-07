@@ -43,6 +43,22 @@
 | 2026-09-07 | **2ª auditoría**: seguridad (CSRF/cabeceras/throttle), responsive (nav inferior móvil, desbordes), captcha admin solo si el DNI es admin. | `git revert` |
 | 2026-09-07 | **Cancelación de pedidos + anti no-show** (migración 006). Ver "No-show 2026-09-07" abajo. | `git revert` + revertir 006 |
 | 2026-09-07 | **Inicio rediseñado como landing** (distinto de la Carta) + **subida de imágenes desde el panel** (migración 007). Ver "Inicio + imágenes 2026-09-07". | `git revert` + revertir 007 |
+| 2026-09-07 | **Ancho + animaciones**: contenedores más anchos, banda "Explora" a todo el ancho, grillas fluidas, aparición al scroll. Ver "Ancho + animaciones 2026-09-07". | `git revert` |
+
+### Ancho + animaciones 2026-09-07
+**Problema**: en pantallas grandes sobraba mucho aire a los lados.
+
+- `.musa-shell` 1200 → **1320 px** (padding 32 → 40). `.cx-wrap` 1100 → 1240. `.adm-content` 1240 → 1440.
+- `.producto-grid` pasa a `repeat(auto-fill, minmax(250px, 1fr))` → llena el ancho con más columnas.
+  En el inicio, `.musa-favs .producto-grid` se fija a 4 columnas.
+- `.mp-lista` (Mis pedidos) pasa a grilla `auto-fill minmax(460px, 1fr)` → 2 columnas en desktop.
+- **"Explora"** ahora es una banda a todo el ancho (`background` + `border-block`), con un
+  `.musa-shell` interno — rompe el vacío lateral. Estructura: `<section class="musa-explora"><div class="musa-shell">…`.
+- **Aparición al scroll** (`static/js/animaciones.js`, IntersectionObserver, ~30 líneas):
+  `[data-reveal]` empieza en `opacity:0; translateY` y pasa a `.is-visible`. `data-reveal-delay="1..3"` escalona.
+  Failsafe a 2.5 s + respeta `prefers-reduced-motion`. Cargado en `client/base.html`.
+- Micro-interacciones (solo CSS): hover con elevación + zoom de la foto en `.producto-card`,
+  `:active` en botones, zoom lento del fondo del hero, pulso del punto "abierto ahora".
 
 ### Inicio + imágenes 2026-09-07
 **Problema**: Inicio y Carta eran casi idénticas (ambas = secciones por categoría + tarjetas).

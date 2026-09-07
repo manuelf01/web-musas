@@ -44,7 +44,7 @@
           }) %}
         {% endfor %}
 
-        <article class="mp-card" data-estado="{{ p.estado }}">
+        <article class="mp-card" data-estado="{{ p.estado }}" data-reveal data-reveal-delay="{{ loop.index0 % 4 }}">
           <div class="mp-card__head">
             <div>
               <strong>Pedido N° {{ p.idPedido }}</strong>

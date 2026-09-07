@@ -448,7 +448,8 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 /* ============================================================
    HOME / TIENDA
    ============================================================ */
-.musa-shell { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+.musa-shell { max-width: 1320px; margin: 0 auto; padding: 0 40px; }
+@media (max-width: 1024px) { .musa-shell { padding: 0 28px; } }
 @media (max-width: 768px) { .musa-shell { padding: 0 16px; } }
 
 /* ---------- Hero ---------- */
@@ -617,10 +618,9 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 /* ---------- Grid + tarjeta de producto ---------- */
 .producto-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 24px;
 }
-@media (max-width: 992px) { .producto-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 560px) { .producto-grid { grid-template-columns: 1fr; } }
 
 .producto-card {
@@ -1205,7 +1205,8 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 /* ============================================================
    CARRITO
    ============================================================ */
-.cx-wrap { max-width: 1100px; margin: 0 auto; padding: 24px 32px 96px; }
+.cx-wrap { max-width: 1240px; margin: 0 auto; padding: 24px 40px 96px; }
+@media (max-width: 1024px) { .cx-wrap { padding: 24px 28px 96px; } }
 @media (max-width: 768px) { .cx-wrap { padding: 16px 16px 80px; } }
 .cx-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 8px 0 28px; }
 .cx-head h1 { font-size: 30px; font-weight: 700; margin: 0; }
@@ -1491,8 +1492,9 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
    MIS PEDIDOS
    ============================================================ */
 .mp-filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-.mp-lista { display: flex; flex-direction: column; gap: 16px; }
-.mp-vacio-filtro { text-align: center; color: var(--musa-texto-suave); padding: 40px 0; }
+.mp-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 18px; }
+@media (max-width: 1000px) { .mp-lista { grid-template-columns: 1fr; } }
+.mp-vacio-filtro { text-align: center; color: var(--musa-texto-suave); padding: 40px 0; grid-column: 1 / -1; }
 
 .mp-card {
   background: #fff;
@@ -1628,7 +1630,7 @@ body.adm { background: var(--musa-crema); }
 .adm-topbar__local { font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--musa-texto-suave); }
 .adm-topbar__link { font-size: 13px; color: var(--musa-texto-suave); text-decoration: none; }
 .adm-topbar__link:hover { color: var(--musa-brasa); }
-.adm-content { padding: 28px 32px 64px; max-width: 1240px; width: 100%; margin: 0 auto; }
+.adm-content { padding: 28px 40px 64px; max-width: 1440px; width: 100%; margin: 0 auto; }
 
 .adm-marca-mini { display: none; }
 
@@ -2194,7 +2196,6 @@ body.adm { background: var(--musa-crema); }
 .musa-favs { padding-top: 60px; }
 
 /* --- Explora: mosaicos de categoría (centrados y uniformes) --- */
-.musa-explora { padding-top: 64px; }
 .musa-tiles {
   display: flex;
   flex-wrap: wrap;
@@ -2275,3 +2276,70 @@ body.adm { background: var(--musa-crema); }
 .carta-filtros .btn-brasa { padding: 10px 16px; }
 .carta-busqueda-info { color: var(--musa-texto-suave); font-size: 14px; margin: 18px 0 22px; }
 .carta-busqueda-info a { color: var(--musa-brasa); }
+
+/* ============================================================
+   ANCHO / BANDAS DE FONDO  +  ANIMACIONES
+   ============================================================ */
+
+/* Favoritos: fila fija de 4 en escritorio (sin hueco suelto) */
+@media (min-width: 1080px) { .musa-favs .producto-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* Banda a todo el ancho para "Explora" — corta el vacío lateral en pantallas grandes */
+.musa-explora {
+  background: var(--musa-crema-baja);
+  border-block: 1px solid var(--musa-borde);
+  padding-block: 56px 60px;
+  margin-top: 64px;
+}
+
+/* --- Scroll-reveal --- */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+[data-reveal].is-visible { opacity: 1; transform: none; }
+[data-reveal][data-reveal-delay="1"] { transition-delay: 0.06s; }
+[data-reveal][data-reveal-delay="2"] { transition-delay: 0.12s; }
+[data-reveal][data-reveal-delay="3"] { transition-delay: 0.18s; }
+
+/* --- Micro-interacciones --- */
+.producto-card:not([data-reveal]),
+.producto-card.is-visible { transition: transform 0.24s ease, box-shadow 0.24s ease; }
+.producto-card:hover { transform: translateY(-5px); box-shadow: 0 22px 44px rgba(26, 21, 18, 0.14); }
+.producto-card__media img { transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
+.producto-card:hover .producto-card__media img { transform: scale(1.05); }
+
+.btn-brasa, .btn-contorno { transition: transform 0.12s ease, background-color 0.15s ease, box-shadow 0.15s ease; }
+.btn-brasa:active, .btn-contorno:active { transform: translateY(1px) scale(0.99); }
+
+.musa-tile, .adm-kpi, .musa-paso { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.adm-kpi:hover { transform: translateY(-3px); box-shadow: 0 16px 32px rgba(26, 21, 18, 0.1); }
+
+/* Hero: zoom lento continuo del fondo */
+@keyframes musa-hero-zoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.08); }
+}
+.musa-hero__bg { animation: musa-hero-zoom 18s ease-in-out infinite alternate; }
+.musa-hero__pulse { animation: musa-pulse 2s ease-in-out infinite; }
+@keyframes musa-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 200, 66, 0.5); }
+  50% { box-shadow: 0 0 0 6px rgba(245, 200, 66, 0); }
+}
+
+/* Cremas / franjas seleccionables: feedback */
+.crema-card, .ck-hora, .ck-opcion { transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.12s ease; }
+.crema-card:active, .ck-hora:not([disabled]):active { transform: scale(0.98); }
+
+/* Respeta a quien prefiere menos movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+  [data-reveal] { opacity: 1 !important; transform: none !important; }
+}
