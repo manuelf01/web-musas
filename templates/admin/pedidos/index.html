@@ -1,62 +1,159 @@
-{% extends "admin/main.html" %} {% block titulo %} Discos {% endblock %} {%
-block contenido %}
-<h3 class="m-3 fs-5 fw-bold">Pedidos</h3>
-{% for pedido in pedidos %}
-<div class="row m-0 mb-2">
-  <div class="col-9">
-    <div class="d-flex gap-2 justify-content-around">
-      <p class="fs-6">
-        <span class="fs-6">Cliente:</span> {{pedido["nombres"]}}
-      </p>
-      <p class="fs-6">
-        <span class="fs-6">Dni:</span> {{pedido["dniNoRegistrado"]}}
-      </p>
-      <p class="fs-6">
-        <span class="fs-6">Hora de recojo:</span> {{pedido["horaRecojo"]}}
-      </p>
-    </div>
-    {% for orden in ordenes %} {% if orden["idPedido"] == pedido["idPedido"] %}
-    <div class="row m-0 align-items-center">
-      <div class="col-4 text-center">
-        <p class="fs-6">{{orden["nombreProducto"]}}</p>
-      </div>
-      <div class="col-4 text-center">
-        <p class="fs-6">Cantidad: {{orden["cantidad"]}}</p>
-        <p class="fs-6">Precio: {{orden["precioUnidad"]}}</p>
-        <p class="fs-6">Precio total: {{orden["precioTotal"]}}</p>
-      </div>
+{% extends "admin/base.html" %}
+{% block title %}Pedidos · Backoffice Las Musas{% endblock %}
+{% block nav_pedidos %}is-active{% endblock %}
 
-      <div class="col-4 text-center">
-        <p class="fw-bold fs-6">Cremas:</p>
-        <div class="d-flex gap-2 justify-content-center">
-          {% for crema in cremas %} {% if crema[2] == orden["idDetalleOrden"] %}
-          <p class="fs-6">{{crema[3]}}</p>
-          {% endif %} {% endfor %}
-        </div>
-      </div>
+{% macro linea(l) %}
+  <div class="ped-linea">
+    <div class="ped-linea__img">
+      {% if l.imagen %}<img src="{{ url_for('static', filename='img/' ~ l.imagen) }}" alt="" />
+      {% else %}<span class="producto-card__ph"><i class="bi bi-fire"></i></span>{% endif %}
     </div>
-    {% endif %} {% endfor %}
+    <div class="ped-linea__info">
+      <div class="ped-linea__top">
+        <strong>{{ l.cantidad }}× {{ l.nombre }}</strong>
+        <span>S/ {{ '%.2f'|format(l.precioTotal) }}</span>
+      </div>
+      {% if l.cremas %}
+        <div class="ped-linea__cremas">{% for c in l.cremas %}<span>{{ c }}</span>{% endfor %}</div>
+      {% endif %}
+    </div>
   </div>
-  <div class="col-3">
-    <form action="#" method="" class="d-flex gap-2 align-items-center mb-2">
-      <input
-        id="idPedido"
-        type="hidden"
-        value="{{pedido['idPedido']}}"
-        name="idPedido"
-      />
-      <label for="" class="form-label m-0">KeyPedido:</label>
-      <input
-        id="keyPedido"
-        type="number"
-        class="form-control"
-        required
-        name="keyPedido"
-      />
-    </form>
-    <a class="btn btn-success w-100" id="btn-recogido"> Recogido </a>
+{% endmacro %}
+
+{% block content %}
+<div class="adm-head">
+  <div>
+    <h1>Pedidos
+      {% if contadores.pendiente %}
+        <span class="adm-badge-vivo" style="background: rgba(219,66,0,.12); color: var(--musa-brasa);">
+          {{ contadores.pendiente }} por entregar
+        </span>
+      {% endif %}
+    </h1>
+    <p><i class="bi bi-clock-history"></i> Pedidos de hoy, ordenados por hora de recojo</p>
   </div>
 </div>
 
-<hr />
-{% endfor %} {{ pagination.links }}{% endblock %}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for category, message in messages %}
+    <div class="musa-alert {{ 'musa-alert--ok' if category == 'ok' }} d-flex gap-2 mb-3">
+      <i class="bi {{ 'bi-check-circle-fill' if category == 'ok' else 'bi-exclamation-triangle-fill' }} mt-1"></i>
+      <div class="small">{{ message }}</div>
+    </div>
+  {% endfor %}
+{% endwith %}
+
+<div class="ped-toolbar">
+  <div class="ped-buscar">
+    <i class="bi bi-search"></i>
+    <input type="text" id="ped-buscar" placeholder="Buscar por cliente, DNI o N° de pedido…" autocomplete="off" />
+  </div>
+  <div class="adm-filtros">
+    <a href="{{ url_for('admin.pedidos.home', estado='pendiente') }}" class="musa-chip {{ 'is-active' if estado == 'pendiente' }}">Por entregar ({{ contadores.pendiente }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='recogido') }}" class="musa-chip {{ 'is-active' if estado == 'recogido' }}">Recogidos ({{ contadores.recogido }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='todos') }}" class="musa-chip {{ 'is-active' if estado == 'todos' }}">Todos ({{ contadores.todos }})</a>
+  </div>
+</div>
+
+{# ---------------- PENDIENTES (tarjetas con confirmación) ---------------- #}
+{% if estado in ('pendiente', 'todos') %}
+  {% if pendientes %}
+    <div class="ped-grid">
+      {% for p in pendientes %}
+        <article class="ped-card" data-buscar="{{ (p.cliente ~ ' ' ~ p.dni ~ ' ' ~ p.idPedido) | lower }}">
+          <div class="ped-card__head">
+            <span class="adm-avatar">{{ p.iniciales }}</span>
+            <div class="ped-card__cliente">
+              <strong>{{ p.cliente }} <span class="ped-card__id">Pedido #{{ p.idPedido }}</span></strong>
+              <span>DNI {{ p.dni }} · {{ p.telefono }}</span>
+            </div>
+            <span class="ped-hora"><i class="bi bi-clock"></i> {{ p.hora }}</span>
+          </div>
+
+          <div class="ped-card__lineas">
+            {% for l in p.lineas %}{{ linea(l) }}{% endfor %}
+          </div>
+
+          {% if p.notas %}<p class="ped-notas"><i class="bi bi-sticky"></i> {{ p.notas }}</p>{% endif %}
+
+          <div class="ped-card__resumen">
+            <strong>Total: S/ {{ '%.2f'|format(p.total) }}</strong>
+            <span>
+              {% if p.digital %}<i class="bi bi-qr-code"></i> Cobra por Yape / Plin
+              {% else %}<i class="bi bi-cash-coin"></i> Cobra en caja{% endif %}
+              {% if p.boleta %} · pide boleta{% endif %}
+            </span>
+          </div>
+
+          <form method="post" action="{{ url_for('admin.pedidos.confirmar') }}" class="ped-confirmar">
+            <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
+            <input type="hidden" name="estado" value="{{ estado }}" />
+            <label>Palabra clave del cliente</label>
+            <p class="ped-confirmar__hint">Pídele su número de 4 dígitos y escríbelo para entregar el pedido.</p>
+            <div class="ped-confirmar__row">
+              <input type="text" name="key" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"
+                     placeholder="0000" required autocomplete="off" aria-label="Palabra clave" />
+              <button type="submit" class="btn-brasa"><i class="bi bi-check2-all"></i> Entregar pedido</button>
+            </div>
+          </form>
+        </article>
+      {% endfor %}
+    </div>
+  {% elif estado == 'pendiente' %}
+    <div class="adm-card"><p class="adm-vacio"><i class="bi bi-check2-circle d-block mb-2" style="font-size:32px;"></i> No hay pedidos por entregar. Todo al día.</p></div>
+  {% endif %}
+{% endif %}
+
+{# ---------------- RECOGIDOS (tabla compacta) ---------------- #}
+{% if estado in ('recogido', 'todos') and recogidos %}
+  <section class="adm-card" style="margin-top: 24px;">
+    <div class="adm-card__head">
+      <div><h2>Recogidos hoy</h2><p>{{ recogidos|length }} pedidos entregados</p></div>
+    </div>
+    <div class="ped-tabla-wrap">
+      <table class="ped-tabla">
+        <thead>
+          <tr><th>Pedido</th><th>Cliente</th><th>Hora</th><th>Detalle</th><th class="num">Total</th><th>Clave</th></tr>
+        </thead>
+        <tbody>
+          {% for p in recogidos %}
+            <tr data-buscar="{{ (p.cliente ~ ' ' ~ p.dni ~ ' ' ~ p.idPedido) | lower }}">
+              <td>#{{ p.idPedido }}</td>
+              <td>{{ p.cliente }}<br /><span class="muted">DNI {{ p.dni }}</span></td>
+              <td>{{ p.hora }}</td>
+              <td class="muted">{{ p.lineas | map(attribute='nombre') | join(', ') | truncate(48) }}</td>
+              <td class="num">S/ {{ '%.2f'|format(p.total) }}</td>
+              <td><span class="ped-clave-chip">{{ p.keyPedido }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% elif estado == 'recogido' and not recogidos %}
+  <div class="adm-card"><p class="adm-vacio">Todavía no se ha recogido ningún pedido hoy.</p></div>
+{% endif %}
+
+<p class="ped-nada-busqueda" hidden>Ningún pedido coincide con la búsqueda.</p>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    var q = document.getElementById("ped-buscar");
+    if (!q) return;
+    var items = document.querySelectorAll("[data-buscar]");
+    var aviso = document.querySelector(".ped-nada-busqueda");
+    q.addEventListener("input", function () {
+      var t = q.value.trim().toLowerCase();
+      var vis = 0;
+      items.forEach(function (el) {
+        var ok = !t || el.dataset.buscar.indexOf(t) !== -1;
+        el.hidden = !ok;
+        if (ok) vis++;
+      });
+      if (aviso) aviso.hidden = !(t && vis === 0);
+    });
+  })();
+</script>
+{% endblock %}

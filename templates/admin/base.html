@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}Backoffice · Las Musas{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/musas-theme.css') }}" />
+    {% block head %}{% endblock %}
+  </head>
+  <body class="adm">
+    <aside class="adm-side">
+      <div>
+        <div class="adm-side__brand">
+          <span class="musa-wordmark" style="color: #fff; font-size: 18px;">
+            Las Musas <small>Burger Joint · Backoffice</small>
+          </span>
+        </div>
+        <nav class="adm-nav">
+          <a href="{{ url_for('admin.home') }}" class="{% block nav_resumen %}{% endblock %}">
+            <i class="bi bi-grid-1x2"></i> Resumen
+          </a>
+          <a href="{{ url_for('admin.pedidos.home') }}" class="{% block nav_pedidos %}{% endblock %}">
+            <i class="bi bi-receipt"></i> Pedidos
+          </a>
+          <a href="{{ url_for('admin.productos.home') }}" class="{% block nav_productos %}{% endblock %}">
+            <i class="bi bi-egg-fried"></i> Productos
+          </a>
+          <a href="{{ url_for('admin.categoria.home') }}" class="{% block nav_categorias %}{% endblock %}">
+            <i class="bi bi-tags"></i> Categorías
+          </a>
+          <a href="{{ url_for('admin.usuarios.home') }}" class="{% block nav_usuarios %}{% endblock %}">
+            <i class="bi bi-people"></i> Usuarios
+          </a>
+          <a href="{{ url_for('admin.ventas.home') }}" class="{% block nav_ventas %}{% endblock %}">
+            <i class="bi bi-graph-up"></i> Ventas
+          </a>
+        </nav>
+      </div>
+
+      <div class="adm-side__foot">
+        <span class="adm-side__estado"><span class="musa-dot-live" style="background: var(--musa-mostaza);"></span> Abierto · 6–10 p.m</span>
+        <div class="adm-side__user">
+          <span class="adm-avatar">
+            {{ (usuario.nombres[0] ~ (usuario.apellidos[0] if usuario.apellidos else '')) | upper if usuario else 'A' }}
+          </span>
+          <div class="adm-side__user-info">
+            <strong>{{ usuario.nombres if usuario else 'Admin' }}</strong>
+            <span>Administrador</span>
+          </div>
+          <a href="{{ url_for('admin.auth.logout') }}" title="Cerrar sesión" class="adm-side__logout">
+            <i class="bi bi-box-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+    </aside>
+
+    <div class="adm-main">
+      <header class="adm-topbar">
+        <span class="adm-topbar__local">Local Nocturno · Miraflores</span>
+        <a href="{{ url_for('cliente.home') }}" class="adm-topbar__link" target="_blank">
+          <i class="bi bi-shop"></i> Ver tienda
+        </a>
+      </header>
+
+      <main class="adm-content">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+      crossorigin="anonymous"
+    ></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
