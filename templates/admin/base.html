@@ -28,27 +28,28 @@
       <div>
         <div class="adm-side__brand">
           <span class="musa-wordmark" style="color: #fff; font-size: 18px;">
-            Las Musas <small>Burger Joint · Backoffice</small>
+            <span class="adm-marca-full">Las Musas <small>Burger Joint · Backoffice</small></span>
+            <span class="adm-marca-mini">LM</span>
           </span>
         </div>
         <nav class="adm-nav">
-          <a href="{{ url_for('admin.home') }}" class="{% block nav_resumen %}{% endblock %}">
-            <i class="bi bi-grid-1x2"></i> Resumen
+          <a href="{{ url_for('admin.home') }}" class="{% block nav_resumen %}{% endblock %}" title="Resumen">
+            <i class="bi bi-grid-1x2"></i> <span>Resumen</span>
           </a>
-          <a href="{{ url_for('admin.pedidos.home') }}" class="{% block nav_pedidos %}{% endblock %}">
-            <i class="bi bi-receipt"></i> Pedidos
+          <a href="{{ url_for('admin.pedidos.home') }}" class="{% block nav_pedidos %}{% endblock %}" title="Pedidos">
+            <i class="bi bi-receipt"></i> <span>Pedidos</span>
           </a>
-          <a href="{{ url_for('admin.productos.home') }}" class="{% block nav_productos %}{% endblock %}">
-            <i class="bi bi-egg-fried"></i> Productos
+          <a href="{{ url_for('admin.productos.home') }}" class="{% block nav_productos %}{% endblock %}" title="Productos">
+            <i class="bi bi-egg-fried"></i> <span>Productos</span>
           </a>
-          <a href="{{ url_for('admin.categoria.home') }}" class="{% block nav_categorias %}{% endblock %}">
-            <i class="bi bi-tags"></i> Categorías
+          <a href="{{ url_for('admin.categoria.home') }}" class="{% block nav_categorias %}{% endblock %}" title="Categorías">
+            <i class="bi bi-tags"></i> <span>Categorías</span>
           </a>
-          <a href="{{ url_for('admin.usuarios.home') }}" class="{% block nav_usuarios %}{% endblock %}">
-            <i class="bi bi-people"></i> Usuarios
+          <a href="{{ url_for('admin.usuarios.home') }}" class="{% block nav_usuarios %}{% endblock %}" title="Usuarios">
+            <i class="bi bi-people"></i> <span>Usuarios</span>
           </a>
-          <a href="{{ url_for('admin.ventas.home') }}" class="{% block nav_ventas %}{% endblock %}">
-            <i class="bi bi-graph-up"></i> Ventas
+          <a href="{{ url_for('admin.ventas.home') }}" class="{% block nav_ventas %}{% endblock %}" title="Ventas">
+            <i class="bi bi-graph-up"></i> <span>Ventas</span>
           </a>
         </nav>
       </div>

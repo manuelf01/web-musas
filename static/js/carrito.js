@@ -57,6 +57,7 @@
     var t = total();
     document.querySelectorAll("[data-carrito-count]").forEach(function (el) {
       el.textContent = n;
+      if (el.classList.contains("musa-tabbar__badge")) el.hidden = n === 0;
     });
     document.querySelectorAll("[data-carrito-total]").forEach(function (el) {
       el.textContent = "S/ " + t.toFixed(2);

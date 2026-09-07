@@ -68,6 +68,23 @@
       {% block content %}{% endblock %}
     </main>
 
+    <!-- Navegación inferior (solo móvil) -->
+    <nav class="musa-tabbar">
+      <a href="{{ url_for('cliente.home') }}" class="{% block tab_inicio %}{% endblock %}">
+        <i class="bi bi-house-door"></i><span>Inicio</span>
+      </a>
+      <a href="{{ url_for('cliente.carta') }}" class="{% block tab_carta %}{% endblock %}">
+        <i class="bi bi-card-list"></i><span>Carta</span>
+      </a>
+      <a href="{{ url_for('cliente.pag_carrito') }}" class="{% block tab_carrito %}{% endblock %}">
+        <i class="bi bi-bag"></i><span>Carrito</span>
+        <span class="musa-tabbar__badge" data-carrito-count hidden>0</span>
+      </a>
+      <a href="{{ url_for('cliente.mis_pedidos') }}" class="{% block tab_pedidos %}{% endblock %}">
+        <i class="bi bi-receipt"></i><span>Pedidos</span>
+      </a>
+    </nav>
+
     <footer class="musa-footer">
       <div class="inner">
         <div class="row g-4">

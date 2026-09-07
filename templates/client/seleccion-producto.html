@@ -1,6 +1,6 @@
 {% extends "client/base.html" %}
 {% block title %}{{ producto.nombre }} · Las Musas{% endblock %}
-{% block nav_carta %}active{% endblock %}
+{% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}
 
 {% set agotado = not producto.existencias or producto.existencias <= 0 %}
 
