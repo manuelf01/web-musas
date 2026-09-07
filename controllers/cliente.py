@@ -30,7 +30,7 @@ def home():
         "client/index.html",
         cliente=user["nombres"] if user else None,
         categorias=categorias,
-        favoritos=Producto.destacados(8),
+        favoritos=Producto.destacados(4),
         totales=Producto.contar_por_categoria(),
     )
 

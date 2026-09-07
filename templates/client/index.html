@@ -29,19 +29,42 @@
   </div>
 </section>
 
+<!-- CÓMO FUNCIONA -->
+<section class="musa-shell musa-pasos">
+  <div class="musa-paso">
+    <span class="musa-paso__n">1</span>
+    <div>
+      <strong>Elige de la carta</strong>
+      <p>Arma tu pedido y personaliza con las salsas de la casa.</p>
+    </div>
+  </div>
+  <div class="musa-paso">
+    <span class="musa-paso__n">2</span>
+    <div>
+      <strong>Escoge tu hora de recojo</strong>
+      <p>Franjas de 30 min entre 6 y 10 p.m. Sin colas.</p>
+    </div>
+  </div>
+  <div class="musa-paso">
+    <span class="musa-paso__n">3</span>
+    <div>
+      <strong>Muestra tu clave y paga</strong>
+      <p>Das tu palabra clave en el mostrador y pagas al recoger.</p>
+    </div>
+  </div>
+</section>
+
 <!-- FAVORITOS -->
 {% if favoritos %}
 <section class="musa-shell musa-favs">
-  <div class="musa-favs__head">
+  <div class="musa-seccion-head">
     <div>
       <span class="eyebrow">Los favoritos de la noche</span>
       <h2>Lo que más piden</h2>
     </div>
-    <a class="musa-vermas d-none d-sm-inline-flex" href="{{ url_for('cliente.carta') }}">
-      Ver todo <i class="bi bi-chevron-right"></i>
-    </a>
+    <a class="musa-vermas" href="{{ url_for('cliente.carta') }}">Ver toda la carta <i class="bi bi-chevron-right"></i></a>
   </div>
-  <div class="musa-favs__row">
+  <div class="producto-grid">
     {% for p in favoritos %}
       {% include "client/_producto_card.html" %}
     {% endfor %}
@@ -70,7 +93,7 @@
 <!-- EXPLORA POR CATEGORÍA -->
 {% if categorias %}
 <section class="musa-shell musa-explora">
-  <div class="musa-cat-head">
+  <div class="musa-seccion-head">
     <div>
       <span class="eyebrow">Explora</span>
       <h2>Nuestra carta por categoría</h2>
@@ -80,7 +103,7 @@
   <div class="musa-tiles">
     {% for c in categorias %}
       <a class="musa-tile" href="{{ url_for('cliente.productos_categoria', categoria=c[1]) }}"
-         {% if c[3] %}style="background-image: linear-gradient(180deg, rgba(26,21,18,.15), rgba(26,21,18,.8)), url('{{ url_for('static', filename='img/' ~ c[3]) }}');"{% endif %}>
+         {% if c[3] %}style="background-image: linear-gradient(180deg, rgba(26,21,18,.12), rgba(26,21,18,.82)), url('{{ url_for('static', filename='img/' ~ c[3]) }}');"{% endif %}>
         <span class="musa-tile__emoji">{{ emojis.get(c[1], "🍴") }}</span>
         <span class="musa-tile__nombre">{{ c[1] }}</span>
         <span class="musa-tile__n">{{ totales.get(c[0], 0) }} opciones</span>
@@ -89,33 +112,6 @@
   </div>
 </section>
 {% endif %}
-
-<!-- PRUEBA SOCIAL -->
-<section class="musa-resenas">
-  <div class="musa-shell">
-    <div class="musa-resenas__head">
-      <div class="musa-resenas__nota">
-        <strong>4.8</strong>
-        <span class="musa-resenas__estrellas">★★★★★</span>
-      </div>
-      <p>Más de <strong>2,000 pedidos</strong> recogidos en tienda este año</p>
-    </div>
-    <div class="musa-resenas__grid">
-      <blockquote>
-        “La smash con cebolla al vino es adictiva. Pedí, me dieron mi hora y estaba lista.”
-        <cite>— Andrea C.</cite>
-      </blockquote>
-      <blockquote>
-        “Ideal para después del turno. La clave de recojo hace todo rapidísimo.”
-        <cite>— Renzo M.</cite>
-      </blockquote>
-      <blockquote>
-        “Las salchipapas rinden un montón y el chimichurri ahumado es otro nivel.”
-        <cite>— Lucía R.</cite>
-      </blockquote>
-    </div>
-  </div>
-</section>
 
 <!-- PILARES -->
 <div class="musa-shell">
