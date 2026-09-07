@@ -268,9 +268,8 @@
 
   document.getElementById("captcha-refresh").addEventListener("click", cargarCaptcha);
 
-  // Si el servidor devolvió error y ya estabamos en modo admin, recarga el captcha
-  {% if get_flashed_messages() and request.form.get('captcha') is not none %}
-    dni.value = "{{ request.form.get('usuario', '')|e }}";
+  // El servidor decide si el DNI es de administrador y hay que mostrar el captcha.
+  {% if mostrar_captcha %}
     mostrarCaptcha(true);
   {% endif %}
 </script>

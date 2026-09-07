@@ -50,17 +50,26 @@ def login():
         dni = (request.form.get("usuario") or "").strip()
         contraseña = request.form.get("contraseña") or ""
 
+        def _rerender():
+            # Muestra el captcha solo si el DNI es de un administrador.
+            es_admin = bool(RE_DNI.match(dni)) and Autenticacion.dni_es_admin(dni)
+            return render_template(
+                "client/login.html",
+                form=request.form.to_dict(),
+                mostrar_captcha=es_admin,
+            )
+
         if not RE_DNI.match(dni):
             flash("El DNI debe tener 8 dígitos.", "error")
-            return render_template("client/login.html", form=request.form.to_dict())
+            return _rerender()
         if not contraseña:
             flash("Ingresa tu contraseña.", "error")
-            return render_template("client/login.html", form=request.form.to_dict())
+            return _rerender()
 
         resultado = Autenticacion.login_unificado(dni, contraseña)
         if isinstance(resultado, str):
             flash(resultado, "error")
-            return render_template("client/login.html", form=request.form.to_dict())
+            return _rerender()
 
         fila, tipo = resultado
 
@@ -73,7 +82,7 @@ def login():
             ingresado = (request.form.get("captcha") or "").strip().upper()
             if not esperado or ingresado != esperado:
                 flash("El código de verificación no coincide. Intenta de nuevo.", "error")
-                return render_template("client/login.html", form=request.form.to_dict())
+                return _rerender()
 
             session.pop("cliente.auth", None)
             session["admin.auth"] = _datos_sesion(fila)
