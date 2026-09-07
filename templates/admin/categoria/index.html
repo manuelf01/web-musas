@@ -18,12 +18,19 @@
     <div class="adm-tabla-wrap">
       <table class="adm-tabla">
         <thead>
-          <tr><th>#</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
+          <tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           {% for categoria in categorias %}
             <tr>
               <td class="num">{{ categoria[0] }}</td>
+              <td>
+                {% if categoria[3] %}
+                  <img class="adm-foto-mini" src="{{ url_for('static', filename='img/' ~ categoria[3]) }}" alt="" />
+                {% else %}
+                  <span class="adm-foto-mini adm-foto-mini--vacia"><i class="bi bi-image"></i></span>
+                {% endif %}
+              </td>
               <td><strong>{{ categoria[1] }}</strong></td>
               <td style="color: var(--musa-texto-suave);">{{ categoria[2] or '—' }}</td>
               <td>

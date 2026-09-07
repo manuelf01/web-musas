@@ -35,7 +35,7 @@ class Producto:
         return lista_diccionarios
 
     @staticmethod
-    def insertar_producto(nombre, descripcion, precio, existencias, idCategoria):
+    def insertar_producto(nombre, descripcion, precio, existencias, idCategoria, imagen=None):
 
         if nombre == "" or descripcion == "" or precio == "" or existencias == "" or idCategoria == "":
             return False
@@ -50,8 +50,11 @@ class Producto:
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute("INSERT INTO producto( idCategoria, nombre, descripcion, precio, existencias) VALUES (%s, %s, %s, %s, %s)",
-                           (idCategoria, nombre, descripcion, precio, existencias))
+            cursor.execute(
+                "INSERT INTO producto(idCategoria, nombre, descripcion, precio, existencias, imagen) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (idCategoria, nombre, descripcion, precio, existencias, imagen or None),
+            )
         conexion.commit()
         conexion.close()
 
@@ -119,7 +122,7 @@ class Producto:
         }
 
     @staticmethod
-    def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria):
+    def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria, imagen=None):
 
         id = int(id)
         nombre = nombre.strip()
@@ -145,8 +148,19 @@ class Producto:
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute("UPDATE producto SET nombre = %s, descripcion = %s, precio = %s, existencias = %s, idCategoria = %s WHERE idProducto = %s",
-                           (nombre, descripcion, precio, existencias, idCategoria, id))
+            if imagen:
+                # Solo se cambia la imagen si se subió una nueva.
+                cursor.execute(
+                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, existencias=%s, "
+                    "idCategoria=%s, imagen=%s WHERE idProducto=%s",
+                    (nombre, descripcion, precio, existencias, idCategoria, imagen, id),
+                )
+            else:
+                cursor.execute(
+                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, existencias=%s, "
+                    "idCategoria=%s WHERE idProducto=%s",
+                    (nombre, descripcion, precio, existencias, idCategoria, id),
+                )
         conexion.commit()
         conexion.close()
 
@@ -201,6 +215,24 @@ class Producto:
             filas = cursor.fetchall()
         conexion.close()
         return {f[0]: {"nombre": f[1], "precio": float(f[2])} for f in filas}
+
+    @staticmethod
+    def destacados(limite=8):
+        """Productos marcados como destacados (para la fila 'favoritos' del inicio).
+        Si no hay suficientes, completa con los de más existencias."""
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                f"SELECT {Producto._COLS} FROM producto p "
+                "INNER JOIN categoriaProducto cp ON cp.idCategoria = p.idCategoria "
+                "WHERE cp.nombreCategoria <> 'Cremas' "
+                "ORDER BY (p.destacado IS NULL), p.existencias DESC, p.idProducto "
+                "LIMIT %s",
+                (limite,),
+            )
+            filas = cursor.fetchall()
+        conexion.close()
+        return [Producto._fila_a_dict(f) for f in filas]
 
     @staticmethod
     def contar_por_categoria():

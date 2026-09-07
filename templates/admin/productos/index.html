@@ -32,9 +32,18 @@
             <tr>
               <td class="num">{{ loop.index + pagination.skip }}</td>
               <td>
-                <strong>{{ producto['nombre'] }}</strong>
-                <div class="adm-tabla-sub" style="color: var(--musa-texto-suave); font-size: 12px;">
-                  {{ producto['descripcion'] | truncate(60) }}
+                <div class="adm-prod-cel">
+                  {% if producto['imagen'] %}
+                    <img class="adm-foto-mini" src="{{ url_for('static', filename='img/' ~ producto['imagen']) }}" alt="" />
+                  {% else %}
+                    <span class="adm-foto-mini adm-foto-mini--vacia"><i class="bi bi-image"></i></span>
+                  {% endif %}
+                  <div>
+                    <strong>{{ producto['nombre'] }}</strong>
+                    <div style="color: var(--musa-texto-suave); font-size: 12px;">
+                      {{ producto['descripcion'] | truncate(60) }}
+                    </div>
+                  </div>
                 </div>
               </td>
               <td>{{ producto['nombreCategoria'] }}</td>

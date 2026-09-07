@@ -2001,6 +2001,31 @@ body.adm { background: var(--musa-crema); }
 .adm-pag { margin-top: 22px; }
 .adm-pag .pagination { --bs-pagination-color: var(--musa-carbon); --bs-pagination-active-bg: var(--musa-brasa); --bs-pagination-active-border-color: var(--musa-brasa); }
 
+/* Imágenes de producto / categoría en el panel */
+.adm-prod-cel { display: flex; align-items: center; gap: 12px; }
+.adm-foto-mini {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid var(--musa-borde);
+  background: var(--musa-crema-baja);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--musa-texto-suave); font-size: 18px;
+}
+.adm-foto-edit { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+.adm-foto-actual {
+  width: 96px; height: 96px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid var(--musa-borde);
+  background: var(--musa-crema-baja);
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--musa-texto-suave); font-size: 28px;
+  flex-shrink: 0;
+}
+.adm-foto-edit > div { flex: 1; min-width: 220px; }
+
 /* ============================================================
    NAVEGACIÓN INFERIOR MÓVIL  +  AJUSTES RESPONSIVE
    ============================================================ */
@@ -2107,3 +2132,132 @@ body.adm { background: var(--musa-crema); }
   .musa-tabbar a span { font-size: 10px; }
   .musa-navbar .inner { gap: 8px; }
 }
+
+/* ============================================================
+   INICIO (landing) — distinto de la Carta
+   ============================================================ */
+.eyebrow, .musa-favs__head .eyebrow, .musa-local .eyebrow {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--musa-brasa);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* --- Fila de favoritos (scroll horizontal) --- */
+.musa-favs { padding-top: 56px; }
+.musa-favs__head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; gap: 16px; }
+.musa-favs__head h2 { font-size: 30px; font-weight: 700; margin: 0; }
+.musa-favs__row {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.musa-favs__row::-webkit-scrollbar { display: none; }
+.musa-favs__row > .producto-card {
+  flex: 0 0 270px;
+  scroll-snap-align: start;
+}
+@media (max-width: 560px) { .musa-favs__row > .producto-card { flex-basis: 78vw; } }
+
+/* --- Mosaicos de categoría --- */
+.musa-explora { padding-top: 64px; }
+.musa-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+.musa-tile {
+  position: relative;
+  min-height: 168px;
+  border-radius: var(--musa-radio-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  text-decoration: none;
+  overflow: hidden;
+  background: var(--musa-carbon);
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  border: 1px solid var(--musa-borde);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.musa-tile:hover { transform: translateY(-3px); box-shadow: 0 16px 34px rgba(26, 21, 18, 0.22); color: #fff; }
+.musa-tile__emoji { position: absolute; top: 16px; left: 18px; font-size: 26px; }
+.musa-tile__nombre { font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 20px; }
+.musa-tile__n { font-size: 12.5px; color: rgba(255, 255, 255, 0.75); }
+
+/* --- Prueba social --- */
+.musa-resenas { background: var(--musa-crema-baja); padding: 56px 0; margin-top: 64px; }
+.musa-resenas__head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 26px; }
+.musa-resenas__nota { display: flex; align-items: baseline; gap: 8px; }
+.musa-resenas__nota strong { font-family: "Space Grotesk", sans-serif; font-size: 40px; line-height: 1; }
+.musa-resenas__estrellas { color: var(--musa-mostaza); font-size: 18px; letter-spacing: 2px; }
+.musa-resenas__head p { margin: 0; color: var(--musa-texto-suave); font-size: 15px; }
+.musa-resenas__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.musa-resenas__grid blockquote {
+  margin: 0;
+  background: #fff;
+  border: 1px solid var(--musa-borde);
+  border-radius: 16px;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--musa-carbon);
+}
+.musa-resenas__grid cite { display: block; margin-top: 12px; font-style: normal; font-weight: 600; font-size: 13px; color: var(--musa-texto-suave); }
+
+/* --- Local + horario --- */
+.musa-local { padding: 64px 0 24px; }
+.musa-local__inner { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 28px; align-items: center; }
+.musa-local__inner h2 { font-size: 30px; font-weight: 700; margin: 0 0 12px; }
+.musa-local__dato { display: flex; align-items: center; gap: 8px; margin: 4px 0; color: var(--musa-texto-suave); font-size: 15px; }
+.musa-local__dato .bi { color: var(--musa-brasa); }
+.musa-local__map {
+  min-height: 220px;
+  border-radius: var(--musa-radio-card);
+  background: var(--musa-carbon);
+  color: rgba(255, 255, 255, 0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 64px;
+}
+@media (max-width: 768px) {
+  .musa-local__inner { grid-template-columns: 1fr; }
+  .musa-local__map { min-height: 140px; font-size: 44px; }
+  .musa-favs__head h2, .musa-local__inner h2, .musa-resenas__head + .musa-resenas__grid { font-size: 24px; }
+}
+
+/* --- Carta: buscador + orden --- */
+.carta-filtros { display: flex; gap: 8px; align-items: stretch; flex-wrap: wrap; }
+.carta-buscar { position: relative; flex: 1; min-width: 200px; }
+.carta-buscar i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--musa-texto-suave); }
+.carta-buscar input {
+  width: 100%;
+  padding: 10px 14px 10px 40px;
+  border: 1px solid var(--musa-borde);
+  border-radius: var(--musa-radio-control);
+  background: #fff;
+  font-size: 14px;
+}
+.carta-buscar input:focus { outline: none; border-color: var(--musa-brasa); }
+.carta-filtros select {
+  border: 1px solid var(--musa-borde);
+  border-radius: var(--musa-radio-control);
+  background: #fff;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: "Space Grotesk", sans-serif;
+}
+.carta-filtros .btn-brasa { padding: 10px 16px; }
+.carta-busqueda-info { color: var(--musa-texto-suave); font-size: 14px; margin: 18px 0 22px; }
+.carta-busqueda-info a { color: var(--musa-brasa); }

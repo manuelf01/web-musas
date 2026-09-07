@@ -44,6 +44,7 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=not DEBUG,   # solo por HTTPS en producción
+    MAX_CONTENT_LENGTH=5 * 1024 * 1024,  # subida máx. de imagen: 5 MB
 )
 jwt = JWT(app, authenticate, identity)
 

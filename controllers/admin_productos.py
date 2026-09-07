@@ -3,6 +3,7 @@ from flask_paginate import Pagination, get_page_parameter
 from controllers.admin import admin
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
+from subidas import guardar_imagen
 
 productos = Blueprint("productos", __name__, url_prefix='/productos')
 
@@ -39,7 +40,11 @@ def guardar():
     precio = request.form["precio"]
     existencias = request.form["existencias"]
     idCategoria = request.form.get("categorias")
-    if Producto.insertar_producto(nombre, descripcion, precio, existencias, idCategoria) is False:
+    imagen = guardar_imagen(request.files.get("imagen"), "productos")
+    if request.files.get("imagen") and request.files["imagen"].filename and not imagen:
+        flash("La imagen no es válida (usa JPG, PNG o WEBP, máx. 5 MB).", "error")
+        return redirect(url_for("admin.productos.formulario_agregar"))
+    if Producto.insertar_producto(nombre, descripcion, precio, existencias, idCategoria, imagen) is False:
         flash("Completa todos los campos del producto.", "error")
         return redirect(url_for("admin.productos.formulario_agregar"))
     flash("Producto agregado a la carta.", "ok")
@@ -71,7 +76,11 @@ def actualizar():
     precio = request.form["precio"]
     existencias = request.form["existencias"]
     idCategoria = request.form.get("categorias")
+    imagen = guardar_imagen(request.files.get("imagen"), "productos")
+    if request.files.get("imagen") and request.files["imagen"].filename and not imagen:
+        flash("La imagen no es válida (usa JPG, PNG o WEBP, máx. 5 MB).", "error")
+        return redirect(url_for("admin.productos.editar", id=id))
     Producto.actualizar_producto(
-        nombre, descripcion, precio, existencias, id, idCategoria)
-    flash("Producto actualizado.", "ok")
+        nombre, descripcion, precio, existencias, id, idCategoria, imagen)
+    flash("Producto actualizado." + (" Imagen cambiada." if imagen else ""), "ok")
     return redirect(url_for("admin.productos.home"))

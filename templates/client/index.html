@@ -2,9 +2,9 @@
 {% block title %}Las Musas — Burger Joint nocturno en Lima{% endblock %}
 {% block nav_inicio %}active{% endblock %}{% block tab_inicio %}active{% endblock %}
 
-{% set eyebrows = {
-  "Hamburguesas": "Hechas al momento", "Salchipapas": "Tradición y sabor limeño",
-  "Bebidas": "Para acompañar", "Combos": "Rinden para la noche", "Postres": "El cierre dulce"
+{% set emojis = {
+  "Hamburguesas": "🍔", "Salchipapas": "🍟", "Bebidas": "🍹",
+  "Combos": "🔥", "Postres": "🍰"
 } %}
 
 {% block content %}
@@ -15,82 +15,110 @@
     <span class="musa-hero__pill">
       <span class="musa-hero__pulse"></span> Abierto ahora · Miraflores &amp; Barranco
     </span>
-    <h1>Las Musas</h1>
+    <h1>Brasas nocturnas<br />en Lima</h1>
     <p>
-      Atendemos 6:00 p.m – 10:00 p.m <span style="color: var(--musa-mostaza);">•</span>
-      Carne Angus certificada, pan brioche artesanal y brasas nocturnas en Lima.
+      Carne Angus certificada, pan brioche artesanal y salsas de la casa.
+      Pide, elige tu hora y recoge en tienda. Listo en ~20 min.
     </p>
     <div class="d-flex flex-wrap gap-3 pt-2">
-      <a href="#carta" class="btn-brasa">Ver la carta <i class="bi bi-arrow-right"></i></a>
-      <span
-        class="d-inline-flex align-items-center gap-2 px-3 rounded-3 small"
-        style="background: rgba(255, 255, 255, 0.1); color: rgba(255,255,255,.85);"
-      >
-        <i class="bi bi-bag-check" style="color: var(--musa-mostaza);"></i>
-        Pedidos para <strong>recojo en tienda</strong> · listo en ~20 min
-      </span>
+      <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">Pedir ahora <i class="bi bi-arrow-right"></i></a>
+      <a href="{{ url_for('cliente.carta') }}" class="btn-contorno" style="border-color: rgba(255,255,255,.4); color: #fff;">
+        Ver la carta completa
+      </a>
     </div>
   </div>
 </section>
 
-{% if categorias %}
-{% set visibles = [] %}
-{% for c in categorias if c[1] != "Cremas" %}{% set _ = visibles.append(c) %}{% endfor %}
+<!-- FAVORITOS -->
+{% if favoritos %}
+<section class="musa-shell musa-favs">
+  <div class="musa-favs__head">
+    <div>
+      <span class="eyebrow">Los favoritos de la noche</span>
+      <h2>Lo que más piden</h2>
+    </div>
+    <a class="musa-vermas d-none d-sm-inline-flex" href="{{ url_for('cliente.carta') }}">
+      Ver todo <i class="bi bi-chevron-right"></i>
+    </a>
+  </div>
+  <div class="musa-favs__row">
+    {% for p in favoritos %}
+      {% include "client/_producto_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 
-<!-- BARRA DE CATEGORÍAS PEGAJOSA -->
-{% with modo = "anclas", activa = None %}
-  {% include "client/_catbar.html" %}
-{% endwith %}
-
-<!-- SECCIONES POR CATEGORÍA -->
-<div class="musa-shell">
-  {% for categoria in visibles %}
-    {% set items = productos | selectattr("idCategoria", "equalto", categoria[0]) | list %}
-    <section class="musa-cat-section" id="cat-{{ categoria[0] }}">
-      <div class="musa-cat-head">
-        <div>
-          <span class="eyebrow">{{ eyebrows.get(categoria[1], "De la carta") }}</span>
-          <h2>{{ categoria[1] }}</h2>
-          {% if categoria[2] %}<p>{{ categoria[2] }}</p>{% endif %}
-        </div>
-        <a class="musa-vermas" href="{{ url_for('cliente.productos_categoria', categoria=categoria[1]) }}">
-          Ver más ({{ totales.get(categoria[0], items|length) }}) <i class="bi bi-chevron-right"></i>
-        </a>
+<!-- BANDA DE PROMO -->
+<section class="musa-promo">
+  <div class="musa-promo__inner">
+    <div class="d-flex align-items-start gap-3" style="max-width: 40rem;">
+      <span class="musa-promo__ico"><i class="bi bi-cup-straw"></i></span>
+      <div>
+        <span class="musa-promo__eyebrow">Promo nocturna exclusiva</span>
+        <h3>2x1 en Cervezas Artesanales de Barril</h3>
+        <p>
+          Válido en pedidos mayores a <strong>S/ 45.00</strong> entre
+          <strong>8:00 p.m y 10:00 p.m</strong>. Elige IPA o Red Ale.
+        </p>
       </div>
+    </div>
+    <a href="{{ url_for('cliente.carta') }}#cat-3" class="musa-promo__btn">Aprovechar promo <i class="bi bi-lightning-charge-fill"></i></a>
+  </div>
+</section>
 
-      {% if items %}
-        <div class="producto-grid">
-          {% for p in items %}
-            {% include "client/_producto_card.html" %}
-          {% endfor %}
-        </div>
-      {% else %}
-        <p style="color: var(--musa-texto-suave);">Pronto agregaremos productos a esta categoría.</p>
-      {% endif %}
-    </section>
+<!-- EXPLORA POR CATEGORÍA -->
+{% if categorias %}
+<section class="musa-shell musa-explora">
+  <div class="musa-cat-head">
+    <div>
+      <span class="eyebrow">Explora</span>
+      <h2>Nuestra carta por categoría</h2>
+    </div>
+    <a class="musa-vermas" href="{{ url_for('cliente.carta') }}">Ver carta completa <i class="bi bi-chevron-right"></i></a>
+  </div>
+  <div class="musa-tiles">
+    {% for c in categorias %}
+      <a class="musa-tile" href="{{ url_for('cliente.productos_categoria', categoria=c[1]) }}"
+         {% if c[3] %}style="background-image: linear-gradient(180deg, rgba(26,21,18,.15), rgba(26,21,18,.8)), url('{{ url_for('static', filename='img/' ~ c[3]) }}');"{% endif %}>
+        <span class="musa-tile__emoji">{{ emojis.get(c[1], "🍴") }}</span>
+        <span class="musa-tile__nombre">{{ c[1] }}</span>
+        <span class="musa-tile__n">{{ totales.get(c[0], 0) }} opciones</span>
+      </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 
-    {% if loop.first %}
-      <!-- BANDA DE PROMO -->
-      <section class="musa-promo">
-        <div class="musa-promo__inner">
-          <div class="d-flex align-items-start gap-3" style="max-width: 40rem;">
-            <span class="musa-promo__ico"><i class="bi bi-cup-straw"></i></span>
-            <div>
-              <span class="musa-promo__eyebrow">Promo nocturna exclusiva</span>
-              <h3>2x1 en Cervezas Artesanales de Barril</h3>
-              <p>
-                Válido en pedidos mayores a <strong>S/ 45.00</strong> entre
-                <strong>8:00 p.m y 10:00 p.m</strong>. Elige IPA o Red Ale.
-              </p>
-            </div>
-          </div>
-          <a href="#carta" class="musa-promo__btn">Aprovechar promo <i class="bi bi-lightning-charge-fill"></i></a>
-        </div>
-      </section>
-    {% endif %}
-  {% endfor %}
+<!-- PRUEBA SOCIAL -->
+<section class="musa-resenas">
+  <div class="musa-shell">
+    <div class="musa-resenas__head">
+      <div class="musa-resenas__nota">
+        <strong>4.8</strong>
+        <span class="musa-resenas__estrellas">★★★★★</span>
+      </div>
+      <p>Más de <strong>2,000 pedidos</strong> recogidos en tienda este año</p>
+    </div>
+    <div class="musa-resenas__grid">
+      <blockquote>
+        “La smash con cebolla al vino es adictiva. Pedí, me dieron mi hora y estaba lista.”
+        <cite>— Andrea C.</cite>
+      </blockquote>
+      <blockquote>
+        “Ideal para después del turno. La clave de recojo hace todo rapidísimo.”
+        <cite>— Renzo M.</cite>
+      </blockquote>
+      <blockquote>
+        “Las salchipapas rinden un montón y el chimichurri ahumado es otro nivel.”
+        <cite>— Lucía R.</cite>
+      </blockquote>
+    </div>
+  </div>
+</section>
 
-  <!-- FRANJA DE GARANTÍAS -->
+<!-- PILARES -->
+<div class="musa-shell">
   <section class="musa-pilares">
     <div class="musa-pilar">
       <span class="musa-pilar__ico"><i class="bi bi-patch-check"></i></span>
@@ -115,13 +143,24 @@
     </div>
   </section>
 </div>
-{% else %}
-<div class="musa-shell">
-  <div class="musa-vacio">
-    <i class="bi bi-fire d-block mb-3"></i>
-    <h2 class="fw-bold">La carta se está preparando</h2>
-    <p>Vuelve en un momento, estamos encendiendo las brasas.</p>
+
+<!-- LOCAL + HORARIO -->
+<section class="musa-local">
+  <div class="musa-shell musa-local__inner">
+    <div>
+      <span class="eyebrow">Recojo en tienda</span>
+      <h2>Sede Miraflores</h2>
+      <p class="musa-local__dato"><i class="bi bi-geo-alt-fill"></i> Calle Schell 385, Miraflores, Lima</p>
+      <p class="musa-local__dato"><i class="bi bi-clock"></i> Todos los días · 6:00 p.m – 10:00 p.m</p>
+      <div class="d-flex flex-wrap gap-2 pt-2">
+        <a class="btn-contorno" target="_blank" rel="noopener"
+           href="https://maps.google.com/?q=Calle+Schell+385+Miraflores+Lima">
+          <i class="bi bi-map"></i> Cómo llegar
+        </a>
+        <a class="btn-brasa" href="{{ url_for('cliente.carta') }}">Empezar mi pedido</a>
+      </div>
+    </div>
+    <div class="musa-local__map" aria-hidden="true"><i class="bi bi-shop-window"></i></div>
   </div>
-</div>
-{% endif %}
+</section>
 {% endblock %}

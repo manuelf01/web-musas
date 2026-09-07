@@ -12,9 +12,24 @@
 </div>
 
 <section class="adm-card">
-  <form action="{{ url_for('admin.productos.actualizar') }}" method="post" class="adm-form">
+  <form action="{{ url_for('admin.productos.actualizar') }}" method="post" enctype="multipart/form-data" class="adm-form">
     {{ campo_csrf() }}
     <input type="hidden" name="idProducto" value="{{ producto['idProducto'] }}" />
+
+    <div class="musa-field">
+      <label class="musa-field-label">Foto del producto</label>
+      <div class="adm-foto-edit">
+        {% if producto['imagen'] %}
+          <img src="{{ url_for('static', filename='img/' ~ producto['imagen']) }}" alt="" class="adm-foto-actual" />
+        {% else %}
+          <span class="adm-foto-actual adm-foto-actual--vacia"><i class="bi bi-image"></i></span>
+        {% endif %}
+        <div>
+          <input type="file" name="imagen" id="imagen" accept="image/*" class="musa-input" />
+          <span class="musa-field-hint">Sube una nueva para reemplazarla. Déjalo vacío para conservar la actual.</span>
+        </div>
+      </div>
+    </div>
     <div class="musa-field">
       <label class="musa-field-label" for="categorias">Categoría</label>
       <select class="musa-input" name="categorias" id="categorias" required>

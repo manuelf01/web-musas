@@ -42,6 +42,35 @@
 | 2026-09-07 | **Auditoría del flujo completo + tanda de correcciones** (18 hallazgos). Ver sección "Auditoría 2026-09-07" abajo. | `git revert` de los commits |
 | 2026-09-07 | **2ª auditoría**: seguridad (CSRF/cabeceras/throttle), responsive (nav inferior móvil, desbordes), captcha admin solo si el DNI es admin. | `git revert` |
 | 2026-09-07 | **Cancelación de pedidos + anti no-show** (migración 006). Ver "No-show 2026-09-07" abajo. | `git revert` + revertir 006 |
+| 2026-09-07 | **Inicio rediseñado como landing** (distinto de la Carta) + **subida de imágenes desde el panel** (migración 007). Ver "Inicio + imágenes 2026-09-07". | `git revert` + revertir 007 |
+
+### Inicio + imágenes 2026-09-07
+**Problema**: Inicio y Carta eran casi idénticas (ambas = secciones por categoría + tarjetas).
+
+- **Inicio (`/`)** ahora es un *landing* de marketing, NO un catálogo:
+  hero → fila horizontal "Los favoritos de la noche" (`Producto.destacados()`) →
+  banda de promo → mosaicos de categoría (`.musa-tiles`, enlazan a `/productos/<cat>`) →
+  reseñas / prueba social (`.musa-resenas`, texto estático) → pilares → sede + mapa.
+  Ya NO lista la carta completa.
+- **Carta (`/carta`)** gana **buscador** (`?q=`) y **ordenar** (`?orden=`); con búsqueda
+  activa muestra una sola grilla sin secciones ni catbar.
+- ⚠️ Colisión de clases resuelta: `.musa-social` ya existía (iconos del footer).
+  La sección de reseñas usa `.musa-resenas`. **No reusar `.musa-social` para bloques.**
+
+**Migración 007**: `categoriaProducto.imagen VARCHAR(255) NULL`.
+
+- **Subida de imágenes** (`subidas.py` → `guardar_imagen(archivo, subcarpeta)`):
+  valida extensión + que sea imagen real (Pillow `verify()`), guarda en
+  `static/img/<productos|categorias>/` con nombre aleatorio, devuelve la ruta relativa.
+- Formularios admin de producto y categoría: `enctype="multipart/form-data"` + `<input type="file" name="imagen">`.
+  Al editar: se muestra la imagen actual; si no subes una nueva, se conserva.
+- `Producto.insertar_producto` / `actualizar_producto` y `CategoriaProducto.insertar/actualizar_categoria`
+  aceptan `imagen=None`.
+- Las listas del panel muestran miniatura (`.adm-foto-mini`).
+- `MAX_CONTENT_LENGTH = 5 MB` en `app.py`.
+- **`static/img/productos/` y `static/img/categorias/` están en `.gitignore`**: las
+  imágenes subidas son datos de cada entorno, no código. Para el demo compartido,
+  subir las fotos por el panel en cada equipo o pasar un zip.
 
 ### Seguridad 2026-09-07
 - **CSRF**: token de sesión propio (`seguridad.py` → `campo_csrf()` / `csrf_valido()`), validado en `app.before_request` para todo POST de formulario. APIs JSON (JWT, `/api/*`) exentas por content-type. `{{ campo_csrf() }}` en los 15 formularios.

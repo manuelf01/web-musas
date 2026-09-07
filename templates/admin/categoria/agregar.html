@@ -12,8 +12,12 @@
 </div>
 
 <section class="adm-card">
-  <form action="{{ url_for('admin.categoria.guardar') }}" method="post" class="adm-form">
+  <form action="{{ url_for('admin.categoria.guardar') }}" method="post" enctype="multipart/form-data" class="adm-form">
     {{ campo_csrf() }}
+    <div class="musa-field">
+      <label class="musa-field-label" for="imagen">Imagen de la categoría <span class="musa-field-hint">se usa en el mosaico del inicio, opcional</span></label>
+      <input type="file" name="imagen" id="imagen" accept="image/*" class="musa-input" />
+    </div>
     <div class="musa-field">
       <label class="musa-field-label" for="nombreCategoria">Nombre de la categoría</label>
       <input class="musa-input" required type="text" placeholder="Ej. Hamburguesas" name="nombreCategoria" id="nombreCategoria" />

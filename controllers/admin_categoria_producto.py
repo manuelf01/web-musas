@@ -1,6 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, g, flash
 from controllers.admin import admin
 from model.CategoriaProducto import CategoriaProducto
+from subidas import guardar_imagen
 
 categoria_producto = Blueprint("categoria", __name__, url_prefix='/categorias')
 
@@ -20,7 +21,8 @@ def agregar():
 def guardar():
     nombreCategoria = request.form["nombreCategoria"]
     descripcion = request.form["descripcion"]
-    CategoriaProducto.insertar_categoria(nombreCategoria, descripcion)
+    imagen = guardar_imagen(request.files.get("imagen"), "categorias")
+    CategoriaProducto.insertar_categoria(nombreCategoria, descripcion, imagen)
     flash("Categoría creada.", "ok")
     return redirect(url_for('admin.categoria.home'))
 
@@ -47,6 +49,7 @@ def actualizar():
     id = request.form["idCategoria"]
     nombreCategoria = request.form["nombreCategoria"]
     descripcion = request.form["descripcion"]
-    CategoriaProducto.actualizar_categoria(nombreCategoria, descripcion, id)
-    flash("Categoría actualizada.", "ok")
+    imagen = guardar_imagen(request.files.get("imagen"), "categorias")
+    CategoriaProducto.actualizar_categoria(nombreCategoria, descripcion, id, imagen)
+    flash("Categoría actualizada." + (" Imagen cambiada." if imagen else ""), "ok")
     return redirect(url_for("admin.categoria.home"))

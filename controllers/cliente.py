@@ -25,16 +25,13 @@ def _cliente_nombre():
 @cliente.route("/")
 def home():
     user = session.get("cliente.auth", None)
-    categorias = CategoriaProducto.obtener_categorias()
-    productos = Producto.obtener_productos_limite()
-    totales = Producto.contar_por_categoria()
-    cliente_nombre = user["nombres"] if user else None
+    categorias = [c for c in CategoriaProducto.obtener_categorias() if c[1] != "Cremas"]
     return render_template(
         "client/index.html",
-        cliente=cliente_nombre,
+        cliente=user["nombres"] if user else None,
         categorias=categorias,
-        productos=productos,
-        totales=totales,
+        favoritos=Producto.destacados(8),
+        totales=Producto.contar_por_categoria(),
     )
 
 @cliente.route("/productos/<string:categoria>")
@@ -64,9 +61,28 @@ def productos_categoria(categoria):
 def carta():
     categorias = CategoriaProducto.obtener_categorias()
     productos = Producto.obtener_productos()
+
+    q = (request.args.get("q") or "").strip()
+    if q:
+        ql = q.lower()
+        productos = [
+            p for p in productos
+            if ql in p["nombre"].lower() or ql in (p["descripcion"] or "").lower()
+        ]
+
+    orden = request.args.get("orden", "recomendados")
+    if orden == "precio-asc":
+        productos.sort(key=lambda p: p["precio"] or 0)
+    elif orden == "precio-desc":
+        productos.sort(key=lambda p: p["precio"] or 0, reverse=True)
+    elif orden == "nombre":
+        productos.sort(key=lambda p: p["nombre"].lower())
+
     return render_template(
         "client/carta.html",
         cliente=_cliente_nombre(),
+        q=q,
+        orden=orden,
         categorias=categorias,
         productos=productos,
     )

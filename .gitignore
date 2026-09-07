@@ -2,4 +2,9 @@
 __pycache__
 cfg.py
 DigiCertGlobalRootCA.crt.pem
-static/js/config.jsstatic/_rev/
+static/js/config.js
+static/_rev/
+
+# Imágenes subidas desde el panel (no son código; cada entorno tiene las suyas)
+static/img/productos/
+static/img/categorias/

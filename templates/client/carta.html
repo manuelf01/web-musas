@@ -12,18 +12,51 @@
 {% set visibles = [] %}
 {% for c in categorias if c[1] != "Cremas" %}{% set _ = visibles.append(c) %}{% endfor %}
 
-{% with modo = "anclas", activa = None %}
-  {% include "client/_catbar.html" %}
-{% endwith %}
+{% if not q %}
+  {% with modo = "anclas", activa = None %}
+    {% include "client/_catbar.html" %}
+  {% endwith %}
+{% endif %}
 
 <div class="musa-shell carta-wrap">
   <div class="carta-head">
     <div class="carta-head__titulo">
       <h1>Nuestra carta</h1>
-      <span class="carta-head__conteo">{{ productos|length }} productos · retiro en tienda</span>
+      <span class="carta-head__conteo">{{ productos|length }} producto{{ '' if productos|length == 1 else 's' }} · retiro en tienda</span>
     </div>
+
+    <form method="get" class="carta-filtros">
+      <div class="carta-buscar">
+        <i class="bi bi-search"></i>
+        <input type="search" name="q" value="{{ q }}" placeholder="Busca smash, trufa, cerveza…" autocomplete="off" />
+      </div>
+      <select name="orden" onchange="this.form.submit()" aria-label="Ordenar">
+        <option value="recomendados" {{ 'selected' if orden == 'recomendados' }}>Recomendados</option>
+        <option value="precio-asc"  {{ 'selected' if orden == 'precio-asc' }}>Menor precio</option>
+        <option value="precio-desc" {{ 'selected' if orden == 'precio-desc' }}>Mayor precio</option>
+        <option value="nombre"      {{ 'selected' if orden == 'nombre' }}>Nombre (A–Z)</option>
+      </select>
+      <button type="submit" class="btn-brasa"><i class="bi bi-search"></i></button>
+    </form>
   </div>
 
+  {% if q %}
+    {# Resultados de búsqueda: una sola grilla, sin secciones #}
+    {% if productos %}
+      <p class="carta-busqueda-info">Resultados para «<strong>{{ q }}</strong>» —
+        <a href="{{ url_for('cliente.carta') }}">ver toda la carta</a></p>
+      <div class="producto-grid">
+        {% for p in productos %}{% include "client/_producto_card.html" %}{% endfor %}
+      </div>
+    {% else %}
+      <div class="carta-empty">
+        <div class="carta-empty__ico"><i class="bi bi-search"></i></div>
+        <h2>Sin resultados para «{{ q }}»</h2>
+        <p>Prueba con otra palabra o revisa la carta completa.</p>
+        <a href="{{ url_for('cliente.carta') }}" class="btn-contorno"><i class="bi bi-arrow-left"></i> Ver toda la carta</a>
+      </div>
+    {% endif %}
+  {% else %}
   {% for categoria in visibles %}
     {% set items = productos | selectattr("idCategoria", "equalto", categoria[0]) | list %}
     <section class="musa-cat-section" id="cat-{{ categoria[0] }}">
@@ -46,6 +79,7 @@
       {% endif %}
     </section>
   {% endfor %}
+  {% endif %}
 
   <section class="musa-pilares">
     <div class="musa-pilar">
