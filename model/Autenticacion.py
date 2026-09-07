@@ -1,6 +1,8 @@
 from bd import obtener_conexion
 from werkzeug.security import check_password_hash, generate_password_hash
 from model.Usuario import Usuario
+
+
 class Autenticacion:
 
     diccionario_tipo = {
@@ -12,24 +14,86 @@ class Autenticacion:
         }
     }
 
+    # ------------------------------------------------------------------
+    # Verificación de contraseña (hash con werkzeug)
+    # ------------------------------------------------------------------
+    @staticmethod
+    def verificar_password(guardada, ingresada):
+        if not guardada:
+            return False
+        try:
+            return check_password_hash(guardada, ingresada)
+        except Exception:
+            # Contraseña antigua guardada en texto plano (datos previos a la
+            # migración a hash). Se acepta una sola vez para no bloquear al
+            # usuario; hay que recrear esas cuentas.
+            return guardada == ingresada
+
+    # ------------------------------------------------------------------
+    # Login unificado: una sola puerta, decide por tipoUsuario
+    # ------------------------------------------------------------------
+    @staticmethod
+    def dni_es_admin(dni):
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM usuario WHERE dni = %s AND tipoUsuario = %s",
+                (dni, False),
+            )
+            total = cursor.fetchone()[0]
+        conexion.close()
+        return total > 0
+
+    @staticmethod
+    def login_unificado(dni, contraseña):
+        """
+        Devuelve (fila_usuario, tipo) con tipo 'admin' o 'cliente',
+        o un string con el mensaje de error.
+        fila_usuario = SELECT * FROM usuario
+          [0]idUsuario [1]dni [2]nombres [3]apellidos [4]correo
+          [5]numTelf   [6]contraseña [7]tipoUsuario
+        """
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            # Si el DNI existe como admin y como cliente, gana admin (tipoUsuario 0).
+            cursor.execute(
+                "SELECT * FROM usuario WHERE dni = %s ORDER BY tipoUsuario ASC",
+                (dni,),
+            )
+            filas = cursor.fetchall()
+        conexion.close()
+
+        if not filas:
+            return "No encontramos una cuenta con ese DNI."
+
+        for fila in filas:
+            if Autenticacion.verificar_password(fila[6], contraseña):
+                tipo = "admin" if fila[7] in (0, False) else "cliente"
+                return (fila, tipo)
+
+        return "La contraseña no es correcta."
+
+    # ------------------------------------------------------------------
+    # Login clásico por tipo (se mantiene por compatibilidad)
+    # ------------------------------------------------------------------
     @staticmethod
     def login(dni, contraseña, tipo_blueprint):
         conexion = obtener_conexion()
         error = None
-        cursor = conexion.cursor()
 
-        tipo = Autenticacion.diccionario_tipo[tipo_blueprint]
-        tipoUsuario = tipo["tipoUsuario"]
-        
+        tipoUsuario = Autenticacion.diccionario_tipo[tipo_blueprint]["tipoUsuario"]
+
         with conexion.cursor() as cursor:
-            query = f"SELECT * FROM usuario WHERE dni = %s and tipoUsuario = %s"
-            cursor.execute(query, (dni, tipoUsuario))
+            cursor.execute(
+                "SELECT * FROM usuario WHERE dni = %s and tipoUsuario = %s",
+                (dni, tipoUsuario),
+            )
             user = cursor.fetchall()
         conexion.close()
 
-        if user is None or user.__len__() == 0:
+        if user is None or len(user) == 0:
             error = "Usuario incorrecto"
-        elif user[0][6] != contraseña:
+        elif not Autenticacion.verificar_password(user[0][6], contraseña):
             error = "Contraseña incorrecta"
         else:
             error = user
@@ -38,25 +102,20 @@ class Autenticacion:
 
     @staticmethod
     def registro(dni, nombres, apellidos, correo, numTelf, contraseña):
-        conexion = obtener_conexion()
-
         if not dni or not nombres or not apellidos or not correo or not numTelf or not contraseña:
-            error = "Campos obligatorios"
-        else:
-            error = Usuario.insertar_usuario(dni, nombres, apellidos, correo, numTelf, contraseña, True)            
-        return error
+            return "Campos obligatorios"
+        # insertar_usuario hace el hash de la contraseña.
+        return Usuario.insertar_usuario(dni, nombres, apellidos, correo, numTelf, contraseña, True)
 
     @staticmethod
     def sesionRegistrada(blueprint_name, dni):
-
         conexion = obtener_conexion()
-
         tipoUsuario = Autenticacion.diccionario_tipo[blueprint_name]["tipoUsuario"]
-
         with conexion.cursor() as cursor:
-            query = f"SELECT * FROM usuario WHERE dni = %s and tipoUsuario = %s"
-            cursor = conexion.cursor()
-            cursor.execute(query, (dni, tipoUsuario))
+            cursor.execute(
+                "SELECT * FROM usuario WHERE dni = %s and tipoUsuario = %s",
+                (dni, tipoUsuario),
+            )
             user = cursor.fetchall()
-
+        conexion.close()
         return user[0]

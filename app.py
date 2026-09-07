@@ -3,6 +3,7 @@ import collections
 import collections.abc
 collections.Mapping = collections.abc.Mapping
 
+from datetime import timedelta
 from flask import Flask, request
 from flask_jwt import JWT
 from flask_swagger_ui import get_swaggerui_blueprint
@@ -76,6 +77,8 @@ app.register_blueprint(api_comprobante)
 app.register_blueprint(transaccion)
 
 app.secret_key = "mysecretkey"
+# "Recordar sesión en este equipo": duración de la sesión permanente
+app.permanent_session_lifetime = timedelta(days=30)
 # Iniciar el servidor
 
 if __name__ == "__main__":

@@ -35,14 +35,15 @@ class Usuario:
         user = Usuario.obtener_usuario_dni_tipo(DNI, tipoUsuario)
         error = None
         if user is None:
+            contra_hash = generate_password_hash(contra)
             conexion = obtener_conexion()
             with conexion.cursor() as cursor:
                 cursor.execute("INSERT INTO usuario(DNI, nombres, apellidos, correo, numTelf,contraseña, tipoUsuario) VALUES (%s, %s, %s, %s, %s, %s, %s)", (
-                    DNI, nombres, apellidos, correo, numTel, contra, tipoUsuario))
+                    DNI, nombres, apellidos, correo, numTel, contra_hash, tipoUsuario))
             conexion.commit()
             conexion.close()
         else:
-            error = "Usuario ya registrado"
+            error = "Este DNI ya está registrado."
         return error
 
     def obtener_usuarios():
@@ -73,12 +74,15 @@ class Usuario:
         return modo
 
     def actualizar_usuario(correo, numTel, contra, id, tipo):
-        if correo is "":
-            correo = Usuario.obtener_usuario_id_tipo(id, tipo)[3]
-        elif numTel is "":
-            numTel = Usuario.obtener_usuario_id_tipo(id, tipo)[4]
-        elif contra is "":
-            contra = Usuario.obtener_usuario_id_tipo(id, tipo)[5]
+        actual = Usuario.obtener_usuario_id_tipo(id, tipo)
+        if correo == "" or correo is None:
+            correo = actual[3]
+        if numTel == "" or numTel is None:
+            numTel = actual[4]
+        if contra == "" or contra is None:
+            contra = actual[5]           # se conserva el hash actual
+        else:
+            contra = generate_password_hash(contra)
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute("UPDATE usuario SET correo = %s, numTelf= %s, contraseña= %s WHERE idUsuario=%s and tipoUsuario = %s",

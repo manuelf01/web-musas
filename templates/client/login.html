@@ -1,42 +1,275 @@
-{% extends "client/main.html" %} {% block titulo %} Registrarse {% endblock %}
-{% block contenido %}
-<section class="w-50 m-auto mt-5 mb-3 h-100">
-  <div class="h-100 d-flex flex-column justify-content-center">
-    <h3 class="m-3 fs-5 fw-bold">Iniciar sesión</h3>
-    <form
-      action="{{url_for('cliente.auth.login')}}"
-      method="post"
-      class="d-flex flex-column justify-content-center"
+{% extends "client/base.html" %}
+{% block title %}Iniciar sesión · Las Musas{% endblock %}
+
+{% block content %}
+<div class="auth-split">
+  <!-- Hero editorial (solo desktop) -->
+  <section
+    class="auth-visual"
+    style="background-image: url('{{ url_for('static', filename='img/hamburguesas/ha-1.jpg') }}');"
+  >
+    <div class="d-flex justify-content-between align-items-center">
+      <div
+        class="d-flex align-items-center gap-2 px-3 py-2 rounded-pill"
+        style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(6px);"
+      >
+        <span class="musa-dot-live" style="background: var(--musa-mostaza);"></span>
+        <span class="small fw-semibold text-uppercase" style="letter-spacing: 0.12em;">
+          Brasas nocturnas · Lima
+        </span>
+      </div>
+      <span class="small text-white-50">Est. 2021</span>
+    </div>
+
+    <div style="max-width: 26ch;">
+      <span
+        class="small fw-bold text-uppercase d-block mb-2"
+        style="letter-spacing: 0.16em; color: var(--musa-mostaza);"
+      >
+        Acceso
+      </span>
+      <h1 class="display-4 fw-bold lh-1">Pasión, Fuego &amp; Sazón.</h1>
+      <p class="text-white-50 mt-3 mb-0">
+        Ingresa con tu DNI. El sistema reconoce si eres cliente o personal del
+        local.
+      </p>
+    </div>
+
+    <div
+      class="d-flex align-items-center justify-content-between gap-3 p-3 rounded-3"
+      style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(6px);"
     >
-      <div class="mb-3">
-        <label for="usuario" class="form-label">Dni:</label>
-        <input
-          required
-          type="number"
-          class="form-control"
-          name="usuario"
-          id="dni"
-        />
+      <div class="d-flex align-items-center gap-3">
+        <span class="musa-avatar" style="border-radius: 12px;"><i class="bi bi-shop"></i></span>
+        <div>
+          <div class="fw-semibold">Miraflores Joint · Calle Schell 385</div>
+          <div class="small text-white-50">Atendemos 6:00 p.m – 10:00 p.m</div>
+        </div>
       </div>
-      <div class="mb-3">
-        <label for="contraseña" class="form-label">Contraseña:</label>
-        <input
-          type="password"
-          class="form-control"
-          name="contraseña"
-          id="contraseña"
-        />
-      </div>
-      <div class="d-flex justify-content-end gap-2">
+      <span class="d-flex align-items-center gap-1 small" style="color: var(--musa-mostaza);">
+        <i class="bi bi-fire"></i> Brasas encendidas
+      </span>
+    </div>
+  </section>
+
+  <!-- Formulario -->
+  <section class="auth-form-side">
+    <div class="auth-card">
+      <a
+        href="{{ url_for('cliente.home') }}"
+        class="text-decoration-none small d-inline-flex align-items-center gap-1"
+        style="color: var(--musa-texto-suave);"
+      >
+        <i class="bi bi-arrow-left"></i> Volver a la carta
+      </a>
+
+      <p
+        class="small fw-bold text-uppercase mt-4 mb-1"
+        style="letter-spacing: 0.16em; color: var(--musa-brasa);"
+        id="eyebrow"
+      >
+        Área clientes
+      </p>
+      <h2 class="fw-bold mb-2">Iniciar sesión</h2>
+      <p style="color: var(--musa-texto-suave);">
+        Accede con tu DNI y contraseña para ver tu historial y repetir tus
+        pedidos favoritos.
+      </p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          {% if category == 'ok' %}
+            <div class="musa-alert musa-alert--ok d-flex gap-2 mb-3">
+              <i class="bi bi-check-circle-fill mt-1"></i>
+              <div class="small">{{ message }}</div>
+            </div>
+          {% else %}
+            <div class="musa-alert d-flex gap-2 mb-3">
+              <i class="bi bi-exclamation-circle-fill mt-1"></i>
+              <div>
+                <div class="fw-bold text-uppercase small" style="letter-spacing: 0.06em;">
+                  No pudimos continuar
+                </div>
+                <div class="small">{{ message }}</div>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% endwith %}
+
+      <form action="{{ url_for('cliente.auth.login') }}" method="post" class="d-flex flex-column gap-3">
+        <div class="musa-field">
+          <label for="usuario" class="musa-field-label">
+            Documento de Identidad (DNI)
+            <span class="musa-field-hint">8 dígitos</span>
+          </label>
+          <div class="musa-input-icon">
+            <i class="bi bi-person-vcard"></i>
+            <input
+              type="text"
+              inputmode="numeric"
+              maxlength="8"
+              pattern="[0-9]{8}"
+              class="musa-input"
+              id="usuario"
+              name="usuario"
+              placeholder="Ej. 74829103"
+              autocomplete="off"
+              required
+            />
+          </div>
+        </div>
+
+        <div class="musa-field">
+          <label for="contrasena" class="musa-field-label">
+            Contraseña
+            <a href="#" class="musa-field-hint text-decoration-none">¿Olvidaste tu contraseña?</a>
+          </label>
+          <div class="musa-input-icon">
+            <i class="bi bi-lock"></i>
+            <input
+              type="password"
+              class="musa-input"
+              id="contrasena"
+              name="contraseña"
+              placeholder="••••••••"
+              required
+              style="padding-right: 44px;"
+            />
+            <button
+              type="button"
+              class="musa-toggle"
+              data-toggle-pass="contrasena"
+              aria-label="Mostrar u ocultar contraseña"
+            >
+              <i class="bi bi-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Verificación (solo aparece para DNI de administrador) -->
+        <div class="musa-field" id="bloque-captcha" hidden>
+          <label for="captcha" class="musa-field-label">
+            Verificación de seguridad
+            <span class="musa-badge musa-badge--brasa">Personal autorizado</span>
+          </label>
+          <div class="d-flex align-items-center gap-2">
+            <img
+              id="captcha-img"
+              alt="Código de verificación"
+              width="220"
+              height="80"
+              style="border: 1px solid var(--musa-borde); border-radius: var(--musa-radio-control); background: #fff;"
+            />
+            <button
+              type="button"
+              id="captcha-refresh"
+              class="btn-contorno"
+              style="min-height: 44px; padding: 0 12px;"
+              aria-label="Generar otro código"
+            >
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+          <input
+            type="text"
+            class="musa-input mt-2"
+            id="captcha"
+            name="captcha"
+            placeholder="Escribe los 6 caracteres"
+            maxlength="6"
+            autocomplete="off"
+            style="letter-spacing: 0.3em; text-transform: uppercase;"
+          />
+        </div>
+
+        <label class="d-flex align-items-center gap-2 small" style="color: var(--musa-texto-suave);">
+          <input type="checkbox" name="recordar" class="form-check-input mt-0" />
+          Recordar sesión en este equipo
+        </label>
+
+        <button type="submit" class="btn-brasa w-100">
+          Iniciar sesión <i class="bi bi-arrow-right"></i>
+        </button>
+      </form>
+
+      <p class="text-center small mt-4 mb-0" style="color: var(--musa-texto-suave);">
+        ¿Aún no tienes cuenta?
         <a
-          href="{{url_for('cliente.auth.registro')}}"
-          class="btn btn-primary mt-2"
+          href="{{ url_for('cliente.auth.registro') }}"
+          class="fw-bold text-decoration-none"
+          style="color: var(--musa-brasa);"
         >
-          Registrarse
+          Regístrate aquí
         </a>
-        <button type="submit" class="btn btn-success mt-2">Iniciar</button>
+      </p>
+
+      <div
+        class="d-flex align-items-center justify-content-center gap-2 mt-4 small"
+        style="color: var(--musa-texto-suave);"
+      >
+        <i class="bi bi-shield-lock-fill" style="color: var(--musa-exito);"></i>
+        Contraseñas cifradas · sesiones auditadas
       </div>
-    </form>
-  </div>
-</section>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Mostrar / ocultar contraseña
+  document.querySelectorAll("[data-toggle-pass]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var input = document.getElementById(btn.dataset.togglePass);
+      var visible = input.type === "text";
+      input.type = visible ? "password" : "text";
+      btn.querySelector("i").className = visible ? "bi bi-eye" : "bi bi-eye-slash";
+    });
+  });
+
+  // DNI solo dígitos
+  var dni = document.getElementById("usuario");
+  var bloque = document.getElementById("bloque-captcha");
+  var img = document.getElementById("captcha-img");
+  var eyebrow = document.getElementById("eyebrow");
+  var captchaVisible = false;
+
+  function cargarCaptcha() {
+    img.src = "{{ url_for('cliente.auth.login_captcha') }}?t=" + Date.now();
+  }
+
+  function mostrarCaptcha(mostrar) {
+    if (mostrar === captchaVisible) return;
+    captchaVisible = mostrar;
+    bloque.hidden = !mostrar;
+    eyebrow.textContent = mostrar ? "Acceso administrador" : "Área clientes";
+    if (mostrar) cargarCaptcha();
+  }
+
+  var timer = null;
+  dni.addEventListener("input", function () {
+    this.value = this.value.replace(/[^0-9]/g, "");
+    clearTimeout(timer);
+    var valor = this.value;
+    if (valor.length !== 8) {
+      mostrarCaptcha(false);
+      return;
+    }
+    timer = setTimeout(function () {
+      fetch("{{ url_for('cliente.auth.login_tipo_dni') }}?dni=" + valor)
+        .then(function (r) { return r.json(); })
+        .then(function (d) { mostrarCaptcha(!!d.admin); })
+        .catch(function () { mostrarCaptcha(false); });
+    }, 250);
+  });
+
+  document.getElementById("captcha-refresh").addEventListener("click", cargarCaptcha);
+
+  // Si el servidor devolvió error y ya estabamos en modo admin, recarga el captcha
+  {% if get_flashed_messages() and request.form.get('captcha') is not none %}
+    dni.value = "{{ request.form.get('usuario', '')|e }}";
+    mostrarCaptcha(true);
+  {% endif %}
+</script>
 {% endblock %}

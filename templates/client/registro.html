@@ -1,47 +1,245 @@
-{% extends "client/main.html" %} {% block titulo %} Registrarse {% endblock %}
-{% block contenido %}
-<section class="w-50 m-auto mt-5 mb-3">
-  <h3 class="m-3 fs-5 fw-bold">Registro</h3>
-  <form
-    action="{{url_for('cliente.auth.registro')}}"
-    method="post"
-    class="d-flex flex-column justify-content-center"
+{% extends "client/base.html" %}
+{% block title %}Crear cuenta · Las Musas{% endblock %}
+
+{% block content %}
+<div class="auth-split">
+  <!-- Hero editorial (solo desktop) -->
+  <section
+    class="auth-visual"
+    style="background-image: url('{{ url_for('static', filename='img/hamburguesas/h-2.jpg') }}');"
   >
-    <div class="mb-3">
-      <label for="dni" class="form-label">Dni:</label>
-      <input required type="number" class="form-control" name="dni" id="dni" />
-    </div>
-    <div class="mb-3">
-      <label for="nombres" class="form-label">Nombres:</label>
-      <input type="text" class="form-control" name="nombres" id="nombres" />
-    </div>
-    <div class="mb-3">
-      <label for="apellidos" class="form-label">Apellidos:</label>
-      <input type="text" class="form-control" name="apellidos" id="apellidos" />
-    </div>
-    <div class="mb-3">
-      <label for="correo" class="form-label">Correo:</label>
-      <input type="email" class="form-control" name="correo" id="correo" />
-    </div>
-    <div class="mb-3">
-      <label for="telefono" class="form-label">Teléfono:</label>
-      <input type="tel" class="form-control" name="telefono" id="telefono" />
-    </div>
-    <div class="mb-3">
-      <label for="contraseña" class="form-label">Nueva contraseña:</label>
-      <input
-        type="password"
-        class="form-control"
-        name="contraseña"
-        id="contraseña"
-      />
-    </div>
-    <div class="d-flex justify-content-end gap-2">
-      <a href="{{url_for('cliente.auth.login')}}" class="btn btn-primary mt-2"
-        >Iniciar sesión</a
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="musa-wordmark text-white">Las Musas <small>Burger Joint</small></div>
+      <div
+        class="d-flex align-items-center gap-2 px-3 py-2 rounded-pill"
+        style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(6px);"
       >
-      <button type="submit" class="btn btn-success mt-2">Registrarse</button>
+        <span class="musa-dot-live" style="background: var(--musa-mostaza);"></span>
+        <span class="small fw-semibold text-uppercase" style="letter-spacing: 0.1em;">Lima · Est. 2021</span>
+      </div>
     </div>
-  </form>
-</section>
+
+    <div style="max-width: 26ch;">
+      <span
+        class="small fw-bold text-uppercase d-block mb-2"
+        style="letter-spacing: 0.16em; color: var(--musa-mostaza);"
+      >
+        Beneficios de tener cuenta
+      </span>
+      <h1 class="display-4 fw-bold lh-1">Pasión, Fuego &amp; Sazón.</h1>
+      <p class="text-white-50 mt-3 mb-4">
+        Crea tu cuenta y haz pedidos más rápido, cada vez.
+      </p>
+      <div class="row g-3 small">
+        <div class="col-6 d-flex align-items-center gap-2">
+          <i class="bi bi-arrow-repeat" style="color: var(--musa-mostaza);"></i> Repite pedidos en un toque
+        </div>
+        <div class="col-6 d-flex align-items-center gap-2">
+          <i class="bi bi-person-check" style="color: var(--musa-mostaza);"></i> Datos autocompletados
+        </div>
+        <div class="col-6 d-flex align-items-center gap-2">
+          <i class="bi bi-clock-history" style="color: var(--musa-mostaza);"></i> Historial de tus pedidos
+        </div>
+        <div class="col-6 d-flex align-items-center gap-2">
+          <i class="bi bi-fire" style="color: var(--musa-mostaza);"></i> Atención 6–10 p.m.
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="d-flex align-items-center gap-3 p-3 rounded-3"
+      style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(6px);"
+    >
+      <span class="musa-avatar" style="border-radius: 12px;"><i class="bi bi-shop"></i></span>
+      <div>
+        <div class="fw-semibold">Miraflores Joint · Calle Schell 385</div>
+        <div class="small text-white-50">Retiro en tienda · Brasas encendidas</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Formulario -->
+  <section class="auth-form-side">
+    <div class="auth-card auth-card--ancha">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <a
+          href="{{ url_for('cliente.auth.login') }}"
+          class="text-decoration-none small d-inline-flex align-items-center gap-1"
+          style="color: var(--musa-texto-suave);"
+        >
+          <i class="bi bi-arrow-left"></i> Volver a iniciar sesión
+        </a>
+        <span class="small text-uppercase" style="letter-spacing: 0.1em; color: var(--musa-texto-suave);">Paso 1 de 1</span>
+      </div>
+
+      <div class="musa-card">
+        <h2 class="fw-bold mb-1">Crear cuenta</h2>
+        <p class="mb-4" style="color: var(--musa-texto-suave);">
+          Regístrate para guardar tus datos y repetir tus pedidos favoritos.
+        </p>
+
+        {% with messages = get_flashed_messages() %}
+          {% for message in messages %}
+            <div class="musa-alert d-flex gap-2 mb-3">
+              <i class="bi bi-exclamation-circle-fill mt-1"></i>
+              <div class="small">{{ message }}</div>
+            </div>
+          {% endfor %}
+        {% endwith %}
+
+        <form action="{{ url_for('cliente.auth.registro') }}" method="post" class="d-flex flex-column gap-3">
+          <div class="musa-field">
+            <label for="dni" class="musa-field-label">
+              Documento de Identidad (DNI)
+              <span class="musa-field-hint">8 dígitos</span>
+            </label>
+            <div class="musa-input-icon">
+              <i class="bi bi-person-vcard"></i>
+              <input
+                type="text"
+                inputmode="numeric"
+                maxlength="8"
+                pattern="[0-9]{8}"
+                class="musa-input"
+                id="dni"
+                name="dni"
+                placeholder="Ej. 74829103"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-6 musa-field">
+              <label for="nombres" class="musa-field-label">Nombres</label>
+              <div class="musa-input-icon">
+                <i class="bi bi-person"></i>
+                <input type="text" class="musa-input" id="nombres" name="nombres" placeholder="Ej. Rodrigo" required />
+              </div>
+            </div>
+            <div class="col-sm-6 musa-field">
+              <label for="apellidos" class="musa-field-label">Apellidos</label>
+              <input type="text" class="musa-input" id="apellidos" name="apellidos" placeholder="Ej. Carranza Vega" required />
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-sm-7 musa-field">
+              <label for="correo" class="musa-field-label">Correo electrónico</label>
+              <div class="musa-input-icon">
+                <i class="bi bi-envelope"></i>
+                <input type="email" class="musa-input" id="correo" name="correo" placeholder="rodrigo@ejemplo.pe" required />
+              </div>
+            </div>
+            <div class="col-sm-5 musa-field">
+              <label for="telefono" class="musa-field-label">Teléfono</label>
+              <div class="musa-input-icon" style="position: relative;">
+                <span class="musa-prefix">+51</span>
+                <input
+                  type="tel"
+                  inputmode="numeric"
+                  maxlength="9"
+                  pattern="[0-9]{9}"
+                  class="musa-input"
+                  id="telefono"
+                  name="telefono"
+                  placeholder="987 654 321"
+                  style="padding-left: 54px;"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="musa-field">
+            <label for="contrasena" class="musa-field-label">
+              Contraseña
+              <span class="musa-field-hint" id="strength-label">Mínimo 8 caracteres</span>
+            </label>
+            <div class="musa-input-icon">
+              <i class="bi bi-lock"></i>
+              <input
+                type="password"
+                class="musa-input"
+                id="contrasena"
+                name="contraseña"
+                placeholder="Crea una clave segura"
+                minlength="8"
+                required
+                style="padding-right: 44px;"
+              />
+              <button type="button" class="musa-toggle" data-toggle-pass="contrasena" aria-label="Mostrar u ocultar contraseña">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+            <div class="musa-strength" id="strength-bars" data-score="0">
+              <span></span><span></span><span></span><span></span>
+            </div>
+          </div>
+
+          <label class="d-flex align-items-start gap-2 small mt-1" style="color: var(--musa-texto-suave);">
+            <input type="checkbox" class="form-check-input mt-1" required />
+            <span>
+              Acepto los
+              <a href="#" data-bs-toggle="modal" data-bs-target="#modalTerminos" class="fw-semibold text-decoration-none" style="color: var(--musa-brasa);">Términos y Condiciones</a>
+              y la
+              <a href="#" data-bs-toggle="modal" data-bs-target="#modalPrivacidad" class="fw-semibold text-decoration-none" style="color: var(--musa-brasa);">Política de Privacidad</a>
+              de Las Musas.
+            </span>
+          </label>
+
+          <button type="submit" class="btn-brasa w-100 mt-1">
+            Registrarse <i class="bi bi-arrow-right"></i>
+          </button>
+        </form>
+
+        <p class="text-center small mt-4 pt-3 mb-0" style="color: var(--musa-texto-suave); border-top: 1px solid var(--musa-borde);">
+          ¿Ya tienes cuenta?
+          <a href="{{ url_for('cliente.auth.login') }}" class="fw-bold text-decoration-none" style="color: var(--musa-brasa);">
+            Inicia sesión
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.querySelectorAll("[data-toggle-pass]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var input = document.getElementById(btn.dataset.togglePass);
+      var visible = input.type === "text";
+      input.type = visible ? "password" : "text";
+      btn.querySelector("i").className = visible ? "bi bi-eye" : "bi bi-eye-slash";
+    });
+  });
+
+  (function () {
+    var input = document.getElementById("contrasena");
+    var bars = document.getElementById("strength-bars");
+    var label = document.getElementById("strength-label");
+    if (!input) return;
+    input.addEventListener("input", function () {
+      var v = input.value;
+      var score = 0;
+      if (v.length >= 8) score++;
+      if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+      if (/[0-9]/.test(v)) score++;
+      if (/[^A-Za-z0-9]/.test(v)) score++;
+      bars.dataset.score = v.length === 0 ? 0 : score;
+      var textos = ["Mínimo 8 caracteres", "Débil", "Regular", "Buena", "Excelente"];
+      label.textContent = v.length === 0 ? textos[0] : "Seguridad: " + textos[score];
+    });
+  })();
+
+  ["dni", "telefono"].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("input", function () {
+      this.value = this.value.replace(/[^0-9]/g, "");
+    });
+  });
+</script>
 {% endblock %}

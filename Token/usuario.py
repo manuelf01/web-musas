@@ -1,4 +1,5 @@
 from model.Usuario import Usuario
+from model.Autenticacion import Autenticacion
 class User(object):
 
     def __init__(self, id, username, password):
@@ -26,7 +27,7 @@ userid_table = {u.id: u for u in users}
 
 def authenticate(username, password):
     user = username_table.get(username, None)
-    if user and user.password == password:
+    if user and Autenticacion.verificar_password(user.password, password):
         return user
 
 def identity(payload):
