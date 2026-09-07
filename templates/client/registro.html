@@ -89,6 +89,7 @@
         {% endwith %}
 
         <form action="{{ url_for('cliente.auth.registro') }}" method="post" class="d-flex flex-column gap-3">
+          {{ campo_csrf() }}
           <div class="musa-field">
             <label for="dni" class="musa-field-label">
               Documento de Identidad (DNI)

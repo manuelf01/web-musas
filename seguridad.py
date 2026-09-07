@@ -6,10 +6,43 @@ Utilidades de seguridad del login de Las Musas.
   model/Autenticacion.py (generate_password_hash / check_password_hash).
 """
 
+import hmac
 import io
 import random
+import secrets
 
+from flask import session
+from markupsafe import Markup
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+
+# ----------------------------------------------------------------------
+# CSRF: token por sesión, sin dependencias externas.
+#   - token_csrf()   -> valor actual (se crea si no existe)
+#   - campo_csrf()   -> <input hidden> listo para pegar en un <form>
+#   - csrf_valido()  -> compara el token del formulario con el de la sesión
+# ----------------------------------------------------------------------
+_CSRF_KEY = "_csrf_token"
+CAMPO_CSRF = "_csrf"
+
+
+def token_csrf():
+    tok = session.get(_CSRF_KEY)
+    if not tok:
+        tok = secrets.token_urlsafe(32)
+        session[_CSRF_KEY] = tok
+    return tok
+
+
+def campo_csrf():
+    return Markup(
+        '<input type="hidden" name="{0}" value="{1}">'.format(CAMPO_CSRF, token_csrf())
+    )
+
+
+def csrf_valido(enviado):
+    real = session.get(_CSRF_KEY)
+    return bool(real) and bool(enviado) and hmac.compare_digest(str(real), str(enviado))
 
 CAPTCHA_LARGO = 6
 # Sin caracteres ambiguos (I, O, 0, 1)

@@ -13,6 +13,7 @@
 
 <section class="adm-card">
   <form action="{{ url_for('admin.productos.guardar') }}" method="post" class="adm-form">
+    {{ campo_csrf() }}
     <div class="musa-field">
       <label class="musa-field-label" for="categorias">Categoría</label>
       <select class="musa-input" name="categorias" id="categorias" required>

@@ -42,6 +42,7 @@
 
   <div id="ck-contenido" hidden>
     <form method="post" id="checkout-form" class="ck-grid">
+      {{ campo_csrf() }}
       <input type="hidden" name="carrito_json" id="carrito_json" value="[]" />
 
       <!-- Columna izquierda -->

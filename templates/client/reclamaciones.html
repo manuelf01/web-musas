@@ -29,6 +29,7 @@
   </div>
 
   <form method="post" class="reclamo-form d-flex flex-column gap-3">
+    {{ campo_csrf() }}
     <div class="row g-3">
       <div class="col-sm-7 musa-field">
         <label for="nombres" class="musa-field-label">Nombres y apellidos</label>

@@ -34,6 +34,7 @@
                   </a>
                   <form action="{{ url_for('admin.usuarios.eliminar') }}" method="POST"
                         onsubmit="return confirm('¿Quitar el acceso de {{ u[2] }} {{ u[3] }}?');">
+                    {{ campo_csrf() }}
                     <input type="hidden" name="id" value="{{ u[0] }}" />
                     <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i> Eliminar</button>
                   </form>

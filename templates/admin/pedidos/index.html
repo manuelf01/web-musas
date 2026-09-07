@@ -77,6 +77,7 @@
           </div>
 
           <form method="post" action="{{ url_for('admin.pedidos.confirmar') }}" class="ped-confirmar">
+            {{ campo_csrf() }}
             <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
             <input type="hidden" name="estado" value="{{ estado }}" />
             <label>Palabra clave del cliente</label>

@@ -3,8 +3,9 @@ import collections
 import collections.abc
 collections.Mapping = collections.abc.Mapping
 
+import os
 from datetime import timedelta
-from flask import Flask, request
+from flask import Flask, request, session, jsonify
 from flask_jwt import JWT
 from flask_swagger_ui import get_swaggerui_blueprint
 from Token.usuario import authenticate, identity
@@ -26,15 +27,57 @@ from APIS.detalleComprobante import api_detalleComprobante
 from APIS.detalleCremas import api_detalleCremas
 from APIS.comprobante import api_comprobante
 from APIS.transacciones import transaccion
+from seguridad import campo_csrf, token_csrf, csrf_valido, CAMPO_CSRF
 
 try:
     from cfg import secret_key as _SECRET_KEY
 except ImportError:
     _SECRET_KEY = "dev-musas-cambia-esto"
 
+# FLASK_DEBUG=1 para desarrollo; en producción se queda apagado (el depurador
+# de Werkzeug permite ejecutar código y NO debe exponerse).
+DEBUG = os.environ.get("FLASK_DEBUG", "1") == "1"
+
 app = Flask(__name__)
-app.config["SECRET_KEY"] = _SECRET_KEY
+app.config.update(
+    SECRET_KEY=_SECRET_KEY,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=not DEBUG,   # solo por HTTPS en producción
+)
 jwt = JWT(app, authenticate, identity)
+
+# --- CSRF: token propio de sesión, validado en cada POST del navegador -------
+app.jinja_env.globals["campo_csrf"] = campo_csrf
+app.jinja_env.globals["csrf_token"] = token_csrf
+
+@app.before_request
+def _proteger_csrf():
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return
+    # Las APIs JSON (JWT, /api/*) no se pueden falsificar desde otra web sin CORS;
+    # el CSRF solo aplica a los tipos que un <form> del navegador puede enviar.
+    ctype = (request.content_type or "").split(";")[0].strip()
+    formularios = ("application/x-www-form-urlencoded", "multipart/form-data", "text/plain", "")
+    if ctype not in formularios:
+        return
+    if not csrf_valido(request.form.get(CAMPO_CSRF) or request.headers.get("X-CSRF-Token")):
+        cuerpo = (
+            "<!doctype html><meta charset='utf-8'>"
+            "<div style=\"font-family:system-ui;max-width:32rem;margin:15vh auto;text-align:center\">"
+            "<h2>La sesión expiró</h2>"
+            "<p>Por seguridad no pudimos procesar el formulario. Vuelve atrás y envíalo de nuevo.</p>"
+            "<a href='javascript:history.back()'>← Volver</a></div>"
+        )
+        return cuerpo, 400
+
+
+@app.after_request
+def _cabeceras_seguridad(resp):
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "same-origin")
+    return resp
 
 # swagger
 SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
@@ -87,6 +130,6 @@ app.permanent_session_lifetime = timedelta(days=30)
 # Iniciar el servidor
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=DEBUG)
 
 # print(app.url_map)

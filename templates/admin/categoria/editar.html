@@ -13,6 +13,7 @@
 
 <section class="adm-card">
   <form action="{{ url_for('admin.categoria.actualizar') }}" method="post" class="adm-form">
+    {{ campo_csrf() }}
     <input type="hidden" name="idCategoria" value="{{ categoria[0] }}" />
     <div class="musa-field">
       <label class="musa-field-label" for="nombreCategoria">Nombre de la categoría</label>

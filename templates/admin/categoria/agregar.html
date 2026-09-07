@@ -13,6 +13,7 @@
 
 <section class="adm-card">
   <form action="{{ url_for('admin.categoria.guardar') }}" method="post" class="adm-form">
+    {{ campo_csrf() }}
     <div class="musa-field">
       <label class="musa-field-label" for="nombreCategoria">Nombre de la categoría</label>
       <input class="musa-input" required type="text" placeholder="Ej. Hamburguesas" name="nombreCategoria" id="nombreCategoria" />

@@ -1,4 +1,5 @@
 import re
+import time
 
 from flask import (
     request,
@@ -18,6 +19,29 @@ auth = Blueprint("auth", __name__)
 RE_DNI = re.compile(r"^\d{8}$")
 RE_TEL = re.compile(r"^\d{9}$")
 RE_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# --- Freno anti fuerza-bruta en el login (en memoria del proceso) ------------
+_MAX_INTENTOS = 6
+_BLOQUEO_SEG = 300          # 5 minutos
+_intentos_login = {}        # ip -> [timestamps de fallos recientes]
+
+
+def _ip():
+    return (request.headers.get("X-Forwarded-For", request.remote_addr) or "?").split(",")[0].strip()
+
+
+def _login_bloqueado():
+    fallos = [t for t in _intentos_login.get(_ip(), []) if time.time() - t < _BLOQUEO_SEG]
+    _intentos_login[_ip()] = fallos
+    return len(fallos) >= _MAX_INTENTOS
+
+
+def _registrar_fallo_login():
+    _intentos_login.setdefault(_ip(), []).append(time.time())
+
+
+def _limpiar_fallos_login():
+    _intentos_login.pop(_ip(), None)
 
 
 def _datos_sesion(fila):
@@ -59,6 +83,10 @@ def login():
                 mostrar_captcha=es_admin,
             )
 
+        if _login_bloqueado():
+            flash("Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar.", "error")
+            return _rerender()
+
         if not RE_DNI.match(dni):
             flash("El DNI debe tener 8 dígitos.", "error")
             return _rerender()
@@ -68,6 +96,7 @@ def login():
 
         resultado = Autenticacion.login_unificado(dni, contraseña)
         if isinstance(resultado, str):
+            _registrar_fallo_login()
             flash(resultado, "error")
             return _rerender()
 
@@ -81,13 +110,16 @@ def login():
             esperado = session.pop("captcha_login", None)
             ingresado = (request.form.get("captcha") or "").strip().upper()
             if not esperado or ingresado != esperado:
+                _registrar_fallo_login()
                 flash("El código de verificación no coincide. Intenta de nuevo.", "error")
                 return _rerender()
 
+            _limpiar_fallos_login()
             session.pop("cliente.auth", None)
             session["admin.auth"] = _datos_sesion(fila)
             return redirect(url_for("admin.home"))
 
+        _limpiar_fallos_login()
         session.pop("admin.auth", None)
         session["cliente.auth"] = _datos_sesion(fila)
         return redirect(url_for("cliente.home"))

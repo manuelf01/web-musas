@@ -13,6 +13,7 @@
 
 <section class="adm-card">
   <form action="{{ url_for('admin.productos.actualizar') }}" method="post" class="adm-form">
+    {{ campo_csrf() }}
     <input type="hidden" name="idProducto" value="{{ producto['idProducto'] }}" />
     <div class="musa-field">
       <label class="musa-field-label" for="categorias">Categoría</label>
