@@ -76,6 +76,26 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Modal de confirmación en todos los CRUD** (dar de baja / reactivar / guardar / entregar / cancelar pedido). Ver "Modal de confirmación 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Inicio: sección "Anatomía de Las Musas"** — hamburguesa SVG que se despieza al pasar el cursor / tocar. Ver "Anatomía 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Agregar al carrito con micro-interacción + preview al compartir + placeholders por categoría.** Ver "Carrito + previews 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **Pantalla de cocina en vivo**: el panel de Pedidos se refresca solo y avisa (pitido + banner) cuando entra un pedido nuevo. Ver "Cocina en vivo 2026-09-08" abajo. | `git revert` |
+
+### Cocina en vivo 2026-09-08
+- **Endpoint** `GET /admin/pedidos/pulso` (`admin_pedidos.pulso`) → JSON
+  `{firma, pendientes:[ids]}`. `firma` = huella de `id:estado:recogido` de todos
+  los pedidos de hoy; cambia si entra uno nuevo o si alguno avanza / se recoge.
+- **`static/js/pedidos-cocina.js`** (cargado solo en `admin/pedidos/index.html`):
+  sondea `/pulso` cada **15 s**. Si la `firma` cambió, re-descarga la página y
+  reemplaza **solo** `#ped-lista` y `#ped-chips` (no recarga entera: no salta el
+  scroll ni pierde lo tecleado en el buscador).
+  - Si aparece un `idPedido` que no estaba → **pitido** (2 tonos con WebAudio,
+    sin archivo), **banner** `#ped-nuevo` flotante, **título** de la pestaña
+    parpadeando y la tarjeta nueva resaltada (`.ped-card--nuevo`).
+  - Botón **«Sonido»** en la barra de filtros para activar/probar el audio
+    (los navegadores exigen un gesto del usuario antes de reproducir).
+- `data-*` que alimentan el JS van en `<div id="ped-cocina">` (no se reemplaza).
+  `templates`: `id="ped-chips"` en `.adm-filtros`, `data-pedido-id` en `.ped-card`.
+- `ui-comun.js`: el filtro en vivo ahora **re-consulta el DOM en cada tecla**
+  (antes cacheaba los nodos) para seguir funcionando tras el reemplazo de lista.
+- Respeta `prefers-reduced-motion` (sin animaciones, el aviso igual aparece).
 
 ### Carrito + previews 2026-09-08
 - **Micro-interacción "agregar al carrito"** (`static/js/carrito.js`, CSS

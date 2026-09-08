@@ -1,7 +1,17 @@
-from flask import Blueprint, render_template, g, request, redirect, url_for, flash
+from flask import Blueprint, render_template, g, request, redirect, url_for, flash, jsonify
 from model.Pedido import Pedido
 
 pedidos = Blueprint("pedidos", __name__, url_prefix="/pedidos")
+
+
+def _firma(lista):
+    """Huella del estado de los pedidos de hoy: cambia si entra un pedido nuevo
+    o si alguno cambia de estado / se recoge. La cocina la sondea cada pocos
+    segundos para refrescar sola la pantalla."""
+    return "|".join(
+        f'{p["idPedido"]}:{p["estado"]}:{1 if p["recogido"] else 0}'
+        for p in sorted(lista, key=lambda p: p["idPedido"])
+    )
 
 
 @pedidos.route("/")
@@ -34,7 +44,19 @@ def home():
         usuario=g.user, estado=estado, q=request.args.get("q", ""),
         pendientes=pendientes, recogidos=recogidos, contadores=contadores,
         sugerencias=sorted({p["cliente"] for p in todos}),
+        firma=_firma(todos),
+        ids_iniciales=",".join(str(p["idPedido"]) for p in todos if not p["recogido"]),
     )
+
+
+@pedidos.route("/pulso")
+def pulso():
+    """JSON ligero para el sondeo de la pantalla de cocina."""
+    hoy = Pedido.pedidos_de_hoy(None)
+    return jsonify({
+        "firma": _firma(hoy),
+        "pendientes": [p["idPedido"] for p in hoy if not p["recogido"]],
+    })
 
 
 @pedidos.route("/preparar", methods=["POST"])

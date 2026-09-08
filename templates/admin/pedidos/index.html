@@ -21,6 +21,18 @@
 {% endmacro %}
 
 {% block content %}
+<div id="ped-cocina"
+     data-pedidos-cocina
+     data-pulso-url="{{ url_for('admin.pedidos.pulso') }}"
+     data-firma="{{ firma }}"
+     data-ids-iniciales="{{ ids_iniciales }}"></div>
+
+<div class="ped-nuevo-aviso" id="ped-nuevo" hidden role="alert">
+  <i class="bi bi-bell-fill"></i>
+  <span id="ped-nuevo-txt">Nuevo pedido</span>
+  <button type="button" id="ped-nuevo-ok">Entendido</button>
+</div>
+
 <div class="adm-head">
   <div>
     <h1>Pedidos
@@ -42,7 +54,11 @@
            data-filtro-vivo="#ped-lista" placeholder="Escribe para filtrar por cliente, DNI o N° de pedido…" autocomplete="off" />
     <datalist id="ped-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </form>
-  <div class="adm-filtros">
+  <div class="adm-filtros" id="ped-chips">
+    <button type="button" class="ped-sonido-btn" id="ped-sonido" aria-pressed="false"
+            title="Alerta de sonido para pedidos nuevos">
+      <i class="bi bi-bell-slash"></i> <span>Sonido</span>
+    </button>
     <a href="{{ url_for('admin.pedidos.home', estado='pendiente', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'pendiente' }}">Por entregar ({{ contadores.pendiente }})</a>
     <a href="{{ url_for('admin.pedidos.home', estado='recibido', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'recibido' }}">Recibidos ({{ contadores.recibido }})</a>
     <a href="{{ url_for('admin.pedidos.home', estado='preparando', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'preparando' }}">En cocina ({{ contadores.preparando }})</a>
@@ -58,7 +74,7 @@
   {% if pendientes %}
     <div class="ped-grid">
       {% for p in pendientes %}
-        <article class="ped-card" data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.dni }} {{ p.idPedido }}">
+        <article class="ped-card" data-pedido-id="{{ p.idPedido }}" data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.dni }} {{ p.idPedido }}">
           <div class="ped-card__head">
             <span class="adm-avatar">{{ p.iniciales }}</span>
             <div class="ped-card__cliente">
@@ -190,4 +206,8 @@
 
 <p class="adm-vacio" data-filtro-vacio hidden>Ningún pedido coincide con la búsqueda.</p>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pedidos-cocina.js') }}" defer></script>
 {% endblock %}

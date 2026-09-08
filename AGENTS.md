@@ -162,6 +162,12 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   Se salta con `MUSAS_DEMO=1`.
 - **Comprobante**: se emite en `Pedido.marcar_recogido` (al entregar). Número
   `B001-000000NN` si pidió boleta, `NV01-...` si no.
+- **Pantalla de cocina en vivo**: `GET /admin/pedidos/pulso` devuelve
+  `{firma, pendientes}`. `static/js/pedidos-cocina.js` lo sondea cada 15 s y, si
+  la `firma` cambió, reemplaza solo `#ped-lista` + `#ped-chips` de la página;
+  si entra un pedido nuevo, pitido (WebAudio) + banner `#ped-nuevo` + título
+  parpadeante. Si tocas el layout de `admin/pedidos/index.html`, mantené
+  `#ped-cocina`, `#ped-lista`, `#ped-chips` y `data-pedido-id` en `.ped-card`.
 - **Búsqueda en vivo**: `static/js/ui-comun.js`. Un `<input data-filtro-vivo="#scope">`
   oculta los `[data-filtro-item]` dentro de `#scope` conforme se teclea
   (sin Enter). Opcional `[data-filtro-seccion]` y `[data-filtro-vacio]`.

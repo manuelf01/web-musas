@@ -27,13 +27,17 @@
   }
 
   function conectar(input) {
-    var scope = document.querySelector(input.getAttribute("data-filtro-vivo"));
-    if (!scope) return;
-    var items = scope.querySelectorAll("[data-filtro-item]");
-    var secciones = scope.querySelectorAll("[data-filtro-seccion]");
-    var vacio = scope.querySelector("[data-filtro-vacio]");
+    var sel = input.getAttribute("data-filtro-vivo");
+    if (!document.querySelector(sel)) return;
 
     function aplicar() {
+      // Se re-consulta el DOM en cada tecla: así el filtro sigue funcionando
+      // aunque la lista se haya vuelto a renderizar (p. ej. cocina en vivo).
+      var scope = document.querySelector(sel);
+      if (!scope) return;
+      var items = scope.querySelectorAll("[data-filtro-item]");
+      var secciones = scope.querySelectorAll("[data-filtro-seccion]");
+      var vacio = scope.querySelector("[data-filtro-vacio]");
       var q = normalizar(input.value.trim());
       var visibles = 0;
       items.forEach(function (el) {
