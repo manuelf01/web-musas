@@ -69,9 +69,8 @@
                 {% else %}
                   <div class="acciones">
                     <button type="button" class="adm-btn-sm" data-user-abrir data-modo="editar"
-                      data-id="{{ u.idUsuario }}" data-nombre="{{ u.nombreCompleto }}"
-                      data-correo="{{ u.correo }}" data-telefono="{{ u.telefono }}" data-rol="{{ u.rol }}">
-                      <i class="bi bi-pencil"></i> Editar
+                      data-id="{{ u.idUsuario }}" data-nombre="{{ u.nombreCompleto }}" data-rol="{{ u.rol }}">
+                      <i class="bi bi-person-badge"></i> Cambiar rol
                     </button>
                     {% if not yo %}
                     <form action="{{ url_for('admin.usuarios.estado') }}" method="POST">
@@ -119,6 +118,12 @@
         </select>
         <span class="musa-field-hint">Superusuario = acceso total · Administrador = panel sin usuarios · Usuario = cliente</span>
       </div>
+
+      <p class="musa-field-hint" data-solo-editar hidden style="margin-top: 14px;">
+        <i class="bi bi-info-circle"></i> Desde aquí solo se cambia el <b>rol</b>. El correo,
+        teléfono y contraseña los edita cada persona en <b>«Mi perfil»</b>.
+      </p>
+
       <div class="musa-field mt-3" data-solo-crear>
         <label class="musa-field-label" for="pu-dni">DNI</label>
         <input class="musa-input" id="pu-dni" name="dni" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="8 dígitos" />
@@ -133,20 +138,22 @@
           <input class="musa-input" id="pu-apellidos" name="apellidos" placeholder="Ej. Fernández" />
         </div>
       </div>
-      <div class="musa-field mt-3">
+      <div class="musa-field mt-3" data-solo-crear>
         <label class="musa-field-label" for="pu-correo">Correo</label>
-        <input class="musa-input" id="pu-correo" name="correo" type="email" placeholder="nombre@correo.com" required />
+        <input class="musa-input" id="pu-correo" name="correo" type="email" placeholder="nombre@correo.com" />
       </div>
-      <div class="musa-field mt-3">
+      <div class="musa-field mt-3" data-solo-crear>
         <label class="musa-field-label" for="pu-telefono">Teléfono</label>
-        <input class="musa-input" id="pu-telefono" name="telefono" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" placeholder="9 dígitos" required />
+        <input class="musa-input" id="pu-telefono" name="telefono" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" placeholder="9 dígitos" />
       </div>
-      <div class="musa-field mt-3">
+      <div class="musa-field mt-3" data-solo-crear>
         <label class="musa-field-label" for="pu-contra">
-          Contraseña <span class="musa-field-hint" data-solo-editar hidden>· vacía = no cambiar</span>
+          Contraseña <span class="musa-field-hint">{{ REGLA_PASSWORD }}</span>
         </label>
         <div class="musa-pass">
-          <input class="musa-input" id="pu-contra" name="contraseña" type="password" minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+          <input class="musa-input" id="pu-contra" name="contraseña" type="password" minlength="8"
+                 pattern="{{ PASSWORD_PATTERN }}" title="{{ REGLA_PASSWORD }}"
+                 placeholder="{{ REGLA_PASSWORD }}" autocomplete="new-password" />
           <button type="button" class="musa-toggle" data-toggle-pass="pu-contra" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye"></i></button>
         </div>
       </div>
@@ -181,17 +188,15 @@
       form.reset();
       var editar = b.dataset.modo === "editar";
       form.action = editar ? URL_EDITAR : URL_CREAR;
-      panel.querySelector("[data-user-titulo]").textContent = editar ? "Editar cuenta" : "Agregar usuario";
+      panel.querySelector("[data-user-titulo]").textContent = editar ? "Cambiar rol" : "Agregar usuario";
       panel.querySelector("[data-user-sub]").textContent = editar
-        ? "Cambia el contacto, el rol o la contraseña." : "Elige el rol y completa los datos.";
-      panel.querySelector("[data-user-btn]").textContent = editar ? "Guardar cambios" : "Guardar usuario";
+        ? "El administrador solo cambia el rol o da de baja la cuenta." : "Elige el rol y completa los datos.";
+      panel.querySelector("[data-user-btn]").textContent = editar ? "Guardar rol" : "Guardar usuario";
       toggle(soloCrear, !editar);
       toggle(soloEditar, editar);
       document.getElementById("pu-contra").required = !editar;
       if (editar) {
         document.getElementById("pu-id").value = b.dataset.id;
-        document.getElementById("pu-correo").value = b.dataset.correo;
-        document.getElementById("pu-telefono").value = b.dataset.telefono;
         document.getElementById("pu-rol").value = b.dataset.rol;
       }
       abrir();

@@ -156,10 +156,8 @@
           </div>
 
           <div class="musa-field">
-            <label for="contrasena" class="musa-field-label">
-              Contraseña
-              <span class="musa-field-hint" id="strength-label">Mínimo 8 caracteres</span>
-            </label>
+            <label for="contrasena" class="musa-field-label">Contraseña</label>
+            <p class="musa-field-hint" id="strength-label" style="margin: 2px 0 6px;">{{ REGLA_PASSWORD }}</p>
             <div class="musa-input-icon">
               <i class="bi bi-lock"></i>
               <input
@@ -169,6 +167,8 @@
                 name="contraseña"
                 placeholder="Crea una clave segura"
                 minlength="8"
+                pattern="{{ PASSWORD_PATTERN }}"
+                title="{{ REGLA_PASSWORD }}"
                 required
                 style="padding-right: 44px;"
               />
@@ -179,6 +179,11 @@
             <div class="musa-strength" id="strength-bars" data-score="0">
               <span></span><span></span><span></span><span></span>
             </div>
+            <ul class="musa-pw-check" id="pw-check">
+              <li data-check="len"><i class="bi bi-circle"></i> 8 caracteres o más</li>
+              <li data-check="mayus"><i class="bi bi-circle"></i> una letra mayúscula</li>
+              <li data-check="num"><i class="bi bi-circle"></i> un número</li>
+            </ul>
           </div>
 
           <label class="d-flex align-items-start gap-2 small mt-1" style="color: var(--musa-texto-suave);">
@@ -216,17 +221,33 @@
     var input = document.getElementById("contrasena");
     var bars = document.getElementById("strength-bars");
     var label = document.getElementById("strength-label");
+    var check = document.getElementById("pw-check");
     if (!input) return;
+    var REGLA = {{ REGLA_PASSWORD | tojson }};
+    function marcar(li, ok) {
+      li.classList.toggle("is-ok", ok);
+      var i = li.querySelector("i");
+      if (i) i.className = ok ? "bi bi-check-circle-fill" : "bi bi-circle";
+    }
     input.addEventListener("input", function () {
       var v = input.value;
+      var cLen = v.length >= 8, cMayus = /[A-ZÑÁÉÍÓÚ]/.test(v), cNum = /[0-9]/.test(v);
+      if (check) {
+        marcar(check.querySelector('[data-check="len"]'), cLen);
+        marcar(check.querySelector('[data-check="mayus"]'), cMayus);
+        marcar(check.querySelector('[data-check="num"]'), cNum);
+      }
+      var cumple = cLen && cMayus && cNum;
       var score = 0;
-      if (v.length >= 8) score++;
-      if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
-      if (/[0-9]/.test(v)) score++;
+      if (cLen) score++;
+      if (cMayus) score++;
+      if (cNum) score++;
       if (/[^A-Za-z0-9]/.test(v)) score++;
       bars.dataset.score = v.length === 0 ? 0 : score;
-      var textos = ["Mínimo 8 caracteres", "Débil", "Regular", "Buena", "Excelente"];
-      label.textContent = v.length === 0 ? textos[0] : "Seguridad: " + textos[score];
+      var textos = ["", "Débil", "Regular", "Buena", "Excelente"];
+      label.textContent = v.length === 0 ? REGLA
+        : (cumple ? "Cumple · " + (textos[score] || "Buena") : REGLA);
+      label.style.color = v.length && cumple ? "var(--musa-exito)" : "";
     });
   })();
 

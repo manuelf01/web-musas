@@ -51,6 +51,10 @@ class Usuario:
             rol = "usuario" if tipoUsuario in (True, 1) else "administrador"
         if rol not in ROLES:
             return "Rol no válido."
+        from seguridad import password_valida   # red de seguridad (los controladores ya validan)
+        err = password_valida(contra)
+        if err:
+            return err
         if Usuario.existe_dni(DNI):
             return "Este DNI ya está registrado."
         contra_hash = generate_password_hash(contra)
@@ -141,28 +145,24 @@ class Usuario:
         conexion.close()
 
     @staticmethod
-    def actualizar_por_admin(id, correo, telefono, rol, contra):
-        """El superusuario edita otra cuenta (contacto + rol). No toca superusuarios."""
+    def cambiar_rol(id, rol):
+        """El superusuario cambia el rol de otra cuenta (no de un superusuario, y
+        no puede ascender a superusuario por aquí). Devuelve None o texto de error."""
         actual = Usuario.obtener_dict(id)
         if actual is None:
             return "La cuenta no existe."
         if actual["esSuper"]:
-            return "No puedes editar a otro superusuario."
+            return "No puedes cambiarle el rol a otro superusuario."
         if rol not in ROLES:
-            rol = actual["rol"]
+            return "Elige un rol válido."
         if rol == "superusuario":
             return "Para dar rol de superusuario, crea la cuenta desde «Agregar usuario»."
-        correo = correo or actual["correo"]
-        telefono = telefono or actual["telefono"]
-        sets = ["correo=%s", "numTelf=%s", "rol=%s", "tipoUsuario=%s"]
-        vals = [correo, telefono, rol, _tipo_de_rol(rol)]
-        if contra:
-            sets.append("contraseña=%s")
-            vals.append(generate_password_hash(contra))
-        vals.append(id)
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute("UPDATE usuario SET " + ", ".join(sets) + " WHERE idUsuario=%s", vals)
+            cursor.execute(
+                "UPDATE usuario SET rol=%s, tipoUsuario=%s WHERE idUsuario=%s",
+                (rol, _tipo_de_rol(rol), id),
+            )
         conexion.commit()
         conexion.close()
         return None

@@ -181,7 +181,8 @@ class Comprobante:
             cursor.execute(
                 "SELECT c.idComprobante, c.numeroComprobante, c.fechaComprobante, c.horaComprobante, "
                 "c.dniNoRegistrado, c.subTotal, c.igv, c.montoTotal, "
-                "COALESCE(u.nombres, rp.nombres, 'Cliente') AS cliente, rp.billeteraDigital "
+                "COALESCE(NULLIF(TRIM(rp.nombres), ''), NULLIF(TRIM(CONCAT_WS(' ', u.nombres, u.apellidos)), ''), 'Cliente') AS cliente, "
+                "rp.billeteraDigital "
                 "FROM comprobante c "
                 "LEFT JOIN usuario u ON u.idUsuario = c.idUsuario "
                 "LEFT JOIN registroPedido rp ON rp.idPedido = c.idPedido "
@@ -218,7 +219,8 @@ class Comprobante:
             cursor.execute(
                 "SELECT c.idComprobante, c.numeroComprobante, c.fechaComprobante, c.horaComprobante, "
                 "c.dniNoRegistrado, c.subTotal, c.igv, c.montoTotal, c.idPedido, "
-                "COALESCE(u.nombres, rp.nombres, 'Cliente'), rp.numeroTelefono, rp.billeteraDigital, "
+                "COALESCE(NULLIF(TRIM(rp.nombres), ''), NULLIF(TRIM(CONCAT_WS(' ', u.nombres, u.apellidos)), ''), 'Cliente'), "
+                "rp.numeroTelefono, rp.billeteraDigital, "
                 "rp.estadoBoleta, rp.notas, rp.horaRecojo, rp.estadoRecojo, rp.cancelado, rp.noShow, rp.estadoPrep "
                 "FROM comprobante c "
                 "LEFT JOIN usuario u ON u.idUsuario = c.idUsuario "

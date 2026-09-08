@@ -74,6 +74,32 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
 
+### Política de contraseña + admin solo cambia rol 2026-09-08
+- **Contraseña (una sola regla en todo el proyecto)**: mínimo 8 caracteres, con
+  al menos una **mayúscula** y un **número**. `seguridad.py` → `password_valida(pw)`
+  (None | texto de error), `REGLA_PASSWORD`, `PASSWORD_PATTERN` (para el
+  `pattern=` del `<input>`). Registrados como globals de Jinja en `app.py`.
+  Se usa en: registro (`autenticacion.py`), alta de usuario (`admin_usuarios.py`),
+  Mi perfil (`admin_perfil.py`), Mi cuenta (`cliente.py`), y como red de seguridad
+  en `Usuario.insertar_usuario`. Templates: hint visible + `pattern` + `title`;
+  el registro además muestra un checklist en vivo (`#pw-check`).
+  - **Nota**: la contraseña de ejemplo de `sql.sql` pasó de `musas2026` a `Musas2026`
+    (la anterior no cumplía). El login solo valida el hash, así que cuentas viejas
+    con contraseña débil siguen entrando; solo se exige la regla al **cambiarla**.
+- **Gestión de usuarios: el administrador SOLO cambia el rol y da de baja.**
+  El correo/teléfono/contraseña de cada persona los edita ella misma en «Mi perfil».
+  `Usuario.actualizar_por_admin(...)` → reemplazado por `Usuario.cambiar_rol(id, rol)`
+  (solo toca `rol` + `tipoUsuario`; conserva las protecciones de superusuario).
+  `admin_usuarios.actualizar` solo lee `rol`. El panel de edición muestra solo el
+  selector de Rol + un aviso; el botón de la fila dice «Cambiar rol».
+- **Ventas**: el nombre del comprobante ahora es `rp.nombres` (el de quien recoge,
+  que se pide en el checkout) y si no, el nombre completo de la cuenta — antes
+  mostraba solo el primer nombre de la cuenta.
+- Flujo completo re-verificado E2E (compra → confirmación → CRUD pedidos con los
+  3 vistos buenos → comprobante → Ventas): 60+ checks, 0 fallos. Aritmética
+  (27×2=54, 18×3=54, total 108), IGV (91.53+16.47), stock (resta y devolución),
+  estados, palabra clave, KPIs y gráfico — todo cuadra.
+
 ### QA adversarial + fixes 2026-09-08
 Batería de ~120 casos (3 roles) contra una BD limpia `db_musuas_qa`. No había
 nada crítico (auth, CSRF, roles, aritmética, IGV, stock, no-show, cancelación

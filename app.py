@@ -28,7 +28,10 @@ from APIS.detalleComprobante import api_detalleComprobante
 from APIS.detalleCremas import api_detalleCremas
 from APIS.comprobante import api_comprobante
 from APIS.transacciones import transaccion
-from seguridad import campo_csrf, token_csrf, csrf_valido, CAMPO_CSRF
+from seguridad import (
+    campo_csrf, token_csrf, csrf_valido, CAMPO_CSRF,
+    REGLA_PASSWORD, PASSWORD_PATTERN,
+)
 
 try:
     from cfg import secret_key as _SECRET_KEY
@@ -51,6 +54,8 @@ jwt = JWT(app, authenticate, identity)
 # --- CSRF: token propio de sesión, validado en cada POST del navegador -------
 app.jinja_env.globals["campo_csrf"] = campo_csrf
 app.jinja_env.globals["csrf_token"] = token_csrf
+app.jinja_env.globals["REGLA_PASSWORD"] = REGLA_PASSWORD
+app.jinja_env.globals["PASSWORD_PATTERN"] = PASSWORD_PATTERN
 
 @app.before_request
 def _proteger_csrf():

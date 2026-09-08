@@ -8,6 +8,7 @@ from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
 from model.Pedido import Pedido, StockInsuficiente, LimitePedidos
 from model.Usuario import Usuario
+from seguridad import password_valida
 cliente = Blueprint('cliente', __name__)
 
 # Categorías cuyo producto admite cremas adicionales.
@@ -195,10 +196,10 @@ def mi_cuenta():
             error = "Ingresa un correo válido."
         elif telefono and not RE_TEL.match(telefono):
             error = "El teléfono debe tener 9 dígitos."
-        elif contra and len(contra) < 8:
-            error = "La nueva contraseña debe tener al menos 8 caracteres."
         elif contra and contra != contra2:
             error = "Las contraseñas nuevas no coinciden."
+        elif contra:
+            error = password_valida(contra)
         if error is None:
             error = Usuario.actualizar_perfil(user["idUsuario"], nombres, apellidos, correo, dni, telefono, contra)
 

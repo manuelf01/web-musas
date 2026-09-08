@@ -7,7 +7,7 @@
 --    2. Copia y pega TODO este archivo y ejecútalo.
 --  Crea la base `db_musuas` (nombre que espera cfg.py) con datos de ejemplo.
 --
---  Cuentas de ejemplo (contraseña de todas: musas2026)
+--  Cuentas de ejemplo (contraseña de todas: Musas2026)
 --    DNI 12345678  → superusuario  (acceso total al panel + gestión de usuarios)
 --    DNI 87654321  → administrador (panel sin la sección Usuarios)
 --    DNI 12345679  → usuario       (cliente de la tienda)
@@ -195,12 +195,12 @@ SET FOREIGN_KEY_CHECKS = 1;
 --  DATOS DE EJEMPLO
 -- =====================================================================
 
--- Cuentas (contraseña de todas: musas2026)
+-- Cuentas (contraseña de todas: Musas2026)
 INSERT INTO `usuario`
   (`idUsuario`,`dni`,`nombres`,`apellidos`,`correo`,`numTelf`,`contraseña`,`tipoUsuario`,`noShows`,`rol`,`activo`) VALUES
-  (1,'12345678','Piero','Ramirez','superadmin@lasmusas.pe','987654321','pbkdf2:sha256:260000$2AAShn4HVpJeEqet$81a1bf5d11e5fbfe0d02964b4f6c16d9858387cb48685f946fb35ad7b331c46d',0,0,'superusuario',1),
-  (2,'87654321','Admin','Prueba','admin@lasmusas.pe','987654322','pbkdf2:sha256:260000$2AAShn4HVpJeEqet$81a1bf5d11e5fbfe0d02964b4f6c16d9858387cb48685f946fb35ad7b331c46d',0,0,'administrador',1),
-  (3,'12345679','Cliente','Prueba','cliente@correo.com','912345678','pbkdf2:sha256:260000$2AAShn4HVpJeEqet$81a1bf5d11e5fbfe0d02964b4f6c16d9858387cb48685f946fb35ad7b331c46d',1,0,'usuario',1);
+  (1,'12345678','Piero','Ramirez','superadmin@lasmusas.pe','987654321','pbkdf2:sha256:260000$vxtBrOTidMwkCp4V$dab206ee6109184d8e1c8c4eb65e8678aa8d13a7ebe150b2cef577f55cef51b3',0,0,'superusuario',1),
+  (2,'87654321','Admin','Prueba','admin@lasmusas.pe','987654322','pbkdf2:sha256:260000$vxtBrOTidMwkCp4V$dab206ee6109184d8e1c8c4eb65e8678aa8d13a7ebe150b2cef577f55cef51b3',0,0,'administrador',1),
+  (3,'12345679','Cliente','Prueba','cliente@correo.com','912345678','pbkdf2:sha256:260000$vxtBrOTidMwkCp4V$dab206ee6109184d8e1c8c4eb65e8678aa8d13a7ebe150b2cef577f55cef51b3',1,0,'usuario',1);
 
 -- Categorías (la 6 "Cremas" no se muestra en la carta pública)
 INSERT INTO `categoriaProducto` (`idCategoria`,`nombreCategoria`,`descripcion`,`imagen`,`activo`) VALUES

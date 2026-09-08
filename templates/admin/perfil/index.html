@@ -41,12 +41,15 @@
       </div>
 
       <hr style="border-color: var(--musa-borde); margin: 22px 0;" />
-      <p class="musa-field-label">Cambiar contraseña <span class="musa-field-hint">déjalo vacío para mantenerla</span></p>
+      <p class="musa-field-label">Cambiar contraseña
+        <span class="musa-field-hint">{{ REGLA_PASSWORD }} · déjalo vacío para mantenerla</span>
+      </p>
       <div class="row g-3">
         <div class="col-md-6 musa-field">
           <label class="musa-field-label" for="pf-c1">Nueva contraseña</label>
           <div class="musa-pass">
-            <input class="musa-input" id="pf-c1" name="contraseña" type="password" minlength="8" autocomplete="new-password" />
+            <input class="musa-input" id="pf-c1" name="contraseña" type="password" minlength="8"
+                   pattern="{{ PASSWORD_PATTERN }}" title="{{ REGLA_PASSWORD }}" autocomplete="new-password" />
             <button type="button" class="musa-toggle" data-toggle-pass="pf-c1" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye"></i></button>
           </div>
         </div>

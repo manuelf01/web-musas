@@ -2619,3 +2619,13 @@ body.adm { background: var(--musa-crema); }
 .adm-foto-box .adm-drop i { margin: 0 0 2px; }
 .adm-foto-url-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--musa-texto-suave); }
 .adm-foto-url-row::before, .adm-foto-url-row::after { content: ""; flex: 1; height: 1px; background: var(--musa-borde); }
+
+/* --- checklist de política de contraseña --- */
+.musa-pw-check {
+  list-style: none; margin: 8px 0 0; padding: 0;
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 12px; color: var(--musa-texto-suave);
+}
+.musa-pw-check li { display: flex; align-items: center; gap: 6px; }
+.musa-pw-check li i { font-size: 13px; }
+.musa-pw-check li.is-ok { color: var(--musa-exito); }

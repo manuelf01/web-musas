@@ -2,6 +2,7 @@ import re
 
 from flask import Blueprint, render_template, redirect, request, url_for, g, flash, session
 from model.Usuario import Usuario
+from seguridad import password_valida
 
 perfil = Blueprint("perfil", __name__, url_prefix="/perfil")
 
@@ -34,10 +35,10 @@ def actualizar():
         error = "Ingresa un correo válido."
     elif telefono and not RE_TEL.match(telefono):
         error = "El teléfono debe tener 9 dígitos."
-    elif contra and len(contra) < 8:
-        error = "La nueva contraseña debe tener al menos 8 caracteres."
     elif contra and contra != contra2:
         error = "Las contraseñas nuevas no coinciden."
+    elif contra:
+        error = password_valida(contra)
 
     if error is None:
         error = Usuario.actualizar_perfil(id, nombres, apellidos, correo, dni, telefono, contra)

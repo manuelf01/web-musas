@@ -9,11 +9,37 @@ Utilidades de seguridad del login de Las Musas.
 import hmac
 import io
 import random
+import re
 import secrets
 
 from flask import session
 from markupsafe import Markup
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+
+# ----------------------------------------------------------------------
+# Política de contraseñas (una sola regla en todo el proyecto):
+#   mínimo 8 caracteres, con al menos una MAYÚSCULA y un NÚMERO.
+# ----------------------------------------------------------------------
+PASSWORD_MIN = 8
+REGLA_PASSWORD = "Mínimo 8 caracteres, con al menos una mayúscula y un número."
+# pattern para el atributo HTML del <input> (feedback inmediato en el navegador)
+PASSWORD_PATTERN = r"(?=.*[A-ZÑÁÉÍÓÚ])(?=.*\d).{8,}"
+
+_RE_MAYUS = re.compile(r"[A-ZÑÁÉÍÓÚ]")
+_RE_DIGITO = re.compile(r"\d")
+
+
+def password_valida(pw):
+    """Devuelve None si la contraseña cumple la política, o el texto del error."""
+    pw = pw or ""
+    if len(pw) < PASSWORD_MIN:
+        return f"La contraseña debe tener al menos {PASSWORD_MIN} caracteres."
+    if not _RE_MAYUS.search(pw):
+        return "La contraseña debe incluir al menos una letra mayúscula."
+    if not _RE_DIGITO.search(pw):
+        return "La contraseña debe incluir al menos un número."
+    return None
 
 
 # ----------------------------------------------------------------------

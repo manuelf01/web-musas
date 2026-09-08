@@ -2,6 +2,7 @@ import re
 
 from flask import Blueprint, render_template, redirect, request, url_for, g, flash
 from model.Usuario import Usuario, ROLES, ETIQUETA_ROL
+from seguridad import password_valida
 
 usuarios = Blueprint('usuarios', __name__, url_prefix='/usuarios')
 
@@ -70,8 +71,8 @@ def guardar():
         error = "Ingresa un correo válido."
     elif not RE_TEL.match(telefono):
         error = "El teléfono debe tener 9 dígitos."
-    elif len(contra) < 8:
-        error = "La contraseña debe tener al menos 8 caracteres."
+    else:
+        error = password_valida(contra)
 
     if error is None:
         error = Usuario.insertar_usuario(dni, nombres, apellidos, correo, telefono, contra, None, rol=rol)
@@ -82,6 +83,9 @@ def guardar():
 
 @usuarios.route("/actualizar", methods=["POST"])
 def actualizar():
+    """Desde Gestión de usuarios SOLO se puede cambiar el ROL. Los datos
+    personales (correo, teléfono, contraseña) los edita cada persona en su
+    propio perfil — el administrador no los toca."""
     id = request.form["id"]
     objetivo = Usuario.obtener_dict(id)
     if objetivo is None:
@@ -91,23 +95,9 @@ def actualizar():
         flash("No puedes editar a otro superusuario. Solo puedes crear uno nuevo.", "error")
         return redirect(url_for("admin.usuarios.home"))
 
-    correo = (request.form.get("correo") or "").strip()
-    telefono = (request.form.get("telefono") or "").strip()
     rol = request.form.get("rol") or objetivo["rol"]
-    contra = request.form.get("contraseña") or ""
-
-    if correo and not RE_CORREO.match(correo):
-        flash("Ingresa un correo válido.", "error")
-        return redirect(url_for("admin.usuarios.home"))
-    if telefono and not RE_TEL.match(telefono):
-        flash("El teléfono debe tener 9 dígitos.", "error")
-        return redirect(url_for("admin.usuarios.home"))
-    if contra and len(contra) < 8:
-        flash("La contraseña debe tener al menos 8 caracteres.", "error")
-        return redirect(url_for("admin.usuarios.home"))
-
-    err = Usuario.actualizar_por_admin(id, correo, telefono, rol, contra)
-    flash(err or "Cuenta actualizada.", "error" if err else "ok")
+    err = Usuario.cambiar_rol(id, rol)
+    flash(err or f"Rol actualizado a «{ETIQUETA_ROL.get(rol, rol)}».", "error" if err else "ok")
     return redirect(url_for("admin.usuarios.home"))
 
 

@@ -12,7 +12,7 @@ from flask import (
     send_file,
 )
 from model.Autenticacion import Autenticacion
-from seguridad import generar_texto_captcha, generar_imagen_captcha
+from seguridad import generar_texto_captcha, generar_imagen_captcha, password_valida
 
 auth = Blueprint("auth", __name__)
 
@@ -180,8 +180,8 @@ def registro():
             error = "Ingresa un correo electrónico válido."
         elif not RE_TEL.match(telefono):
             error = "El teléfono debe tener 9 dígitos."
-        elif len(contraseña) < 8:
-            error = "La contraseña debe tener al menos 8 caracteres."
+        else:
+            error = password_valida(contraseña)
 
         if error is None:
             error = Autenticacion.registro(dni, nombres, apellidos, correo, telefono, contraseña)

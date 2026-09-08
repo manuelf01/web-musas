@@ -51,7 +51,7 @@ python app.py                   # http://127.0.0.1:5000
 set MUSAS_DEMO=1 && python app.py
 ```
 
-**Cuentas de ejemplo** (creadas por `sql.sql`, contraseña de todas: `musas2026`):
+**Cuentas de ejemplo** (creadas por `sql.sql`, contraseña de todas: `Musas2026`):
 
 | DNI | Rol | Acceso |
 |---|---|---|
@@ -124,6 +124,20 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   content-type de formulario. Las APIs JSON (`/api/*`, JWT) están exentas.
 - **Jinja**: nunca uses la clave `items` en un dict que va a una plantilla
   (choca con `dict.items`). Usa `lineas`, `detalle`, etc.
+- **Contraseña — UNA regla en todo el proyecto**: mínimo **8 caracteres, con al
+  menos una MAYÚSCULA y un NÚMERO**. Valídala con `seguridad.password_valida(pw)`
+  (devuelve `None` o el texto del error). En plantillas: `{{ REGLA_PASSWORD }}`
+  y `pattern="{{ PASSWORD_PATTERN }}"` (globals de Jinja). El login solo compara
+  el hash — la regla se exige al **crear o cambiar** la contraseña.
+- **Entradas del checkout**: el `carrito_json` viene del `localStorage` (no es de
+  fiar). `controllers.cliente._leer_carrito()` lo sanea (lista de dicts, `int()`
+  tolerante, cremas deduplicadas y solo de la categoría 'Cremas'). Nunca conviertas
+  directo lo que llega del cliente.
+- **CRUD de productos/categorías**: `Producto.insertar_producto` /
+  `actualizar_producto` / `CategoriaProducto.insertar_categoria` /
+  `actualizar_categoria` devuelven `None` (ok) o **texto de error** — el
+  controlador lo pasa al flash. No lanzan excepciones ante datos malos
+  (precio negativo/texto, categoría inexistente, nombre vacío).
 - **Pedidos solo de usuarios registrados.** `/carrito` y `/compra` exigen
   `session["cliente.auth"]`; si no hay, redirigen a `/login?next=…`. El detalle
   de producto muestra "Inicia sesión para pedir" en vez del botón de agregar.
@@ -134,8 +148,11 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
 - **Roles** (`usuario.rol`): `superusuario` | `administrador` | `usuario`.
   `tipoUsuario` se mantiene sincronizado (0 = panel, 1 = cliente) por compat.
   - Solo el **superusuario** entra a `/admin/usuarios/*` y asigna roles.
-  - Un superusuario **no puede editar ni dar de baja a otro superusuario** — solo
-    crear uno nuevo. No puede darse de baja a sí mismo.
+  - Desde Gestión de usuarios **solo se puede cambiar el ROL y dar de baja** una
+    cuenta (`Usuario.cambiar_rol`, `Usuario.cambiar_estado`). El correo / teléfono
+    / contraseña los edita **cada persona** en `/mi-cuenta` o `/admin/perfil`.
+  - Un superusuario **no puede cambiarle el rol ni dar de baja a otro
+    superusuario** — solo crear uno nuevo. No puede darse de baja a sí mismo.
 - **Estados del pedido** (`registroPedido.estadoPrep`): 0 recibido → 1 en
   preparación → 2 listo. El cliente **solo puede cancelar mientras está
   "recibido"**. `model.Pedido.estado_pedido(recogido, cancelado, no_show, prep)`
