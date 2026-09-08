@@ -74,6 +74,17 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
 
+### Entrega para el compañero 2026-09-08
+- **`sql.sql` reescrito**: crea `db_musuas` desde cero con TODO el esquema
+  (migraciones 001–010 ya incluidas) + datos de ejemplo (6 categorías, 20
+  productos, 3 cuentas: superusuario 12345678 / admin 87654321 / cliente
+  12345679, **contraseña `musas2026`**). Copiar y pegar en phpMyAdmin.
+- **`db/backup_db_musuas.sql`**: `mysqldump` del estado real de trabajo
+  (referencia; los hashes de contraseña de esas cuentas no se conocen).
+- **`AGENTS.md`** (NUEVO): contexto para Codex — qué es el proyecto, reglas de
+  negocio, arquitectura, cómo levantarlo, esquema de BD, convenciones y estado
+  actual. Es la "bitácora para Codex".
+
 ### Ajustes UX 2026-09-08 (búsqueda viva, ver contraseña, carrito con login)
 - **`static/js/ui-comun.js`** (nuevo, cargado en ambos `base.html`):
   - Filtrado **en vivo sin Enter**: `<input data-filtro-vivo="#scope">` oculta los
