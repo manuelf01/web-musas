@@ -17,6 +17,60 @@
     return "S/ " + Number(n).toFixed(2);
   }
 
+  var PH_ICO = {
+    Bebidas: "bi-cup-straw", Postres: "bi-cake2-fill", Combos: "bi-bag-heart-fill",
+    Salchipapas: "bi-fire", Hamburguesas: "bi-fire", Piqueos: "bi-egg-fried",
+    Acompañamientos: "bi-basket-fill",
+  };
+
+  function tarjetaSugerida(s) {
+    var card = document.createElement("div");
+    card.className = "cart-sug";
+    var media = s.imagen
+      ? '<img src="' + IMG + s.imagen + '" alt="">'
+      : '<span class="cart-sug__ph"><i class="bi ' + (PH_ICO[s.categoria] || "bi-fire") + '"></i></span>';
+    card.innerHTML =
+      '<div class="cart-sug__media">' + media + "</div>" +
+      '<div class="cart-sug__body">' +
+        '<span class="cart-sug__motivo">' + s.motivo + "</span>" +
+        "<strong>" + s.nombre + "</strong>" +
+        '<span class="cart-sug__precio">+ ' + money(s.precio) + "</span>" +
+      "</div>" +
+      '<button class="cart-sug__add btn-contorno" type="button"><i class="bi bi-plus-lg"></i> Agregar</button>';
+    card.querySelector(".cart-sug__add").addEventListener("click", function () {
+      window.MusasCarrito.agregarConAnim(
+        {
+          idProducto: s.idProducto, nombre: s.nombre, precio: s.precio,
+          imagen: s.imagen || null, cantidad: 1, cremas: [],
+        },
+        this,
+        { mensaje: s.nombre + " agregado" }
+      );
+      render();
+    });
+    return card;
+  }
+
+  function renderSugeridos(items) {
+    var sec = document.getElementById("carrito-sugeridos");
+    var lista = document.getElementById("carrito-sugeridos-lista");
+    if (!sec || !lista) return;
+    var ids = items
+      .map(function (it) { return it.idProducto; })
+      .filter(function (x) { return x; })
+      .join(",");
+    fetch("/carrito/sugeridos?ids=" + encodeURIComponent(ids), { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : { sugeridos: [] }; })
+      .then(function (d) {
+        var sug = (d && d.sugeridos) || [];
+        if (!sug.length) { sec.hidden = true; return; }
+        lista.innerHTML = "";
+        sug.forEach(function (s) { lista.appendChild(tarjetaSugerida(s)); });
+        sec.hidden = false;
+      })
+      .catch(function () { sec.hidden = true; });
+  }
+
   function chip(txt) {
     var s = document.createElement("span");
     s.className = "cart-chip";
@@ -133,6 +187,7 @@
     if (elIgv) elIgv.textContent = money(igv);
     if (elTotal) elTotal.textContent = money(total);
     window.MusasCarrito.actualizarNav();
+    renderSugeridos(items);
   }
 
   var btnVaciar = document.getElementById("carrito-vaciar");

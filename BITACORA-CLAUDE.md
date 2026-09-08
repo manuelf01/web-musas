@@ -79,6 +79,20 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Pantalla de cocina en vivo**: el panel de Pedidos se refresca solo y avisa (pitido + banner) cuando entra un pedido nuevo. Ver "Cocina en vivo 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **`idPedido` / `idDetalleOrden` → AUTO_INCREMENT** (migración 011). Ver "AUTO_INCREMENT 2026-09-08" abajo. | `git revert` + revertir 011 |
 | 2026-09-08 | **Seguimiento del pedido para el cliente**: línea de tiempo en vivo en «Mis pedidos» (Recibido → En cocina → Listo → Recogido). Ver "Seguimiento cliente 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
+
+### Upsell carrito 2026-09-08
+- **`Producto.sugeridos(ids_en_carrito, limite=4)`**: complementos activos y con
+  stock que NO están en el carrito. Prioriza lo que le falta al pedido: bebida
+  («Para acompañar») si hay comida y no hay bebida, un postre («El toque dulce»),
+  una salchipapa («Para compartir»); rellena con los `destacado`. Excluye Cremas.
+- **Endpoint** `GET /carrito/sugeridos?ids=2,4` → `{sugeridos:[...]}` (público).
+- **`templates/client/carrito.html`**: sección `#carrito-sugeridos` bajo el grid.
+- **`static/js/carrito-pagina.js`**: tras renderizar el carrito, pide los
+  sugeridos con los ids actuales y los pinta; «Agregar» usa
+  `MusasCarrito.agregarConAnim` (bolsita vuela + toast) y re-renderiza (el
+  agregado sale de sugeridos y entra al carrito).
+- Sin cambios de BD.
 
 ### Seguimiento cliente 2026-09-08
 - **Endpoint** `GET /mis-pedidos/estado` (`cliente.mis_pedidos_estado`) →

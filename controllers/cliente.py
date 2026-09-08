@@ -279,6 +279,13 @@ def comprar_producto(id):
         cremas=cremas,
     )
 
+@cliente.route("/carrito/sugeridos")
+def carrito_sugeridos():
+    """Complementos para 'Completa tu pedido' (upsell del carrito)."""
+    ids = (request.args.get("ids") or "").split(",")
+    return jsonify({"sugeridos": Producto.sugeridos(ids)})
+
+
 @cliente.route("/carrito")
 def pag_carrito():
     # El carrito y el pedido son solo para clientes registrados.

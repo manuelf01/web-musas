@@ -140,6 +140,61 @@ class Producto:
         conexion.close()
 
     @staticmethod
+    def sugeridos(ids_en_carrito, limite=4):
+        """Complementos para 'Completa tu pedido' en el carrito: productos activos
+        y con stock que aún no están en el carrito. Prioriza lo que le falta al
+        pedido (bebida si hay comida, un postre, una salchipapa para compartir)
+        y rellena con los destacados."""
+        ids = set()
+        for i in ids_en_carrito:
+            try:
+                ids.add(int(i))
+            except (TypeError, ValueError):
+                pass
+
+        todos = Producto.obtener_productos(solo_activos=True)
+        cat_por_id = {p["idProducto"]: p["nombreCategoria"] for p in todos}
+        cats_carrito = {cat_por_id.get(i) for i in ids}
+        tiene_bebida = "Bebidas" in cats_carrito
+        tiene_postre = "Postres" in cats_carrito
+        tiene_principal = bool(cats_carrito & {"Hamburguesas", "Salchipapas", "Combos"})
+
+        disp = [p for p in todos
+                if p["idProducto"] not in ids
+                and (p["existencias"] or 0) > 0
+                and p["nombreCategoria"] != "Cremas"]
+
+        salida, vistos = [], set()
+
+        def sumar(items, motivo, tope=2):
+            n = 0
+            for p in items:
+                if len(salida) >= limite or n >= tope or p["idProducto"] in vistos:
+                    continue
+                vistos.add(p["idProducto"])
+                n += 1
+                salida.append({
+                    "idProducto": p["idProducto"],
+                    "nombre": p["nombre"],
+                    "precio": float(p["precio"] or 0),
+                    "imagen": p["imagen"],
+                    "categoria": p["nombreCategoria"],
+                    "motivo": motivo,
+                })
+
+        por_cat = lambda c: [p for p in disp if p["nombreCategoria"] == c]
+
+        if tiene_principal and not tiene_bebida:
+            sumar(por_cat("Bebidas"), "Para acompañar")
+        if not tiene_postre:
+            sumar(por_cat("Postres"), "El toque dulce")
+        if tiene_principal and "Salchipapas" not in cats_carrito:
+            sumar(por_cat("Salchipapas"), "Para compartir", tope=1)
+        sumar([p for p in disp if p["destacado"]], "Los más pedidos", tope=limite)
+        sumar(disp, "También te puede gustar", tope=limite)
+        return salida[:limite]
+
+    @staticmethod
     def eliminar_producto(id):
         conexion = obtener_conexion()
         try:
