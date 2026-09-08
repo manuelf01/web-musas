@@ -1,32 +1,21 @@
-{% extends "client/main.html" %} {% block titulo %} Carrito de compras {%
-endblock %} {% block contenido %}
-
-<section class="mt-5 mb-3">
-  <main class="mt-4 container">
-    <div class="bg-titulo p-2 mb-2">
-      <h1 class="mt-2 mb-2">Carrito de compras</h1>
-    </div>
-
-    <div class="productos-carrito mb-2 d-flex flex-column gap-3"></div>
-
-    <div id="precio-total" class="mt-4"></div>
-
-    <div class="d-flex justify-content-end gap-2">
-      <div class="btn-vaciar-carrito">
-        <a class="btn btn-danger" id="vaciar-carrito">Vaciar carrito</a>
-      </div>
-      <div>
-        <a href="{{url_for('cliente.pag_compra')}}" class="btn btn-success"
-          >Comprar</a
-        >
-      </div>
-    </div>
-  </main>
-</section>
-
-<script
-  src="{{url_for('static', filename = 'js/mostrarProductos.js')}}"
-  type="module"
-></script>
-
+{% extends "client/main.html" %}
+{% block titulo %}Carrito de compras | Las Musas{% endblock %}
+{% block contenido %}
+<main class="page-shell"><div class="musas-container">
+  <div class="breadcrumb"><a href="{{ url_for('cliente.home') }}">Inicio</a> / Carrito</div>
+  <h1 class="page-title">Carrito de compras</h1><p class="page-subtitle">Retiro en tienda · Calle Schell 385, Miraflores</p>
+  <div class="cart-layout" style="margin-top:32px">
+    <section><div class="productos-carrito cart-products"></div></section>
+    <aside class="surface-card cart-summary">
+      <h2 style="font-size:24px">Resumen del pedido</h2>
+      <div class="summary-line"><span>Productos</span><strong id="resumen-cantidad">0</strong></div>
+      <div class="summary-line"><span>IGV incluido</span><strong id="resumen-igv">S/ 0.00</strong></div>
+      <div class="summary-total"><span>Total a pagar</span><strong id="precio-total">S/ 0.00</strong></div>
+      <a id="continuar-compra" href="{{ url_for('cliente.pag_compra') }}" class="musas-btn musas-btn--primary" style="width:100%">Continuar al retiro →</a>
+      <button class="musas-btn musas-btn--secondary" id="vaciar-carrito" type="button" style="width:100%;margin-top:10px">Vaciar carrito</button>
+      <p class="field-help" style="text-align:center;margin-top:18px">El pago se realiza al confirmar o recoger en tienda.</p>
+    </aside>
+  </div>
+</div></main>
+<script src="{{ url_for('static', filename='js/mostrarProductos.js') }}" type="module"></script>
 {% endblock %}

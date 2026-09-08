@@ -4,11 +4,11 @@ from flask import jsonify, Blueprint, request
 from model.DetalleComprobante import detalleComprobante
 from model.Producto import Producto
 from model.Comprobante import Comprobante
-from flask_jwt import jwt_required
+from security import admin_required
 
 api_detalleComprobante = Blueprint('om',__name__)
 @api_detalleComprobante.route("/api_obtenerdetalleComprobante")
-
+@admin_required()
 def api_obtenerdetallecomprobante():
     try:
         detalleC = detalleComprobante.obtener_detalleComprobante()
@@ -21,6 +21,7 @@ def api_obtenerdetallecomprobante():
         return jsonify ({"Mensaje":"Error al obtener detalle de comprobante"})
 
 @api_detalleComprobante.route("/api_obtenerdetalleComprobante/<int:idcomprobante>")
+@admin_required()
 def api_obtenerdetalleComprobante(idcomprobante):
     try:
         deC = detalleComprobante.obtener_detalleComprobante_id(idcomprobante)

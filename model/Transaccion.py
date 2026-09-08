@@ -1,126 +1,254 @@
+import secrets
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
 from bd import obtener_conexion
-from model.Pedido import Pedido
-from model.DetalleOrden import DetalleOrden
 from model.Comprobante import Comprobante
+from model.DetalleOrden import DetalleOrden
 from model.Pedido import Pedido
-from datetime import time, datetime, date
+
+
+class DatosCompraInvalidos(ValueError):
+    pass
 
 
 class Transaccion:
-    conteo = 0
+    @staticmethod
+    def _entero_positivo(valor, campo):
+        try:
+            numero = int(valor)
+        except (TypeError, ValueError) as exc:
+            raise DatosCompraInvalidos(f"{campo} no es válido") from exc
+        if numero <= 0:
+            raise DatosCompraInvalidos(f"{campo} debe ser mayor que cero")
+        return numero
 
     @classmethod
-    def insertarCompra(cls, datosPedido, productos):
+    def insertarCompra(cls, datos_pedido, productos, usuario_sesion=None):
+        if not isinstance(datos_pedido, dict) or not isinstance(productos, list) or not productos:
+            raise DatosCompraInvalidos("El pedido debe contener al menos un producto")
 
-        idUsuario = datosPedido["idUsuario"]
-        dniNoRegistrado = datosPedido["dniNoRegistrado"]
-        numeroTelefono = datosPedido["telefono"]
-        nombres = datosPedido["nombres"]
-        horaRecojo = datetime.strptime(
-            datosPedido["horaRecojo"], "%H:%M").time()
-        estadoBoleta = datosPedido["estadoBoleta"]
-        billeteraDigital = datosPedido["billeteraDigital"]
-
-        if idUsuario == "":
-            queryPedido = "INSERT INTO registroPedido(idPedido,dniNoRegistrado, nombres, numeroTelefono, horaRecojo, estadoBoleta, billeteraDigital, keyPedido) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
+        if usuario_sesion:
+            id_usuario = usuario_sesion.get("idUsuario")
+            dni = str(usuario_sesion.get("dni", "")).strip()
+            nombres = str(usuario_sesion.get("nombres", "")).strip()
+            telefono = str(usuario_sesion.get("telefono", "")).strip()
         else:
-            queryPedido = "INSERT INTO registroPedido(idPedido, idUsuario, dniNoRegistrado, nombres, numeroTelefono, horaRecojo,estadoBoleta, billeteraDigital, keyPedido) VALUES (%s, %s, %s, %s, %s, %s, %s, %s,%s)"
+            id_usuario = None
+            dni = str(datos_pedido.get("dniNoRegistrado", "")).strip()
+            nombres = str(datos_pedido.get("nombres", "")).strip()
+            telefono = str(datos_pedido.get("telefono", "")).strip()
 
-        queryDetalleOrden = "INSERT INTO detalleOrden(idDetalleOrden, idPedido, idProducto, nombreProducto, precioUnidad, cantidad, preciototal) VALUES (%s, %s, %s, %s, %s, %s, %s)"
-        queryDetalleCremas = "INSERT INTO detalleCremas(idPedido, idCrema, idDetalleOrden) VALUES (%s, %s, %s)"
+        if len(dni) != 8 or not dni.isdigit():
+            raise DatosCompraInvalidos("El DNI debe contener 8 dígitos")
+        if len(telefono) != 9 or not telefono.isdigit():
+            raise DatosCompraInvalidos("El teléfono debe contener 9 dígitos")
+        if not nombres:
+            raise DatosCompraInvalidos("El nombre es obligatorio")
 
-        cls.conteo += 1
-        cont = str(cls.conteo)
-        keyPedido = "2023" + cont
-
-        idPedido = Pedido.obtener_id_pedido_registro()
-        idDetalleOrden = DetalleOrden.obtener_id_detalle_orden_registro()
         try:
+            hora_recojo = datetime.strptime(
+                str(datos_pedido.get("horaRecojo", "")), "%H:%M"
+            ).time()
+        except ValueError as exc:
+            raise DatosCompraInvalidos("La hora de recojo no es válida") from exc
 
-            conexion = obtener_conexion()
-            with conexion.cursor() as cursor:
-                if idUsuario == "":
-                    cursor.execute(queryPedido, (idPedido, dniNoRegistrado, nombres,
-                                   numeroTelefono, horaRecojo, estadoBoleta, billeteraDigital, keyPedido))
-                else:
-                    cursor.execute(queryPedido, (idPedido, idUsuario, dniNoRegistrado, nombres,
-                                   numeroTelefono, horaRecojo, estadoBoleta, billeteraDigital, keyPedido))
-            with conexion.cursor() as cursor:
-                for producto in productos:
-                    idProducto = producto["idProducto"]
-                    nombreProducto = producto["nombre"]
-                    precioUnidad = producto["precio"]
-                    cantidad = producto["cantidad"]
-                    precioTotal = producto["precioTotal"]
-                    cremas = producto["cremas"]
+        estado_boleta = bool(datos_pedido.get("estadoBoleta", False))
+        billetera_digital = bool(datos_pedido.get("billeteraDigital", False))
+        key_pedido = secrets.token_urlsafe(16)
+        conexion = obtener_conexion()
 
-                    cursor.execute(queryDetalleOrden, (idDetalleOrden, idPedido,
-                                   idProducto, nombreProducto, precioUnidad, cantidad, precioTotal))
-                    for crema in cremas:
-                        idCrema = crema
-                        cursor.execute(queryDetalleCremas,
-                                       (idPedido, idCrema, idDetalleOrden))
-                    idDetalleOrden += 1
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    """
+                    INSERT INTO registroPedido(
+                        idUsuario, dniNoRegistrado, nombres, numeroTelefono,
+                        horaRecojo, estadoBoleta, billeteraDigital, keyPedido
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        id_usuario,
+                        dni,
+                        nombres,
+                        telefono,
+                        hora_recojo,
+                        estado_boleta,
+                        billetera_digital,
+                        key_pedido,
+                    ),
+                )
+                id_pedido = cursor.lastrowid
+                total_pedido = Decimal("0.00")
+
+                for item in productos:
+                    if not isinstance(item, dict):
+                        raise DatosCompraInvalidos("Producto inválido")
+                    id_producto = cls._entero_positivo(item.get("idProducto"), "Producto")
+                    cantidad = cls._entero_positivo(item.get("cantidad"), "Cantidad")
+
+                    cursor.execute(
+                        """
+                        SELECT idProducto, nombre, precio, existencias
+                        FROM producto
+                        WHERE idProducto = %s
+                        FOR UPDATE
+                        """,
+                        (id_producto,),
+                    )
+                    producto = cursor.fetchone()
+                    if producto is None:
+                        raise DatosCompraInvalidos(f"El producto {id_producto} no existe")
+                    if producto[3] is None or producto[3] < cantidad:
+                        raise DatosCompraInvalidos(
+                            f"Stock insuficiente para {producto[1]}"
+                        )
+
+                    try:
+                        precio_unidad = Decimal(str(producto[2])).quantize(
+                            Decimal("0.01"), rounding=ROUND_HALF_UP
+                        )
+                    except (InvalidOperation, TypeError) as exc:
+                        raise DatosCompraInvalidos(
+                            f"El precio de {producto[1]} no es válido"
+                        ) from exc
+                    precio_total = (precio_unidad * cantidad).quantize(
+                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                    )
+
+                    cursor.execute(
+                        """
+                        INSERT INTO detalleOrden(
+                            idPedido, idProducto, nombreProducto, precioUnidad,
+                            cantidad, precioTotal
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            id_pedido,
+                            id_producto,
+                            producto[1],
+                            precio_unidad,
+                            cantidad,
+                            precio_total,
+                        ),
+                    )
+                    id_detalle = cursor.lastrowid
+
+                    cremas = item.get("cremas", [])
+                    if not isinstance(cremas, list):
+                        raise DatosCompraInvalidos("La selección de cremas no es válida")
+                    for id_crema_sin_validar in set(cremas):
+                        id_crema = cls._entero_positivo(id_crema_sin_validar, "Crema")
+                        cursor.execute(
+                            """
+                            SELECT p.idProducto
+                            FROM producto p
+                            INNER JOIN categoriaProducto c
+                                ON c.idCategoria = p.idCategoria
+                            WHERE p.idProducto = %s
+                              AND LOWER(c.nombreCategoria) = 'cremas'
+                            """,
+                            (id_crema,),
+                        )
+                        if cursor.fetchone() is None:
+                            raise DatosCompraInvalidos(f"La crema {id_crema} no existe")
+                        cursor.execute(
+                            """
+                            INSERT INTO detalleCremas(idPedido, idCrema, idDetalleOrden)
+                            VALUES (%s, %s, %s)
+                            """,
+                            (id_pedido, id_crema, id_detalle),
+                        )
+
+                    cursor.execute(
+                        "UPDATE producto SET existencias = existencias - %s WHERE idProducto = %s",
+                        (cantidad, id_producto),
+                    )
+                    total_pedido += precio_total
 
             conexion.commit()
-            return True
-        except Exception as e:
+            return {
+                "idPedido": id_pedido,
+                "keyPedido": key_pedido,
+                "total": float(total_pedido),
+            }
+        except Exception:
             conexion.rollback()
-            raise e
+            raise
         finally:
             conexion.close()
 
+    @staticmethod
     def insertarComprobante(idPedido, keyPedido):
-        datosPedido = Pedido.obtener_dni_pedido(idPedido)
-        idUsuario = datosPedido[0]
-        dniNoRegistrado = datosPedido[1]
-        idComprobante = Comprobante.obtener_id_comprobante_registro()
-        fechaComprobante = date.today()
-        horaComprobante = datetime.now().time()
-        subTotal = DetalleOrden.obtener_subTotal(idPedido)
-        base = subTotal/1.18
-        igv = subTotal-base
-        montoTotal = subTotal
-        numComprobante = Comprobante.obtener_numero_comprobante()
-        ordenes = DetalleOrden.obtener_detalle_orden_id_pedido(idPedido)
-
-        queryComprobante = "INSERT INTO comprobante(idComprobante, idPedido, idUsuario, dniNoRegistrado, fechaComprobante, horaComprobante, subTotal, montoTotal, igv, numeroComprobante) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
-        queryDetalleComprobante = "INSERT INTO detalleComprobante(idComprobante, idProducto, nombreProducto, precioUnidad, cantidad, precioTotal) VALUES (%s, %s, %s, %s, %s, %s)"
-
-        validateKey = Pedido.validate_key_pedido(idPedido, keyPedido)
-        if not validateKey:
+        datos_pedido = Pedido.obtener_dni_pedido(idPedido)
+        if datos_pedido is None or not Pedido.validate_key_pedido(idPedido, keyPedido):
             return False
-        try:
-            conexion = obtener_conexion()
-            with conexion.cursor() as cursor:
-                cursor.execute(queryComprobante, (idComprobante, idPedido, idUsuario, dniNoRegistrado,
-                               fechaComprobante, horaComprobante, subTotal, montoTotal, igv, numComprobante))
 
-            with conexion.cursor() as cursor:
-                for orden in ordenes:
-                    idProducto = orden[2]
-                    nombreProducto = orden[3]
-                    precioUnidad = orden[4]
-                    cantidad = orden[5]
-                    precioTotal = orden[6]
-                    try:
-                        cursor.execute(queryDetalleComprobante, (idComprobante, idProducto,
-                                       nombreProducto, precioUnidad, cantidad, precioTotal))
-                    except:
-                        cursor.execute(
-                            "select cantidad,precioTotal from detalleComprobante where idComprobante = %s and idProducto = %s", (idComprobante, idProducto))
-                        data = cursor.fetchone()
-                        cantidad += data[0]
-                        precioTotal += data[1]
-                        cursor.execute("update detalleComprobante set cantidad = %s, precioTotal = %s where idComprobante = %s and idProducto = %s", (
-                            cantidad, precioTotal, idComprobante, idProducto))
+        id_usuario, dni_no_registrado = datos_pedido
+        fecha_comprobante = date.today()
+        hora_comprobante = datetime.now().time()
+        subtotal = Decimal(str(DetalleOrden.obtener_subTotal(idPedido))).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        base = (subtotal / Decimal("1.18")).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        igv = subtotal - base
+        numero_comprobante = str(Comprobante.obtener_numero_comprobante())
+        ordenes = DetalleOrden.obtener_detalle_orden_id_pedido(idPedido)
+        conexion = obtener_conexion()
+
+        try:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "UPDATE registroPedido SET estadoRecojo = %s WHERE idPedido = %s", (True, idPedido))
+                    """
+                    INSERT INTO comprobante(
+                        idPedido, idUsuario, dniNoRegistrado, fechaComprobante,
+                        horaComprobante, subTotal, montoTotal, igv, numeroComprobante
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        idPedido,
+                        id_usuario,
+                        dni_no_registrado,
+                        fecha_comprobante,
+                        hora_comprobante,
+                        subtotal,
+                        subtotal,
+                        igv,
+                        numero_comprobante,
+                    ),
+                )
+                id_comprobante = cursor.lastrowid
+
+                for orden in ordenes:
+                    cursor.execute(
+                        """
+                        INSERT INTO detalleComprobante(
+                            idComprobante, idProducto, nombreProducto,
+                            precioUnidad, cantidad, precioTotal
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
+                        ON DUPLICATE KEY UPDATE
+                            cantidad = cantidad + VALUES(cantidad),
+                            precioTotal = precioTotal + VALUES(precioTotal)
+                        """,
+                        (
+                            id_comprobante,
+                            orden[2],
+                            orden[3],
+                            orden[4],
+                            orden[5],
+                            orden[6],
+                        ),
+                    )
+                cursor.execute(
+                    "UPDATE registroPedido SET estadoRecojo = %s WHERE idPedido = %s",
+                    (True, idPedido),
+                )
             conexion.commit()
             return True
-        except Exception as e:
+        except Exception:
             conexion.rollback()
-            raise e
+            raise
         finally:
             conexion.close()

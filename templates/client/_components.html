@@ -1,0 +1,17 @@
+{% macro product_card(producto) %}
+<article class="product-card">
+  <div class="product-card__media">
+    <img src="{{ url_for('static', filename=producto['imagen'] or 'img/hamburguesas/ha-1.jpg') }}" alt="{{ producto['nombre'] }}" loading="lazy" />
+    {% if producto['existencias'] <= 0 %}<span class="product-card__badge">Agotado</span>{% elif producto['existencias'] <= 5 %}<span class="product-card__badge">Últimas unidades</span>{% endif %}
+  </div>
+  <div class="product-card__body">
+    <h3>{{ producto['nombre'] }}</h3>
+    <p class="product-card__description">{{ producto['descripcion'] }}</p>
+    <div class="product-card__meta">
+      <span class="price">S/ {{ "%.2f"|format(producto['precio']) }}</span>
+      <span class="stock {% if producto['existencias'] <= 5 %}stock--low{% endif %}">{{ producto['existencias'] }} disponibles</span>
+    </div>
+    <a href="{{ url_for('cliente.comprar_producto', id=producto['idProducto']) }}" class="musas-btn musas-btn--primary {% if producto['existencias'] <= 0 %}disabled{% endif %}" {% if producto['existencias'] <= 0 %}aria-disabled="true" tabindex="-1"{% endif %}>{% if producto['existencias'] > 0 %}+ Agregar{% else %}Sin stock{% endif %}</a>
+  </div>
+</article>
+{% endmacro %}

@@ -1,6 +1,6 @@
 # insertar, obtener por (idpedido, idproducto, idcrema
 from flask import Blueprint, request, jsonify
-from flask_jwt import jwt_required
+from security import admin_required
 from model.DetalleCremas import DetalleCremas
 from model.Pedido import Pedido
 from model.Producto import Producto
@@ -10,7 +10,7 @@ api_detalleCremas = Blueprint('api_detalleCremas', __name__)
 
 
 @api_detalleCremas.route("/obtener_detalleCremas/<int:idPedido>/<int:idDetalleOrden>")
-@jwt_required()
+@admin_required()
 def obtener_detalleCremas(idPedido, idDetalleOrden):
     try:
         detalleCrema = DetalleCremas.obtener_detalleCremas_idPedido(

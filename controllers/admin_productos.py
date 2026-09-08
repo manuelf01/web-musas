@@ -1,10 +1,29 @@
-from flask import Blueprint, render_template, redirect, request, url_for, g
+from pathlib import Path
+from uuid import uuid4
+
+from flask import Blueprint, current_app, flash, g, redirect, render_template, request, url_for
 from flask_paginate import Pagination, get_page_parameter
+from werkzeug.utils import secure_filename
 from controllers.admin import admin
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
 
 productos = Blueprint("productos", __name__, url_prefix='/productos')
+EXTENSIONES_IMAGEN = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+def guardar_imagen(imagen):
+    if imagen is None or not imagen.filename:
+        return None
+    nombre_seguro = secure_filename(imagen.filename)
+    extension = Path(nombre_seguro).suffix.lower()
+    if extension not in EXTENSIONES_IMAGEN:
+        raise ValueError("La imagen debe ser JPG, PNG o WEBP")
+    nombre_final = f"{uuid4().hex}{extension}"
+    carpeta = Path(current_app.static_folder) / "img" / "productos"
+    carpeta.mkdir(parents=True, exist_ok=True)
+    imagen.save(carpeta / nombre_final)
+    return f"img/productos/{nombre_final}"
 
 
 @productos.route("/")
@@ -34,14 +53,22 @@ def formulario_agregar():
 
 @productos.route("/guardar_producto", methods=["POST"])
 def guardar():
-    nombre = request.form["nombre"]
-    descripcion = request.form["descripcion"]
-    precio = request.form["precio"]
-    existencias = request.form["existencias"]
-    idCategoria = request.form.get("categorias")
-    Producto.insertar_producto(
-        nombre, descripcion, precio, existencias, idCategoria)
-
+    try:
+        imagen = guardar_imagen(request.files.get("imagen"))
+        error = Producto.insertar_producto(
+            request.form.get("nombre", ""),
+            request.form.get("descripcion", ""),
+            request.form.get("precio", ""),
+            request.form.get("existencias", ""),
+            request.form.get("categorias", ""),
+            imagen,
+        )
+        if error:
+            raise ValueError(error)
+        flash("Producto agregado correctamente.", "success")
+    except ValueError as error:
+        flash(str(error), "danger")
+        return redirect(url_for("admin.productos.formulario_agregar"))
     return redirect(url_for("admin.productos.home"))
 
 
@@ -55,17 +82,30 @@ def eliminar():
 def editar(id):
     producto = Producto.obtener_producto_por_id(id)
     categorias = CategoriaProducto.obtener_categorias()
-    return render_template("admin/productos/editar_producto.html", producto=producto, categorias=categorias)
+    return render_template(
+        "admin/productos/editar_producto.html",
+        producto=producto,
+        categorias=categorias,
+        usuario=g.user,
+    )
 
 
 @productos.route("/actualizar_producto", methods=["POST"])
 def actualizar():
-    id = request.form["idProducto"]
-    nombre = request.form["nombre"]
-    descripcion = request.form["descripcion"]
-    precio = request.form["precio"]
-    existencias = request.form["existencias"]
-    idCategoria = request.form.get("categorias")
-    Producto.actualizar_producto(
-        nombre, descripcion, precio, existencias, id, idCategoria)
+    id_producto = request.form["idProducto"]
+    try:
+        imagen = guardar_imagen(request.files.get("imagen"))
+        Producto.actualizar_producto(
+            request.form.get("nombre", ""),
+            request.form.get("descripcion", ""),
+            request.form.get("precio", ""),
+            request.form.get("stockAgregar", "0"),
+            id_producto,
+            request.form.get("categorias", ""),
+            imagen,
+        )
+        flash("Producto y stock actualizados correctamente.", "success")
+    except ValueError as error:
+        flash(str(error), "danger")
+        return redirect(url_for("admin.productos.editar", id=id_producto))
     return redirect(url_for("admin.productos.home"))

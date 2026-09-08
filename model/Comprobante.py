@@ -72,15 +72,6 @@ class Comprobante:
         else:
             return False
 
-    def obtener_id_comprobante_registro():
-        conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute(
-                "SELECT coalesce(MAX(idComprobante),0)+1 as idComprobante FROM comprobante")
-            idComprobante = cursor.fetchone()
-        conexion.close()
-        return idComprobante[0]
-
     def obtener_numero_comprobante():
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:

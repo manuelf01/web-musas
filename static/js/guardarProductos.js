@@ -1,4 +1,5 @@
-import { SERVER, datosAutorizacion } from "./config.js";
+import { SERVER } from "./config.js";
+import { guardarCarrito, obtenerCarrito } from "./carritoStorage.js";
 const agregarCarrito = document.querySelector("#agregar-carrito");
 const cremas = document.querySelectorAll("input[type=checkbox]");
 
@@ -23,20 +24,8 @@ if (agregarCarrito) {
 
 async function obtener_data_producto() {
   try {
-    const accesToken = await fetch(`${SERVER}/auth`, {
-      method: "POST",
-      body: JSON.stringify(datosAutorizacion),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const token = await accesToken.json();
-
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `JWT ${token.access_token}`,
-      },
-    });
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("No se pudo obtener el producto");
     const data = await response.json();
     guardar_data_carrito(data);
   } catch (error) {
@@ -45,9 +34,7 @@ async function obtener_data_producto() {
 }
 
 function guardar_data_carrito(data) {
-  const id = localStorage.length + 1;
-
-  const { idProducto, idCategoria, nombre, descripcion, precio, existencias } =
+  const { idProducto, idCategoria, nombre, descripcion, precio, existencias, imagen } =
     data.producto;
 
   const obj = {
@@ -57,13 +44,16 @@ function guardar_data_carrito(data) {
     descripcion: descripcion,
     precio: precio,
     existencias: existencias,
-    imagen: "",
+    imagen: imagen || "",
     cantidad: 1,
     precioTotal: precio,
     cremas: cremasElegidas,
   };
 
-  localStorage.setItem(id, JSON.stringify(obj));
+  const carrito = obtenerCarrito();
+  carrito.push(obj);
+  guardarCarrito(carrito);
+  window.dispatchEvent(new Event("cart:updated"));
   cremasElegidas = [];
   window.location.href = `${SERVER}/carrito`;
 }

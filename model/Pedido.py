@@ -21,7 +21,7 @@ class Pedido:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT * FROM registroPedido WHERE idPedido = %s", (idPedido))
+                    "SELECT * FROM registroPedido WHERE idPedido = %s", (idPedido,))
             pedido = cursor.fetchone()
         conexion.close()
         return pedido
@@ -31,7 +31,7 @@ class Pedido:
         with obtener_conexion() as conexion:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT * FROM registroPedido WHERE dniNoRegistrado = %s", (dni))
+                    "SELECT * FROM registroPedido WHERE dniNoRegistrado = %s", (dni,))
                 pedidos = cursor.fetchall()
         if pedidos is None:
             return pedidos
@@ -42,7 +42,7 @@ class Pedido:
         with obtener_conexion() as conexion:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT * FROM registroPedido WHERE idUsuario = %s", (id))
+                    "SELECT * FROM registroPedido WHERE idUsuario = %s", (id,))
                 pedidos = cursor.fetchall()
         if pedidos is None:
             return pedidos
@@ -53,7 +53,7 @@ class Pedido:
         with obtener_conexion() as conexion:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT estadoRecojo FROM registroPedido WHERE keyPedido = %s and estadoRecojo = 0", (keyPedido))
+                    "SELECT estadoRecojo FROM registroPedido WHERE keyPedido = %s and estadoRecojo = 0", (keyPedido,))
                 seleccion = cursor.fetchone()
             if seleccion is not None:
                 with conexion.cursor() as cursor:
@@ -103,19 +103,10 @@ class Pedido:
         juego = None
         with conexion.cursor() as cursor:
             cursor.execute(
-                "select idUsuario, dniNoRegistrado from registroPedido where idPedido = %s", (idPedido))
+                "select idUsuario, dniNoRegistrado from registroPedido where idPedido = %s", (idPedido,))
             juego = cursor.fetchone()
         conexion.close()
         return juego
-
-    def obtener_id_pedido_registro():
-        conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute(
-                "SELECT coalesce(max(idPedido),0)+1 as idpedido FROM registroPedido")
-            idPedido = cursor.fetchone()
-        conexion.close()
-        return idPedido[0]
 
     def validate_key_pedido(idPedido, keyPedido):
         conexion = obtener_conexion()

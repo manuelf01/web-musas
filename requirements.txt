@@ -1,0 +1,8 @@
+Flask>=2.3,<4
+Flask-JWT-Extended>=4.6,<5
+Flask-Paginate>=2023.10.24
+Flask-Swagger-UI>=4.11,<6
+Flask-WTF>=1.2,<2
+PyMySQL>=1.1,<2
+cryptography>=41
+python-dotenv>=1.0,<2

@@ -7,6 +7,8 @@ function categoriasFija() {
 
   const categorias_lista = document.querySelector(".categorias");
 
+  if (!breakPoint || !categorias_lista) return;
+
   window.addEventListener("scroll", () => {
     // console.log(breakPoint.getBoundingClientRect());
     const aviso = breakPoint.getBoundingClientRect().y;

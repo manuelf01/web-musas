@@ -1,70 +1,21 @@
-{% extends "client/main.html" %} {% block titulo %} Registrarse {% endblock %}
+{% extends "client/main.html" %}
+{% block titulo %}{{ producto['nombre'] }} | Las Musas{% endblock %}
 {% block contenido %}
-<section class="mt-5 mb-3 container">
-  <h2 class="">{{producto["nombre"]}}</h2>
-  <div class="w-auto m-auto">
-    <div class="row align-items-center justify-content-md-center m-auto">
-      <div class="col-sm-6 text-center">
-        <img
-          src="{{url_for('static', filename = 'img/hamburguesas/h-2.jpg')}}"
-          alt=""
-          class="rounded"
-          style="width: 250px"
-        />
-      </div>
-
-      <div class="col-sm-6 text-center">
-        <div class="informacion-producto-ingredientes">
-          <p>{{producto["descripcion"]}}</p>
-        </div>
-
-        <p class="informacion-producto-precio">
-          <span>S/.</span>{{producto["precio"]}}
-        </p>
-      </div>
-    </div>
+<main class="page-shell"><div class="musas-container">
+  <div class="breadcrumb"><a href="{{ url_for('cliente.home') }}">Inicio</a> / <a href="{{ url_for('cliente.home') }}#carta">Carta</a> / {{ producto['nombre'] }}</div>
+  <div class="detail-layout">
+    <div class="detail-media"><img src="{{ url_for('static', filename=producto['imagen'] or 'img/hamburguesas/h-2.jpg') }}" alt="{{ producto['nombre'] }}" /></div>
+    <section class="surface-card detail-panel">
+      <span class="eyebrow">Preparado a las brasas</span><h1>{{ producto['nombre'] }}</h1>
+      <p class="page-subtitle">{{ producto['descripcion'] }}</p>
+      <div class="detail-price">S/ {{ "%.2f"|format(producto['precio']) }}</div>
+      <span class="status-pill {% if producto['existencias'] > 5 %}status-pill--success{% else %}status-pill--danger{% endif %}">{% if producto['existencias'] > 0 %}{{ producto['existencias'] }} unidades disponibles{% else %}Sin stock disponible{% endif %}</span>
+      {% if cremas %}<div style="margin-top:28px"><h2 style="font-size:20px">Personaliza tus salsas</h2><p class="page-subtitle">Elige las que deseas incluir.</p><div class="option-grid">
+        {% for crema in cremas %}<label class="option-card"><img src="{{ url_for('static', filename=crema['imagen'] or 'img/personalizar/mayonesa.jpg') }}" alt="{{ crema['nombre'] }}" /><span><strong>{{ crema['nombre'] }}</strong><small>S/ {{ "%.2f"|format(crema['precio']) }}</small></span><input type="checkbox" name="crema" value="{{ crema['idProducto'] }}" class="valores" /></label>{% endfor %}
+      </div></div>{% endif %}
+      <a id="agregar-carrito" href="{{ url_for('cliente.pag_carrito') }}" class="musas-btn musas-btn--primary {% if producto['existencias'] <= 0 %}disabled{% endif %}" style="width:100%" {% if producto['existencias'] <= 0 %}aria-disabled="true" tabindex="-1"{% endif %}>{% if producto['existencias'] > 0 %}+ Agregar al carrito{% else %}Producto agotado{% endif %}</a>
+    </section>
   </div>
-
-  <div class="main-content-personalizar">
-    <h3 class="text-start">Personaliza</h3>
-    <div class="personalizar-salsas">
-      <h4>Elegir salsas</h4>
-      <div class="d-flex justify-content-around">
-        {% for crema in cremas %}
-        <div class="custom-item">
-          <div class="custom-item__img">
-            <img
-              src="{{url_for('static', filename = 'img/personalizar/mayonesa.jpg')}}"
-              alt=""
-              width="68"
-              height="68"
-            />
-          </div>
-          <p>{{crema["nombre"]}}</p>
-          <p class="precio-agregar"><span>S/.</span>{{crema["precio"]}}</p>
-          <input
-            type="checkbox"
-            name="crema"
-            value="{{crema['idProducto']}}"
-            class="valores"
-          />
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-  <div class="text-end">
-    <a
-      id="agregar-carrito"
-      href="{{url_for('cliente.pag_carrito')}}"
-      class="btn btn-success text-center"
-      >Agregar al carrito</a
-    >
-  </div>
-
-  <script
-    src="{{url_for('static', filename = 'js/guardarProductos.js')}}"
-    type="module"
-  ></script>
-</section>
+</div></main>
+<script src="{{ url_for('static', filename='js/guardarProductos.js') }}" type="module"></script>
 {% endblock %}

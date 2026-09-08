@@ -1,14 +1,14 @@
 #obtener, insertar, obtener por id
 
 from flask import jsonify, Blueprint, request
-from flask_jwt import jwt_required
+from security import admin_required
 from model.DetalleOrden import DetalleOrden
 from model.Producto import Producto
 from model.Pedido import Pedido
 
 api_detalleOrden = Blueprint('api_detalleOrden',__name__)
 @api_detalleOrden.route("/api_obtenerdetalleorden")
-@jwt_required()
+@admin_required()
 def api_obtenerdetalleorden():
     try:
         detallesorden = DetalleOrden.obtener_detalleOrden()
@@ -23,7 +23,7 @@ def api_obtenerdetalleorden():
 
 
 @api_detalleOrden.route("/api_obtenerdetalleorden/<int:idDetalleOrden>/<int:idpedido>")
-@jwt_required()
+@admin_required()
 def api_obtenedetalleorden(idDetalleOrden,idpedido):
     try:
         listaserializable = []

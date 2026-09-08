@@ -1220,7 +1220,7 @@ paths:
                 idPedido:
                   type: integer
                 keyPedido:
-                  type: integer
+                  type: string
         required: True
       responses:
         200:
@@ -1245,6 +1245,11 @@ paths:
                 
                 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     Autenticacion:
       type: object
@@ -1338,6 +1343,4 @@ components:
         required: True
         schema:
           type: string
-          example: JWT $token
-  
-  
+          example: Bearer $token
