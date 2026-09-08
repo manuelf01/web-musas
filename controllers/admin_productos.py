@@ -10,27 +10,40 @@ productos = Blueprint("productos", __name__, url_prefix='/productos')
 
 @productos.route("/")
 def home():
-    search = False
-    q = request.args.get('q')
-    if q:
-        search = True
-
-    productosTotal = Producto.obtener_total_productos()
+    q = (request.args.get("q") or "").strip()
     per_page = 9
     page = request.args.get(get_page_parameter(), type=int, default=1)
-    start_index = (page - 1) * per_page + 1
 
-    pagination = Pagination(page=page, total=productosTotal, per_page=per_page,
-                            search=search, record_name='productos')
+    catalogo = Producto.obtener_productos()
+    sin_stock = sum(1 for p in catalogo if not p["existencias"])
 
-    productos = Producto.obtener_productos_paginacion(per_page, start_index)
-    return render_template("admin/productos/index.html", productos=productos, usuario=g.user, pagination=pagination)
+    filtrados = catalogo
+    if q:
+        ql = q.lower()
+        filtrados = [p for p in catalogo if ql in p["nombre"].lower()
+                     or ql in (p["descripcion"] or "").lower()
+                     or ql in (p["nombreCategoria"] or "").lower()]
+
+    total = len(filtrados)
+    inicio = (page - 1) * per_page
+    productos = filtrados[inicio:inicio + per_page]
+    pagination = Pagination(page=page, total=total, per_page=per_page,
+                            search=bool(q), record_name="productos", css_framework="bootstrap5")
+
+    categorias = CategoriaProducto.obtener_categorias()
+    return render_template(
+        "admin/productos/index.html",
+        productos=productos, usuario=g.user, pagination=pagination,
+        categorias=categorias, q=q,
+        rango=(inicio + 1 if total else 0, inicio + len(productos)),
+        conteos={"total": len(catalogo), "sin_stock": sin_stock, "categorias": len(categorias)},
+    )
 
 
 @productos.route("/agregar_producto")
 def formulario_agregar():
-    nombreCategorias = CategoriaProducto.obtener_categorias()
-    return render_template("admin/productos/agregar_producto.html", categorias=nombreCategorias, usuario=g.user)
+    # El alta ahora es un panel deslizante en la lista.
+    return redirect(url_for("admin.productos.home"))
 
 
 @productos.route("/guardar_producto", methods=["POST"])
@@ -63,9 +76,8 @@ def eliminar():
 
 @productos.route("/formulario_editar_producto/<int:id>")
 def editar(id):
-    producto = Producto.obtener_producto_por_id(id)
-    categorias = CategoriaProducto.obtener_categorias()
-    return render_template("admin/productos/editar_producto.html", producto=producto, categorias=categorias, usuario=g.user)
+    # La edición ahora es un panel deslizante en la lista.
+    return redirect(url_for("admin.productos.home"))
 
 
 @productos.route("/actualizar_producto", methods=["POST"])

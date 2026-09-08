@@ -1,47 +1,106 @@
 {% extends "admin/base.html" %}
-{% block title %}Detalle de venta · Backoffice Las Musas{% endblock %}
+{% block title %}{{ c.numero }} · Comprobante{% endblock %}
 {% block nav_ventas %}is-active{% endblock %}
 
 {% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Detalle de venta</h1>
-    <p><i class="bi bi-receipt"></i> Comprobante {{ comprobante[9] }}</p>
-  </div>
-  <a href="{{ url_for('admin.ventas.home') }}" class="adm-btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+<div class="adm-recibo__acc" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
+  <a href="{{ url_for('admin.ventas.home') }}" class="adm-topbar__link"><i class="bi bi-arrow-left"></i> Volver a ventas</a>
+  <button type="button" class="btn-contorno" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
 </div>
 
-<section class="adm-card">
-  <div class="adm-datos">
-    <div><span>Fecha</span><strong>{{ comprobante[4] }}</strong></div>
-    <div><span>Hora</span><strong>{{ comprobante[5] }}</strong></div>
-    <div><span>Cliente</span><strong>{{ pedido[3] or 'Invitado' }}</strong></div>
-    <div><span>DNI</span><strong>{{ pedido[2] }}</strong></div>
-    <div><span>Forma de pago</span><strong>{{ forma_pago }}</strong></div>
+<div class="adm-head" style="margin-bottom: 20px;">
+  <div>
+    <h1>Comprobante {{ c.numero }}</h1>
+    <p><i class="bi bi-check-circle-fill" style="color: var(--musa-exito);"></i> Emitido · pedido #{{ c.idPedido }}</p>
+  </div>
+</div>
+
+<div class="adm-recibo-wrap">
+  <div class="adm-recibo">
+    <div class="adm-recibo__cinta"></div>
+    <div class="adm-recibo__in">
+      <div class="adm-recibo__cab">
+        <div>
+          <h3>LAS MUSAS <span style="color: var(--musa-brasa);">●</span></h3>
+          <small>Nocturnal Burger Joint · Miraflores, Lima</small>
+        </div>
+        <div class="adm-recibo__tipo">
+          <b>{{ c.tipoDoc }}</b>
+          <strong>{{ c.numero }}</strong>
+          <small>{{ c.fecha }} · {{ c.hora }}</small>
+        </div>
+      </div>
+
+      <dl class="adm-recibo__datos">
+        <div><dt>Cliente</dt><dd>{{ c.cliente }}</dd></div>
+        <div><dt>Documento</dt><dd>DNI {{ c.dni }}</dd></div>
+        <div><dt>Tipo de entrega</dt><dd>Retiro en tienda</dd></div>
+        <div><dt>Método de pago</dt><dd>{{ c.formaPago }}</dd></div>
+        <div><dt>Teléfono</dt><dd>{{ c.telefono }}</dd></div>
+        <div><dt>Hora de recojo</dt><dd>{{ c.horaRecojo }}</dd></div>
+      </dl>
+
+      <table class="adm-recibo__lineas">
+        <thead>
+          <tr><th>Ítem</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th></tr>
+        </thead>
+        <tbody>
+          {% for l in c.lineas %}
+            <tr>
+              <td>
+                <div class="adm-recibo__prod">
+                  {% if l.imagen %}<img class="adm-thumb" style="width:40px;height:40px;" src="{{ url_for('static', filename='img/' ~ l.imagen) }}" alt="" />
+                  {% else %}<span class="adm-thumb" style="width:40px;height:40px;"><i class="bi bi-fire"></i></span>{% endif %}
+                  <span>{{ l.nombre }}</span>
+                </div>
+              </td>
+              <td class="num">{{ l.cantidad }}</td>
+              <td class="num">S/ {{ '%.2f'|format(l.precioUnidad) }}</td>
+              <td class="num">S/ {{ '%.2f'|format(l.precioTotal) }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="adm-recibo__tot">
+        <dl>
+          <div class="fila"><span>Op. gravada</span><span>S/ {{ '%.2f'|format(c.subTotal) }}</span></div>
+          <div class="fila"><span>IGV (18%)</span><span>S/ {{ '%.2f'|format(c.igv) }}</span></div>
+          <div class="fila grande"><span>Total</span><strong>S/ {{ '%.2f'|format(c.montoTotal) }}</strong></div>
+        </dl>
+      </div>
+      <p class="adm-recibo__letras">Son: {{ importe_letras }}</p>
+    </div>
   </div>
 
-  <div class="adm-tabla-wrap">
-    <table class="adm-tabla">
-      <thead>
-        <tr><th>Producto</th><th class="num">P. unidad</th><th class="num">Cantidad</th><th class="num">Total</th></tr>
-      </thead>
-      <tbody>
-        {% for p in productos %}
-          <tr>
-            <td>{{ p[2] }}</td>
-            <td class="num">S/ {{ '%.2f'|format(p[3] or 0) }}</td>
-            <td class="num">{{ p[4] }}</td>
-            <td class="num">S/ {{ '%.2f'|format(p[5] or 0) }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <aside class="adm-recibo-side">
+    <h4>Detalle de operación</h4>
+    <h3>Resumen del pedido</h3>
+    <div class="adm-recibo-side__cli">
+      <span class="adm-thumb" style="width:42px;height:42px;font-family:'Space Grotesk',sans-serif;color:var(--musa-brasa);">{{ c.iniciales }}</span>
+      <div>
+        <strong>{{ c.cliente }}</strong>
+        <span>{{ c.telefono }}</span>
+      </div>
+    </div>
 
-  <div class="adm-datos" style="justify-items: end; margin-top: 20px; margin-bottom: 0;">
-    <div><span>Subtotal</span><strong>S/ {{ '%.2f'|format(comprobante[6] or 0) }}</strong></div>
-    <div><span>IGV (18%)</span><strong>S/ {{ '%.2f'|format(comprobante[8] or 0) }}</strong></div>
-    <div><span>Total</span><strong>S/ {{ '%.2f'|format(comprobante[7] or 0) }}</strong></div>
-  </div>
-</section>
+    <h4 style="margin-top:18px;">Estado del pedido</h4>
+    <p style="font-family:'Space Grotesk',sans-serif; font-weight:700; color: var(--musa-brasa); margin:2px 0 0;">{{ estado_texto }}</p>
+
+    <h4 style="margin-top:18px;">Comprobante</h4>
+    <ul class="list-unstyled" style="font-size:13px; margin:4px 0 0; display:flex; flex-direction:column; gap:4px;">
+      <li><i class="bi bi-hash"></i> {{ c.numero }}</li>
+      <li><i class="bi bi-calendar3"></i> {{ c.fecha }} · {{ c.hora }}</li>
+      <li><i class="bi bi-{{ 'qr-code' if c.formaPago != 'Efectivo' else 'cash-coin' }}"></i> {{ c.formaPago }}</li>
+      <li><i class="bi bi-receipt"></i> {{ 'Boleta electrónica' if c.boleta else 'Nota de venta' }}</li>
+    </ul>
+
+    {% if c.notas %}
+      <div class="adm-recibo-side__nota">
+        <strong><i class="bi bi-sticky"></i> Instrucción para cocina</strong><br />
+        {{ c.notas }}
+      </div>
+    {% endif %}
+  </aside>
+</div>
 {% endblock %}

@@ -5,21 +5,30 @@ usuarios = Blueprint('usuarios', __name__, url_prefix='/usuarios')
 
 @usuarios.route("/")
 def home():
-    usuarios = Usuario.obtener_usuarios()
-    return render_template("admin/usuarios/index.html", usuarios=usuarios, usuario=g.user)
+    filtro = request.args.get("rol", "todos")
+    todos = Usuario.obtener_todos()
+    if filtro == "admin":
+        lista = [u for u in todos if u["esAdmin"]]
+    elif filtro == "cliente":
+        lista = [u for u in todos if not u["esAdmin"]]
+    else:
+        lista = todos
+    return render_template(
+        "admin/usuarios/index.html",
+        usuarios=lista, filtro=filtro,
+        conteos=Usuario.contar_por_rol(),
+        usuario=g.user,
+    )
 
 
 @usuarios.route("/agregar")
 def form_agregar():
-    return render_template("admin/usuarios/agregar.html", usuario=g.user)
+    return redirect(url_for("admin.usuarios.home"))
 
 
 @usuarios.route("/editar/<id>")
 def form_editar(id):
-    userUsuario = Usuario.obtener_usuario_id(id)
-    if userUsuario is not None:
-        return render_template("admin/usuarios/editar.html", usuario=g.user, userUsuario=userUsuario)
-    return redirect(url_for('admin.usuarios.home'))
+    return redirect(url_for("admin.usuarios.home"))
 
 
 @usuarios.route("/actualizar", methods=["POST"])

@@ -3,14 +3,29 @@
 {% block nav_usuarios %}is-active{% endblock %}
 
 {% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Usuarios administradores</h1>
-    <p><i class="bi bi-people"></i> Personal con acceso al backoffice</p>
+<div class="adm-list-head">
+  <div class="adm-head" style="margin-bottom: 0;">
+    <div>
+      <h1>Usuarios
+        <span class="adm-count-pill">{{ conteos.total }} registrados</span>
+      </h1>
+      <p class="adm-sub">Equipo interno y clientes registrados de Las Musas.</p>
+      <p style="margin: 6px 0 0; font-size: 13px; font-weight: 600;">
+        <span style="color: var(--musa-exito); white-space: nowrap;">● {{ conteos.clientes }} cliente{{ 's' if conteos.clientes != 1 }}</span>
+        &nbsp;&nbsp;
+        <span style="color: var(--musa-brasa); white-space: nowrap;">● {{ conteos.admins }} admin{{ 's' if conteos.admins != 1 }}</span>
+      </p>
+    </div>
+    <button type="button" class="btn-brasa" data-user-abrir data-modo="crear">
+      <i class="bi bi-person-plus"></i> Agregar usuario
+    </button>
   </div>
-  <a href="{{ url_for('admin.usuarios.form_agregar') }}" class="btn-brasa">
-    <i class="bi bi-plus-lg"></i> Nuevo administrador
-  </a>
+</div>
+
+<div class="adm-chips">
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'todos' }}" href="{{ url_for('admin.usuarios.home') }}">Todos <b>{{ conteos.total }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'admin' }}" href="{{ url_for('admin.usuarios.home', rol='admin') }}">Admin <b>{{ conteos.admins }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'cliente' }}" href="{{ url_for('admin.usuarios.home', rol='cliente') }}">Cliente <b>{{ conteos.clientes }}</b></a>
 </div>
 
 <section class="adm-card">
@@ -18,35 +33,141 @@
     <div class="adm-tabla-wrap">
       <table class="adm-tabla">
         <thead>
-          <tr><th>DNI</th><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Acciones</th></tr>
+          <tr><th>Usuario</th><th>Correo</th><th>Teléfono</th><th>Rol</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           {% for u in usuarios %}
             <tr>
-              <td class="num">{{ u[1] }}</td>
-              <td><strong>{{ u[2] }} {{ u[3] }}</strong></td>
-              <td style="color: var(--musa-texto-suave);">{{ u[4] }}</td>
-              <td>{{ u[5] }}</td>
               <td>
-                <div class="acciones">
-                  <a href="{{ url_for('admin.usuarios.form_editar', id=u[0]) }}" class="adm-btn-sm">
-                    <i class="bi bi-pencil"></i> Editar
-                  </a>
-                  <form action="{{ url_for('admin.usuarios.eliminar') }}" method="POST"
-                        onsubmit="return confirm('¿Quitar el acceso de {{ u[2] }} {{ u[3] }}?');">
-                    {{ campo_csrf() }}
-                    <input type="hidden" name="id" value="{{ u[0] }}" />
-                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i> Eliminar</button>
-                  </form>
+                <div class="adm-prod-cel">
+                  <span class="adm-thumb" style="font-size:14px; font-family: 'Space Grotesk', sans-serif; color: var(--musa-brasa);">{{ u.iniciales }}</span>
+                  <div>
+                    <strong>{{ u.nombreCompleto }}</strong>
+                    <p>DNI {{ u.dni }}
+                      {% if u.noShows %}· <span class="adm-faltas">{{ u.noShows }} no-show(s)</span>{% endif %}
+                    </p>
+                  </div>
                 </div>
+              </td>
+              <td>{{ u.correo }}</td>
+              <td>{{ u.telefono }}</td>
+              <td><span class="adm-badge-rol {{ 'admin' if u.esAdmin else 'cliente' }}">{{ u.rol }}</span></td>
+              <td>
+                {% if u.esAdmin %}
+                  <div class="acciones">
+                    <button type="button" class="adm-btn-sm" data-user-abrir data-modo="editar"
+                      data-id="{{ u.idUsuario }}" data-nombre="{{ u.nombreCompleto }}"
+                      data-correo="{{ u.correo }}" data-telefono="{{ u.telefono }}">
+                      <i class="bi bi-pencil"></i> Editar
+                    </button>
+                    <form action="{{ url_for('admin.usuarios.eliminar') }}" method="POST"
+                          onsubmit="return confirm('¿Eliminar al administrador «{{ u.nombreCompleto }}»?');">
+                      {{ campo_csrf() }}
+                      <input type="hidden" name="id" value="{{ u.idUsuario }}" />
+                      <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </div>
+                {% else %}
+                  <span style="color: var(--musa-texto-suave); font-size: 12px;">Cuenta de cliente</span>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    <p class="adm-mostrando">{{ usuarios|length }} usuario(s) · filtro: {{ filtro }}</p>
   {% else %}
-    <p class="adm-vacio">No hay administradores registrados.</p>
+    <p class="adm-vacio"><i class="bi bi-people d-block mb-2" style="font-size: 32px;"></i> No hay usuarios en este filtro.</p>
   {% endif %}
 </section>
+
+{# ---------------- PANEL usuario ---------------- #}
+<div class="adm-panel__backdrop" data-user-cerrar></div>
+<aside class="adm-panel" id="panelUsuario" aria-hidden="true">
+  <div class="adm-panel__head">
+    <button type="button" class="adm-panel__cerrar" data-user-cerrar aria-label="Cerrar">&times;</button>
+    <h2 data-user-titulo>Agregar usuario</h2>
+    <p data-user-sub>Nuevo administrador del backoffice.</p>
+  </div>
+  <form method="post" id="formUsuario">
+    {{ campo_csrf() }}
+    <input type="hidden" name="id" id="pu-id" />
+    <div class="adm-panel__body">
+      <div class="musa-field" data-solo-crear>
+        <label class="musa-field-label" for="pu-dni">DNI</label>
+        <input class="musa-input" id="pu-dni" name="dni" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="8 dígitos" />
+      </div>
+      <div class="row g-3 mt-0" data-solo-crear>
+        <div class="col-6 musa-field">
+          <label class="musa-field-label" for="pu-nombres">Nombres</label>
+          <input class="musa-input" id="pu-nombres" name="nombres" placeholder="Ej. Manuel" />
+        </div>
+        <div class="col-6 musa-field">
+          <label class="musa-field-label" for="pu-apellidos">Apellidos</label>
+          <input class="musa-input" id="pu-apellidos" name="apellidos" placeholder="Ej. Fernández" />
+        </div>
+      </div>
+      <div class="musa-field mt-3">
+        <label class="musa-field-label" for="pu-correo">Correo</label>
+        <input class="musa-input" id="pu-correo" name="correo" type="email" placeholder="nombre@lasmusas.pe" required />
+      </div>
+      <div class="musa-field mt-3">
+        <label class="musa-field-label" for="pu-telefono">Teléfono</label>
+        <input class="musa-input" id="pu-telefono" name="telefono" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" placeholder="9 dígitos" required />
+      </div>
+      <div class="musa-field mt-3">
+        <label class="musa-field-label" for="pu-contra">
+          <span data-pw-label>Contraseña</span>
+          <span class="musa-field-hint" data-solo-editar hidden>Déjala vacía para no cambiarla</span>
+        </label>
+        <input class="musa-input" id="pu-contra" name="contraseña" type="password" minlength="8" placeholder="Mínimo 8 caracteres" />
+      </div>
+    </div>
+    <div class="adm-panel__foot">
+      <button type="submit" class="btn-brasa"><span data-user-btn>Guardar usuario</span></button>
+      <button type="button" class="adm-cancelar" data-user-cerrar>Cancelar</button>
+    </div>
+  </form>
+</aside>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var panel = document.getElementById("panelUsuario");
+  var backdrop = panel.previousElementSibling;
+  var form = document.getElementById("formUsuario");
+  var URL_CREAR = "{{ url_for('admin.usuarios.guardar') }}";
+  var URL_EDITAR = "{{ url_for('admin.usuarios.actualizar') }}";
+  var soloCrear = panel.querySelectorAll("[data-solo-crear]");
+  var soloEditar = panel.querySelectorAll("[data-solo-editar]");
+
+  function abrir() { panel.classList.add("abierto"); backdrop.classList.add("abierto"); }
+  function cerrar() { panel.classList.remove("abierto"); backdrop.classList.remove("abierto"); }
+  function toggle(nodes, mostrar) { nodes.forEach(function (n) { n.hidden = !mostrar; n.querySelectorAll("input").forEach(function (i) { i.disabled = !mostrar; }); }); }
+
+  document.querySelectorAll("[data-user-abrir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      form.reset();
+      var editar = b.dataset.modo === "editar";
+      form.action = editar ? URL_EDITAR : URL_CREAR;
+      panel.querySelector("[data-user-titulo]").textContent = editar ? "Editar administrador" : "Agregar usuario";
+      panel.querySelector("[data-user-sub]").textContent = editar ? "Actualiza el contacto o la contraseña." : "Nuevo administrador del backoffice.";
+      panel.querySelector("[data-user-btn]").textContent = editar ? "Guardar cambios" : "Guardar usuario";
+      toggle(soloCrear, !editar);
+      toggle(soloEditar, editar);
+      document.getElementById("pu-contra").required = !editar;
+      if (editar) {
+        document.getElementById("pu-id").value = b.dataset.id;
+        document.getElementById("pu-correo").value = b.dataset.correo;
+        document.getElementById("pu-telefono").value = b.dataset.telefono;
+      }
+      abrir();
+    });
+  });
+  document.querySelectorAll("[data-user-cerrar]").forEach(function (b) { b.addEventListener("click", cerrar); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrar(); });
+})();
+</script>
 {% endblock %}

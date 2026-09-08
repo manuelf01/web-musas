@@ -71,6 +71,35 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-07 | **Fixes: horario de recojo, admin en tienda, carrito compartido**. Ver "Fixes checkout/sesión 2026-09-07" abajo. | `git revert` |
 | 2026-09-07 | **Integración del panel del compañero** (`Manuelf`): CRUD productos/categorías/usuarios + ventas/comprobantes sobre el diseño de esta rama; comprobante al entregar; migraciones 007–008; CSRF sin exentos. Ver sección 0 + `MERGE_NOTES.md`. | `git revert` |
 | 2026-09-08 | **Estados de pedido + pedidos solo de registrados** (migración 009). Ver "Estados de pedido 2026-09-08" abajo. | `git revert` + revertir 009 |
+| 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
+
+### Panel Stitch 2026-09-08
+Las 4 pantallas del panel + el detalle de comprobante se rehicieron para calzar
+con `C:\Users\JUAN RAMIREZ\Downloads\Musas`:
+- **Productos**: cabecera con pill de conteo, buscador, chips (En carta / Sin stock
+  / Categorías), tabla con miniatura + badge de categoría + stock, "Mostrando X–Y",
+  paginación. Alta y edición en **panel deslizante** (`.adm-panel`) con zona de
+  imagen, no en página aparte (`agregar_producto.html`/`editar_producto.html`
+  BORRADOS; sus rutas redirigen a la lista).
+- **Categorías**: grilla de tarjetas (emoji, N° productos, descripción, editar/borrar)
+  + tarjeta "Crear nueva categoría". Alta/edición en **modal** (`.adm-modal`).
+  Sin slug/ícono/color/estado/orden (regla del rediseño). `agregar.html`/`editar.html`
+  BORRADOS.
+- **Usuarios**: `Usuario.obtener_todos()` + `contar_por_rol()`. Tabla con avatar,
+  DNI, correo, teléfono, badge de rol. Chips Todos/Admin/Cliente. Panel deslizante:
+  alta de admin (DNI+datos) o edición (correo/tel/contraseña). Clientes solo lectura.
+  `agregar.html`/`editar.html` BORRADOS.
+- **Ventas**: 3 KPIs (facturado / N° comprobantes / ticket) desde `Comprobante.kpis()`,
+  gráfico de barras 7 días (`Comprobante.ventas_por_dia`), tabla de comprobantes
+  (`Comprobante.listado_paginado`) con badge de forma de pago.
+- **Detalle de comprobante**: boleta con cinta degradada, datos del cliente,
+  líneas con miniatura, totales, **importe en letras** (`formato.py` →
+  `soles_en_letras`), panel lateral con estado del pedido y notas. Botón Imprimir
+  (CSS `@media print`). Sin RUC/SUNAT/QR (regla del rediseño).
+- CSS nuevo en `musas-theme.css` (`.adm-list-head`, `.adm-chip2`, `.adm-panel`,
+  `.adm-drop`, `.adm-cat-grid`, `.adm-modal`, `.adm-vent-kpi`, `.adm-recibo*`).
+- Modelos: `Comprobante` (+kpis, ventas_por_dia, listado_paginado, detalle),
+  `Usuario` (+obtener_todos, contar_por_rol). Nuevo `formato.py`.
 
 ### Estados de pedido 2026-09-08
 Tres pedidos del usuario:

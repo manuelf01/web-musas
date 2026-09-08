@@ -2,57 +2,147 @@
 {% block title %}Categorías · Backoffice Las Musas{% endblock %}
 {% block nav_categorias %}is-active{% endblock %}
 
+{% set emojis = {
+  "Hamburguesas": "🍔", "Salchipapas": "🍟", "Bebidas": "🍹", "Combos": "🔥",
+  "Postres": "🍰", "Cremas": "🥫", "Piqueos": "🍢", "Acompañamientos": "🍞"
+} %}
+
 {% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Categorías</h1>
-    <p><i class="bi bi-tags"></i> Agrupan los productos de la carta. «Cremas» es la categoría de salsas.</p>
+<div class="adm-list-head">
+  <div class="adm-head" style="margin-bottom: 0;">
+    <div>
+      <h1>Categorías de productos
+        <span class="adm-count-pill">{{ categorias|length }} totales</span>
+      </h1>
+      <p class="adm-sub">Organiza la carta y clasifica los platos de Las Musas.</p>
+    </div>
+    <button type="button" class="btn-brasa" data-cat-abrir data-modo="crear">
+      <i class="bi bi-plus-lg"></i> Nueva categoría
+    </button>
   </div>
-  <a href="{{ url_for('admin.categoria.agregar') }}" class="btn-brasa">
-    <i class="bi bi-plus-lg"></i> Nueva categoría
-  </a>
 </div>
 
-<section class="adm-card">
-  {% if categorias %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
-        <thead>
-          <tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
-        </thead>
-        <tbody>
-          {% for categoria in categorias %}
-            <tr>
-              <td class="num">{{ categoria[0] }}</td>
-              <td>
-                {% if categoria[3] %}
-                  <img class="adm-foto-mini" src="{{ url_for('static', filename='img/' ~ categoria[3]) }}" alt="" />
-                {% else %}
-                  <span class="adm-foto-mini adm-foto-mini--vacia"><i class="bi bi-image"></i></span>
-                {% endif %}
-              </td>
-              <td><strong>{{ categoria[1] }}</strong></td>
-              <td style="color: var(--musa-texto-suave);">{{ categoria[2] or '—' }}</td>
-              <td>
-                <div class="acciones">
-                  <a href="{{ url_for('admin.categoria.editar', id=categoria[0]) }}" class="adm-btn-sm">
-                    <i class="bi bi-pencil"></i> Editar
-                  </a>
-                  <form action="{{ url_for('admin.categoria.eliminar') }}" method="POST"
-                        onsubmit="return confirm('¿Eliminar la categoría «{{ categoria[1] }}»? Sus productos quedarán sin categoría.');">
-                    {{ campo_csrf() }}
-                    <input type="hidden" name="idCategoria" value="{{ categoria[0] }}" />
-                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i> Eliminar</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+<div class="adm-cat-grid">
+  {% for c in categorias %}
+    <article class="adm-cat-card">
+      <div class="adm-cat-card__top">
+        <span class="adm-cat-emoji">
+          {% if c[3] %}<img src="{{ url_for('static', filename='img/' ~ c[3]) }}" alt="" />
+          {% else %}{{ emojis.get(c[1], "🍴") }}{% endif %}
+        </span>
+        <span class="adm-badge-cat">{{ totales.get(c[0], 0) }} productos</span>
+      </div>
+      <h3>{{ c[1] }}</h3>
+      <p>{{ (c[2] or "Sin descripción.") | truncate(90) }}</p>
+      <div class="adm-cat-card__foot">
+        <button type="button" class="adm-btn-sm" data-cat-abrir data-modo="editar"
+          data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}"
+          data-imagen="{{ c[3] or '' }}">
+          <i class="bi bi-pencil"></i> Editar
+        </button>
+        <form action="{{ url_for('admin.categoria.eliminar') }}" method="POST"
+              onsubmit="return confirm('¿Eliminar la categoría «{{ c[1] }}»? Solo se puede si no tiene productos.');">
+          {{ campo_csrf() }}
+          <input type="hidden" name="idCategoria" value="{{ c[0] }}" />
+          <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </article>
+  {% endfor %}
+
+  <button type="button" class="adm-cat-nueva" data-cat-abrir data-modo="crear">
+    <i class="bi bi-plus-circle"></i>
+    <strong>Crear nueva categoría</strong>
+    <span>Combos, promociones de temporada o extras</span>
+  </button>
+</div>
+
+{# ---------------- MODAL categoría ---------------- #}
+<div class="adm-modal__backdrop" id="modalCategoria">
+  <div class="adm-modal">
+    <button type="button" class="adm-modal__cerrar" data-cat-cerrar aria-label="Cerrar">&times;</button>
+    <div class="adm-modal__head">
+      <h2><i class="bi bi-tags" style="color: var(--musa-brasa);"></i> <span data-cat-titulo>Nueva categoría</span></h2>
+      <p>Crea o edita una sección para ordenar los platos de la carta.</p>
     </div>
-  {% else %}
-    <p class="adm-vacio">Todavía no hay categorías.</p>
-  {% endif %}
-</section>
+    <form method="post" id="formCategoria" enctype="multipart/form-data">
+      {{ campo_csrf() }}
+      <input type="hidden" name="idCategoria" id="mc-id" />
+      <div class="adm-modal__body">
+        <div class="musa-field">
+          <label class="musa-field-label" for="mc-nombre">Nombre de categoría</label>
+          <input class="musa-input" id="mc-nombre" name="nombreCategoria" placeholder="Ej. Hamburguesas Veggie" required />
+        </div>
+        <div class="musa-field mt-3">
+          <label class="musa-field-label" for="mc-descripcion">Descripción de carta</label>
+          <textarea class="musa-input" id="mc-descripcion" name="descripcion" rows="3"
+                    placeholder="Breve texto que se muestra en el encabezado de la sección…"></textarea>
+        </div>
+        <div class="musa-field mt-3">
+          <label class="adm-drop" for="mc-imagen" id="mc-drop">
+            <span id="mc-drop-txt">
+              <i class="bi bi-image"></i>
+              <strong>Imagen de la categoría (opcional)</strong>
+              <span>PNG, JPG, WEBP hasta 5 MB</span>
+            </span>
+            <img id="mc-preview" hidden alt="" />
+          </label>
+          <input type="file" id="mc-imagen" name="imagen" accept="image/*" hidden />
+        </div>
+      </div>
+      <div class="adm-modal__foot">
+        <button type="button" class="btn-contorno" data-cat-cerrar>Cancelar</button>
+        <button type="submit" class="btn-brasa"><span data-cat-btn>Guardar categoría</span></button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var modal = document.getElementById("modalCategoria");
+  var form = document.getElementById("formCategoria");
+  var titulo = modal.querySelector("[data-cat-titulo]");
+  var btnTxt = modal.querySelector("[data-cat-btn]");
+  var preview = document.getElementById("mc-preview");
+  var dropTxt = document.getElementById("mc-drop-txt");
+  var URL_CREAR = "{{ url_for('admin.categoria.guardar') }}";
+  var URL_EDITAR = "{{ url_for('admin.categoria.actualizar') }}";
+
+  function abrir() { modal.classList.add("abierto"); }
+  function cerrar() { modal.classList.remove("abierto"); }
+
+  document.querySelectorAll("[data-cat-abrir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      form.reset();
+      preview.hidden = true; dropTxt.hidden = false;
+      if (b.dataset.modo === "editar") {
+        titulo.textContent = "Editar categoría";
+        btnTxt.textContent = "Guardar cambios";
+        form.action = URL_EDITAR;
+        document.getElementById("mc-id").value = b.dataset.id;
+        document.getElementById("mc-nombre").value = b.dataset.nombre;
+        document.getElementById("mc-descripcion").value = b.dataset.descripcion;
+        if (b.dataset.imagen) { preview.src = "/static/img/" + b.dataset.imagen; preview.hidden = false; dropTxt.hidden = true; }
+      } else {
+        titulo.textContent = "Nueva categoría";
+        btnTxt.textContent = "Guardar categoría";
+        form.action = URL_CREAR;
+        document.getElementById("mc-id").value = "";
+      }
+      abrir();
+    });
+  });
+  document.querySelectorAll("[data-cat-cerrar]").forEach(function (b) { b.addEventListener("click", cerrar); });
+  modal.addEventListener("click", function (e) { if (e.target === modal) cerrar(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrar(); });
+
+  document.getElementById("mc-imagen").addEventListener("change", function () {
+    var f = this.files[0]; if (!f) return;
+    preview.src = URL.createObjectURL(f); preview.hidden = false; dropTxt.hidden = true;
+  });
+})();
+</script>
 {% endblock %}

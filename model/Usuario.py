@@ -56,6 +56,47 @@ class Usuario:
         conexion.close()
         return usuarios
 
+    @staticmethod
+    def obtener_todos():
+        """Todos los usuarios (admins y clientes) para el panel de Usuarios."""
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                "SELECT idUsuario, dni, nombres, apellidos, correo, numTelf, tipoUsuario, "
+                "COALESCE(noShows, 0) FROM usuario ORDER BY tipoUsuario, nombres"
+            )
+            filas = cursor.fetchall()
+        conexion.close()
+        salida = []
+        for f in filas:
+            nombre = f"{f[2]} {f[3]}".strip()
+            salida.append({
+                "idUsuario": f[0],
+                "dni": f[1],
+                "nombres": f[2],
+                "apellidos": f[3],
+                "nombreCompleto": nombre,
+                "iniciales": "".join(p[0] for p in nombre.split()[:2]).upper() or "?",
+                "correo": f[4],
+                "telefono": f[5],
+                "esAdmin": not f[6],           # tipoUsuario 0 = Admin
+                "rol": "Admin" if not f[6] else "Cliente",
+                "noShows": int(f[7] or 0),
+            })
+        return salida
+
+    @staticmethod
+    def contar_por_rol():
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                "SELECT COALESCE(SUM(tipoUsuario = 0), 0), COALESCE(SUM(tipoUsuario = 1), 0) FROM usuario"
+            )
+            admins, clientes = cursor.fetchone()
+        conexion.close()
+        return {"admins": int(admins or 0), "clientes": int(clientes or 0),
+                "total": int((admins or 0) + (clientes or 0))}
+
     def obtener_usuario_id(id):
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:

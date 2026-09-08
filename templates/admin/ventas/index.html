@@ -3,37 +3,96 @@
 {% block nav_ventas %}is-active{% endblock %}
 
 {% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Ventas</h1>
-    <p><i class="bi bi-graph-up"></i> Comprobantes generados por cada pedido</p>
+<div class="adm-list-head">
+  <div class="adm-head" style="margin-bottom: 0;">
+    <div>
+      <h1>Ventas
+        <span class="adm-count-pill">Últimos 7 días</span>
+      </h1>
+      <p class="adm-sub">Ingresos, métricas transaccionales y comprobantes emitidos.</p>
+    </div>
+  </div>
+</div>
+
+<div class="adm-vent-kpis">
+  <div class="adm-vent-kpi">
+    <div class="adm-vent-kpi__top">
+      <span class="adm-vent-kpi__ico"><i class="bi bi-fire"></i></span>
+    </div>
+    <span class="adm-vent-kpi__label">Ventas facturadas</span>
+    <div class="adm-vent-kpi__valor">S/ {{ '%.2f'|format(kpis.total) }}</div>
+  </div>
+  <div class="adm-vent-kpi">
+    <div class="adm-vent-kpi__top">
+      <span class="adm-vent-kpi__ico"><i class="bi bi-receipt"></i></span>
+    </div>
+    <span class="adm-vent-kpi__label">Comprobantes emitidos</span>
+    <div class="adm-vent-kpi__valor">{{ kpis.cantidad }}</div>
+  </div>
+  <div class="adm-vent-kpi">
+    <div class="adm-vent-kpi__top">
+      <span class="adm-vent-kpi__ico"><i class="bi bi-ticket-detailed"></i></span>
+    </div>
+    <span class="adm-vent-kpi__label">Ticket promedio</span>
+    <div class="adm-vent-kpi__valor">S/ {{ '%.2f'|format(kpis.ticket) }}</div>
   </div>
 </div>
 
 <section class="adm-card">
+  <div class="adm-card__head">
+    <div><h2><span style="color: var(--musa-brasa);">●</span> Ventas por día</h2><p>Últimos 7 días</p></div>
+    <span class="adm-chip-total">Total: <strong>S/ {{ '%.2f'|format(grafico | sum(attribute='monto')) }}</strong></span>
+  </div>
+  <div class="adm-chart">
+    {% for d in grafico %}
+      <div class="adm-chart__col">
+        <span class="adm-chart__monto">S/ {{ '%.0f'|format(d.monto) }}</span>
+        <div class="adm-chart__barra {{ 'es-hoy' if d.hoy }}" style="height: {{ [d.pct, 3] | max }}%;"></div>
+        <span class="adm-chart__label {{ 'es-hoy' if d.hoy }}">{{ d.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="adm-card" style="margin-top: 24px;">
+  <div class="adm-card__head">
+    <div><h2>Comprobantes</h2><p>Boletas y notas de venta emitidas al entregar el pedido</p></div>
+  </div>
+
   {% if comprobantes %}
     <div class="adm-tabla-wrap">
       <table class="adm-tabla">
         <thead>
           <tr>
-            <th>#</th><th>Comprobante</th><th>DNI</th><th>Fecha</th><th>Hora</th>
-            <th class="num">Subtotal</th><th class="num">IGV</th><th class="num">Total</th><th></th>
+            <th>Comprobante</th><th>Cliente</th><th>Forma de pago</th>
+            <th class="num">Subtotal</th><th class="num">IGV (18%)</th><th class="num">Total</th><th>Acciones</th>
           </tr>
         </thead>
         <tbody>
           {% for c in comprobantes %}
             <tr>
-              <td class="num">{{ loop.index + pagination.skip }}</td>
-              <td><strong>{{ c[9] }}</strong></td>
-              <td>{{ c[3] }}</td>
-              <td>{{ c[4] }}</td>
-              <td>{{ c[5] }}</td>
-              <td class="num">S/ {{ '%.2f'|format(c[6] or 0) }}</td>
-              <td class="num">S/ {{ '%.2f'|format(c[8] or 0) }}</td>
-              <td class="num">S/ {{ '%.2f'|format(c[7] or 0) }}</td>
               <td>
-                <a href="{{ url_for('admin.ventas.show_detalle', idComprobante=c[0]) }}" class="adm-btn-sm">
-                  <i class="bi bi-eye"></i> Detalle
+                <strong style="font-family: 'Space Grotesk', sans-serif;">{{ c.numero }}</strong><br />
+                <span style="color: var(--musa-texto-suave); font-size: 12px;">{{ c.fecha }} · {{ c.hora }}</span>
+              </td>
+              <td>
+                <div class="adm-prod-cel">
+                  <span class="adm-thumb adm-avatar--sm" style="font-size:11px; color: var(--musa-brasa); font-family:'Space Grotesk',sans-serif; width:34px; height:34px;">{{ c.iniciales }}</span>
+                  <div><strong style="font-size:13px;">{{ c.cliente }}</strong>
+                    <p>DNI {{ c.dni }}</p></div>
+                </div>
+              </td>
+              <td>
+                <span class="adm-badge-pago {{ 'digital' if c.formaPago != 'Efectivo' else 'efectivo' }}">
+                  <i class="bi {{ 'bi-qr-code' if c.formaPago != 'Efectivo' else 'bi-cash' }}"></i> {{ c.formaPago }}
+                </span>
+              </td>
+              <td class="num">S/ {{ '%.2f'|format(c.subTotal) }}</td>
+              <td class="num">S/ {{ '%.2f'|format(c.igv) }}</td>
+              <td class="num" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(c.montoTotal) }}</td>
+              <td>
+                <a class="adm-btn-sm" href="{{ url_for('admin.ventas.show_detalle', idComprobante=c.idComprobante) }}">
+                  <i class="bi bi-eye"></i> Ver detalle
                 </a>
               </td>
             </tr>
@@ -41,9 +100,12 @@
         </tbody>
       </table>
     </div>
+    <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ total }} comprobantes</p>
     <div class="adm-pag">{{ pagination.links }}</div>
   {% else %}
-    <p class="adm-vacio"><i class="bi bi-receipt d-block mb-2" style="font-size: 32px;"></i> Todavía no hay ventas registradas.</p>
+    <p class="adm-vacio"><i class="bi bi-receipt-cutoff d-block mb-2" style="font-size: 32px;"></i>
+      Todavía no se ha emitido ningún comprobante. Se generan al entregar un pedido con su palabra clave.
+    </p>
   {% endif %}
 </section>
 {% endblock %}

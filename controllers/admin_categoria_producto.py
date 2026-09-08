@@ -1,6 +1,7 @@
 from flask import Blueprint, request, render_template, redirect, url_for, g, flash
 from controllers.admin import admin
 from model.CategoriaProducto import CategoriaProducto
+from model.Producto import Producto
 from subidas import guardar_imagen
 
 categoria_producto = Blueprint("categoria", __name__, url_prefix='/categorias')
@@ -9,12 +10,17 @@ categoria_producto = Blueprint("categoria", __name__, url_prefix='/categorias')
 @categoria_producto.route("/")
 def home():
     categoria = CategoriaProducto.obtener_categorias()
-    return render_template("admin/categoria/index.html", categorias=categoria, usuario=g.user)
+    return render_template(
+        "admin/categoria/index.html",
+        categorias=categoria,
+        totales=Producto.contar_por_categoria(),
+        usuario=g.user,
+    )
 
 
 @categoria_producto.route("/agregar")
 def agregar():
-    return render_template("admin/categoria/agregar.html", usuario=g.user)
+    return redirect(url_for("admin.categoria.home"))
 
 
 @categoria_producto.route("/guardar_categoria", methods=["POST"])
@@ -39,9 +45,7 @@ def eliminar():
 
 @categoria_producto.route("/editar_categoria/<int:id>")
 def editar(id):
-    # Obtener el categoria por ID
-    categoria = CategoriaProducto.obtener_categoria_por_id(id)
-    return render_template("admin/categoria/editar.html", categoria=categoria, usuario=g.user)
+    return redirect(url_for("admin.categoria.home"))
 
 
 @categoria_producto.route("/actualizar", methods=["POST"])

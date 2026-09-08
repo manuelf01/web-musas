@@ -3,14 +3,31 @@
 {% block nav_productos %}is-active{% endblock %}
 
 {% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Productos</h1>
-    <p><i class="bi bi-egg-fried"></i> Carta y cremas de la tienda</p>
+<div class="adm-list-head">
+  <div class="adm-head" style="margin-bottom: 0;">
+    <div>
+      <h1>Productos
+        <span class="adm-count-pill">{{ conteos.total }} en carta</span>
+      </h1>
+      <p class="adm-sub">Gestión de inventario, recetas y disponibilidad para el turno noche.</p>
+    </div>
+    <button type="button" class="btn-brasa" data-panel-abrir data-modo="crear">
+      <i class="bi bi-plus-lg"></i> Agregar producto
+    </button>
   </div>
-  <a href="{{ url_for('admin.productos.formulario_agregar') }}" class="btn-brasa">
-    <i class="bi bi-plus-lg"></i> Nuevo producto
-  </a>
+</div>
+
+<form class="adm-actionbar" method="get" action="{{ url_for('admin.productos.home') }}">
+  <div class="adm-search">
+    <i class="bi bi-search"></i>
+    <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, categoría o descripción…" autocomplete="off" />
+  </div>
+</form>
+
+<div class="adm-chips">
+  <span class="adm-chip2 is-active">En carta <b>{{ conteos.total }}</b></span>
+  <span class="adm-chip2">Sin stock <b>{{ conteos.sin_stock }}</b></span>
+  <a class="adm-chip2" href="{{ url_for('admin.categoria.home') }}">Categorías <b>{{ conteos.categorias }}</b></a>
 </div>
 
 <section class="adm-card">
@@ -19,7 +36,6 @@
       <table class="adm-tabla">
         <thead>
           <tr>
-            <th>#</th>
             <th>Producto</th>
             <th>Categoría</th>
             <th class="num">Precio</th>
@@ -28,37 +44,40 @@
           </tr>
         </thead>
         <tbody>
-          {% for producto in productos %}
+          {% for p in productos %}
             <tr>
-              <td class="num">{{ loop.index + pagination.skip }}</td>
               <td>
                 <div class="adm-prod-cel">
-                  {% if producto['imagen'] %}
-                    <img class="adm-foto-mini" src="{{ url_for('static', filename='img/' ~ producto['imagen']) }}" alt="" />
+                  {% if p.imagen %}
+                    <img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="" />
                   {% else %}
-                    <span class="adm-foto-mini adm-foto-mini--vacia"><i class="bi bi-image"></i></span>
+                    <span class="adm-thumb"><i class="bi bi-fire"></i></span>
                   {% endif %}
                   <div>
-                    <strong>{{ producto['nombre'] }}</strong>
-                    <div style="color: var(--musa-texto-suave); font-size: 12px;">
-                      {{ producto['descripcion'] | truncate(60) }}
-                    </div>
+                    <strong>{{ p.nombre }}</strong>
+                    <p>{{ p.descripcion | truncate(64) }}</p>
                   </div>
                 </div>
               </td>
-              <td>{{ producto['nombreCategoria'] }}</td>
-              <td class="num">S/ {{ '%.2f'|format(producto['precio'] or 0) }}</td>
-              <td class="num">{{ producto['existencias'] }}</td>
+              <td><span class="adm-badge-cat">{{ p.nombreCategoria }}</span></td>
+              <td class="num">S/ {{ '%.2f'|format(p.precio or 0) }}</td>
+              <td class="num">
+                <span class="adm-badge-stock {{ 'cero' if not p.existencias }}">{{ p.existencias }}</span>
+              </td>
               <td>
                 <div class="acciones">
-                  <a href="{{ url_for('admin.productos.editar', id=producto['idProducto']) }}" class="adm-btn-sm">
+                  <button type="button" class="adm-btn-sm" data-panel-abrir data-modo="editar"
+                    data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}"
+                    data-descripcion="{{ p.descripcion }}" data-precio="{{ p.precio or 0 }}"
+                    data-existencias="{{ p.existencias }}" data-categoria="{{ p.idCategoria }}"
+                    data-imagen="{{ p.imagen or '' }}">
                     <i class="bi bi-pencil"></i> Editar
-                  </a>
+                  </button>
                   <form action="{{ url_for('admin.productos.eliminar') }}" method="POST"
-                        onsubmit="return confirm('¿Eliminar «{{ producto['nombre'] }}»?');">
+                        onsubmit="return confirm('¿Eliminar «{{ p.nombre }}»? Si aparece en pedidos, mejor ponle stock 0.');">
                     {{ campo_csrf() }}
-                    <input type="hidden" name="id" value="{{ producto['idProducto'] }}" />
-                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i> Eliminar</button>
+                    <input type="hidden" name="id" value="{{ p.idProducto }}" />
+                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i></button>
                   </form>
                 </div>
               </td>
@@ -67,9 +86,123 @@
         </tbody>
       </table>
     </div>
+    <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ pagination.total }} productos</p>
     <div class="adm-pag">{{ pagination.links }}</div>
   {% else %}
-    <p class="adm-vacio"><i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i> Todavía no hay productos.</p>
+    <p class="adm-vacio"><i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i>
+      {{ 'No hay productos que coincidan con la búsqueda.' if q else 'Todavía no hay productos en la carta.' }}
+    </p>
   {% endif %}
 </section>
+
+{# ---------------- PANEL DESLIZANTE (agregar / editar) ---------------- #}
+<div class="adm-panel__backdrop" data-panel-cerrar></div>
+<aside class="adm-panel" id="panelProducto" aria-hidden="true">
+  <div class="adm-panel__head">
+    <button type="button" class="adm-panel__cerrar" data-panel-cerrar aria-label="Cerrar">&times;</button>
+    <h2 data-panel-titulo>Agregar producto</h2>
+    <p>Datos para la carta nocturna.</p>
+  </div>
+  <form method="post" id="formProducto" enctype="multipart/form-data">
+    {{ campo_csrf() }}
+    <input type="hidden" name="idProducto" id="pp-id" />
+    <div class="adm-panel__body">
+      <label class="adm-drop" for="pp-imagen" id="pp-drop">
+        <span id="pp-drop-txt">
+          <i class="bi bi-image"></i>
+          <strong>Arrastra una imagen o explora</strong>
+          <span>PNG, JPG, WEBP hasta 5 MB (recomendado 800×800)</span>
+        </span>
+        <img id="pp-preview" hidden alt="" />
+      </label>
+      <input type="file" id="pp-imagen" name="imagen" accept="image/*" hidden />
+
+      <div class="musa-field mt-3">
+        <label class="musa-field-label" for="pp-categoria">Categoría</label>
+        <select class="musa-input" id="pp-categoria" name="categorias" required>
+          {% for c in categorias %}<option value="{{ c[0] }}">{{ c[1] }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="musa-field mt-3">
+        <label class="musa-field-label" for="pp-nombre">Nombre del producto</label>
+        <input class="musa-input" id="pp-nombre" name="nombre" placeholder="Ej. Triple Trufada Smash" required />
+      </div>
+      <div class="musa-field mt-3">
+        <label class="musa-field-label" for="pp-descripcion">Descripción</label>
+        <textarea class="musa-input" id="pp-descripcion" name="descripcion" rows="3"
+                  placeholder="Ingredientes clave y maridaje de salsas…" required></textarea>
+      </div>
+      <div class="row g-3 mt-0">
+        <div class="col-6 musa-field">
+          <label class="musa-field-label" for="pp-precio">Precio</label>
+          <input class="musa-input" id="pp-precio" name="precio" inputmode="decimal" placeholder="S/ 0.00" required />
+        </div>
+        <div class="col-6 musa-field">
+          <label class="musa-field-label" for="pp-existencias">Existencias</label>
+          <input class="musa-input" id="pp-existencias" name="existencias" inputmode="numeric" placeholder="25" required />
+        </div>
+      </div>
+    </div>
+    <div class="adm-panel__foot">
+      <button type="submit" class="btn-brasa"><span data-panel-btn>Guardar producto</span></button>
+      <button type="button" class="adm-cancelar" data-panel-cerrar>Cancelar</button>
+    </div>
+  </form>
+</aside>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var panel = document.getElementById("panelProducto");
+  var backdrop = document.querySelector(".adm-panel__backdrop");
+  var form = document.getElementById("formProducto");
+  var titulo = panel.querySelector("[data-panel-titulo]");
+  var btnTxt = panel.querySelector("[data-panel-btn]");
+  var preview = document.getElementById("pp-preview");
+  var dropTxt = document.getElementById("pp-drop-txt");
+  var URL_CREAR = "{{ url_for('admin.productos.guardar') }}";
+  var URL_EDITAR = "{{ url_for('admin.productos.actualizar') }}";
+
+  function abrir() { panel.classList.add("abierto"); backdrop.classList.add("abierto"); panel.setAttribute("aria-hidden", "false"); }
+  function cerrar() { panel.classList.remove("abierto"); backdrop.classList.remove("abierto"); panel.setAttribute("aria-hidden", "true"); }
+
+  document.querySelectorAll("[data-panel-abrir]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      form.reset();
+      preview.hidden = true; dropTxt.hidden = false;
+      if (b.dataset.modo === "editar") {
+        titulo.textContent = "Editar producto";
+        btnTxt.textContent = "Guardar cambios";
+        form.action = URL_EDITAR;
+        document.getElementById("pp-id").value = b.dataset.id;
+        document.getElementById("pp-nombre").value = b.dataset.nombre;
+        document.getElementById("pp-descripcion").value = b.dataset.descripcion;
+        document.getElementById("pp-precio").value = b.dataset.precio;
+        document.getElementById("pp-existencias").value = b.dataset.existencias;
+        document.getElementById("pp-categoria").value = b.dataset.categoria;
+        if (b.dataset.imagen) {
+          preview.src = "/static/img/" + b.dataset.imagen;
+          preview.hidden = false; dropTxt.hidden = true;
+        }
+      } else {
+        titulo.textContent = "Agregar producto";
+        btnTxt.textContent = "Guardar producto";
+        form.action = URL_CREAR;
+        document.getElementById("pp-id").value = "";
+      }
+      abrir();
+    });
+  });
+  document.querySelectorAll("[data-panel-cerrar]").forEach(function (b) { b.addEventListener("click", cerrar); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrar(); });
+
+  document.getElementById("pp-imagen").addEventListener("change", function () {
+    var f = this.files[0];
+    if (!f) return;
+    preview.src = URL.createObjectURL(f);
+    preview.hidden = false; dropTxt.hidden = true;
+  });
+})();
+</script>
 {% endblock %}
