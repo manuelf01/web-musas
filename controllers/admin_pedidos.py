@@ -7,18 +7,33 @@ pedidos = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 @pedidos.route("/")
 def home():
     estado = request.args.get("estado", "pendiente")
-    if estado not in ("todos", "pendiente", "recogido"):
+    if estado not in ("todos", "pendiente", "recibido", "preparando", "listo", "recogido"):
         estado = "pendiente"
+    q = (request.args.get("q") or "").strip().lower()
+
     todos = Pedido.pedidos_de_hoy(None)
+    if q:
+        todos = [p for p in todos if q in p["cliente"].lower()
+                 or q in str(p["idPedido"]) or q in (p["dni"] or "").lower()]
+
     pendientes = [p for p in todos if not p["recogido"]]
     recogidos = [p for p in todos if p["recogido"]]
+    if estado in ("recibido", "preparando", "listo"):
+        pendientes = [p for p in pendientes if p["estado"] == estado]
+
+    contadores = {
+        "todos": len(todos),
+        "pendiente": len([p for p in todos if not p["recogido"]]),
+        "recibido": len([p for p in todos if p["estado"] == "recibido"]),
+        "preparando": len([p for p in todos if p["estado"] == "preparando"]),
+        "listo": len([p for p in todos if p["estado"] == "listo"]),
+        "recogido": len(recogidos),
+    }
     return render_template(
         "admin/pedidos/index.html",
-        usuario=g.user,
-        estado=estado,
-        pendientes=pendientes,
-        recogidos=recogidos,
-        contadores={"todos": len(todos), "pendiente": len(pendientes), "recogido": len(recogidos)},
+        usuario=g.user, estado=estado, q=request.args.get("q", ""),
+        pendientes=pendientes, recogidos=recogidos, contadores=contadores,
+        sugerencias=sorted({p["cliente"] for p in todos}),
     )
 
 

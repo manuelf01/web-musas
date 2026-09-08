@@ -1,0 +1,74 @@
+{% extends "admin/base.html" %}
+{% block title %}Mi perfil · Backoffice Las Musas{% endblock %}
+{% block nav_perfil %}is-active{% endblock %}
+
+{% block content %}
+<div class="adm-head" style="margin-bottom: 24px;">
+  <div>
+    <h1>Mi perfil</h1>
+    <p><i class="bi bi-person-gear"></i> Corrige tus datos de acceso si te equivocaste al registrarte.</p>
+  </div>
+</div>
+
+<div class="adm-recibo-wrap">
+  <section class="adm-card">
+    <div class="adm-card__head">
+      <div><h2>Datos de la cuenta</h2><p>Estos datos se usan para iniciar sesión y para el contacto.</p></div>
+    </div>
+    <form method="post" action="{{ url_for('admin.perfil.actualizar') }}">
+      {{ campo_csrf() }}
+      <div class="row g-3">
+        <div class="col-md-6 musa-field">
+          <label class="musa-field-label" for="pf-nombres">Nombres</label>
+          <input class="musa-input" id="pf-nombres" name="nombres" value="{{ datos.nombres }}" required />
+        </div>
+        <div class="col-md-6 musa-field">
+          <label class="musa-field-label" for="pf-apellidos">Apellidos</label>
+          <input class="musa-input" id="pf-apellidos" name="apellidos" value="{{ datos.apellidos }}" required />
+        </div>
+        <div class="col-md-6 musa-field">
+          <label class="musa-field-label" for="pf-dni">DNI</label>
+          <input class="musa-input" id="pf-dni" name="dni" value="{{ datos.dni }}" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" required />
+        </div>
+        <div class="col-md-6 musa-field">
+          <label class="musa-field-label" for="pf-telefono">Teléfono</label>
+          <input class="musa-input" id="pf-telefono" name="telefono" value="{{ datos.telefono }}" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" required />
+        </div>
+        <div class="col-12 musa-field">
+          <label class="musa-field-label" for="pf-correo">Correo</label>
+          <input class="musa-input" id="pf-correo" name="correo" type="email" value="{{ datos.correo }}" required />
+        </div>
+      </div>
+
+      <hr style="border-color: var(--musa-borde); margin: 22px 0;" />
+      <p class="musa-field-label">Cambiar contraseña <span class="musa-field-hint">déjalo vacío para mantenerla</span></p>
+      <div class="row g-3">
+        <div class="col-md-6 musa-field">
+          <label class="musa-field-label" for="pf-c1">Nueva contraseña</label>
+          <input class="musa-input" id="pf-c1" name="contraseña" type="password" minlength="8" autocomplete="new-password" />
+        </div>
+        <div class="col-md-6 musa-field">
+          <label class="musa-field-label" for="pf-c2">Repite la contraseña</label>
+          <input class="musa-input" id="pf-c2" name="contraseña2" type="password" minlength="8" autocomplete="new-password" />
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <button type="submit" class="btn-brasa"><i class="bi bi-check-lg"></i> Guardar cambios</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="adm-recibo-side">
+    <h4>Sesión actual</h4>
+    <h3>{{ datos.nombreCompleto }}</h3>
+    <div class="adm-recibo-side__cli">
+      <span class="adm-thumb" style="width:42px;height:42px;font-family:'Space Grotesk',sans-serif;color:var(--musa-brasa);">{{ datos.iniciales }}</span>
+      <div><strong>{{ datos.rolTexto }}</strong><span>{{ datos.correo }}</span></div>
+    </div>
+    <p style="font-size: 13px; color: var(--musa-texto-suave); margin-top: 16px;">
+      <i class="bi bi-info-circle"></i> Tu rol solo lo puede cambiar un superusuario desde «Usuarios».
+    </p>
+  </aside>
+</div>
+{% endblock %}

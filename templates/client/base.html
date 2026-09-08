@@ -47,9 +47,9 @@
           </a>
 
           {% if cliente %}
-            <span class="d-none d-sm-inline" style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;">
+            <a href="{{ url_for('cliente.mi_cuenta') }}" class="d-none d-sm-inline text-decoration-none" style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: var(--musa-carbon);">
               {{ cliente }}
-            </span>
+            </a>
             <a href="{{ url_for('cliente.auth.logout') }}" class="text-decoration-none small" style="color: var(--musa-texto-suave);">
               Salir
             </a>

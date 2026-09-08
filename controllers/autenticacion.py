@@ -45,8 +45,8 @@ def _limpiar_fallos_login():
 
 
 def _datos_sesion(fila):
-    # fila = SELECT * FROM usuario
-    # [0]idUsuario [1]dni [2]nombres [3]apellidos [4]correo [5]numTelf [6]contraseña [7]tipoUsuario
+    # fila = idUsuario, dni, nombres, apellidos, correo, numTelf, contraseña, tipoUsuario, rol, activo
+    rol = fila[8] if len(fila) > 8 and fila[8] else ("usuario" if fila[7] in (1, True) else "administrador")
     return {
         "idUsuario": fila[0],
         "id": fila[0],
@@ -55,6 +55,7 @@ def _datos_sesion(fila):
         "apellidos": fila[3],
         "correo": fila[4],
         "telefono": fila[5],
+        "rol": rol,
     }
 
 

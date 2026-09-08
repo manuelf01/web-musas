@@ -17,6 +17,7 @@ from controllers.admin_categoria_producto import *
 from controllers.admin_usuarios import *
 from controllers.admin_pedidos import *
 from controllers.admin_ventas import *
+from controllers.admin_perfil import perfil as admin_perfil
 # Importando apis
 from APIS.productos import *
 from APIS.usuarios import api_usuarios
@@ -115,6 +116,7 @@ admin.register_blueprint(categoria_producto)
 admin.register_blueprint(usuarios)
 admin.register_blueprint(pedidos)
 admin.register_blueprint(ventas)
+admin.register_blueprint(admin_perfil)
 admin.register_blueprint(auth)
 cliente.register_blueprint(auth)
 

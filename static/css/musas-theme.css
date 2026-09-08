@@ -2587,3 +2587,12 @@ body.adm { background: var(--musa-crema); }
 .adm-panel form { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .adm-btn-sm--danger { color: var(--musa-peligro); }
 .adm-btn-sm--danger:hover { border-color: var(--musa-peligro); color: var(--musa-peligro); }
+
+/* --- panel: foto grande + enlace --- */
+.adm-foto-box { display: flex; flex-direction: column; gap: 12px; }
+.adm-foto-grande {
+  width: 100%; max-height: 240px; object-fit: cover;
+  border-radius: 16px; border: 1px solid var(--musa-borde); background: #fff;
+}
+.adm-foto-url .musa-field-label { margin-bottom: 4px; }
+.adm-panel .adm-drop { min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; }

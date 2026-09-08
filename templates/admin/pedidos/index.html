@@ -35,19 +35,25 @@
 </div>
 
 <div class="ped-toolbar">
-  <div class="ped-buscar">
+  <form class="ped-buscar" method="get" action="{{ url_for('admin.pedidos.home') }}">
+    <input type="hidden" name="estado" value="{{ estado }}" />
     <i class="bi bi-search"></i>
-    <input type="text" id="ped-buscar" placeholder="Buscar por cliente, DNI o N° de pedido…" autocomplete="off" />
-  </div>
+    <input type="search" name="q" id="ped-buscar" value="{{ q }}" list="ped-sug"
+           placeholder="Buscar por cliente, DNI o N° de pedido…" autocomplete="off" />
+    <datalist id="ped-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
+  </form>
   <div class="adm-filtros">
-    <a href="{{ url_for('admin.pedidos.home', estado='pendiente') }}" class="musa-chip {{ 'is-active' if estado == 'pendiente' }}">Por entregar ({{ contadores.pendiente }})</a>
-    <a href="{{ url_for('admin.pedidos.home', estado='recogido') }}" class="musa-chip {{ 'is-active' if estado == 'recogido' }}">Recogidos ({{ contadores.recogido }})</a>
-    <a href="{{ url_for('admin.pedidos.home', estado='todos') }}" class="musa-chip {{ 'is-active' if estado == 'todos' }}">Todos ({{ contadores.todos }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='pendiente', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'pendiente' }}">Por entregar ({{ contadores.pendiente }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='recibido', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'recibido' }}">Recibidos ({{ contadores.recibido }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='preparando', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'preparando' }}">En cocina ({{ contadores.preparando }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='listo', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'listo' }}">Listos ({{ contadores.listo }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='recogido', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'recogido' }}">Recogidos ({{ contadores.recogido }})</a>
+    <a href="{{ url_for('admin.pedidos.home', estado='todos', q=q) }}" class="musa-chip {{ 'is-active' if estado == 'todos' }}">Todos ({{ contadores.todos }})</a>
   </div>
 </div>
 
 {# ---------------- PENDIENTES (tarjetas con confirmación) ---------------- #}
-{% if estado in ('pendiente', 'todos') %}
+{% if estado != 'recogido' %}
   {% if pendientes %}
     <div class="ped-grid">
       {% for p in pendientes %}

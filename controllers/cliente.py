@@ -7,6 +7,7 @@ from flask import (
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
 from model.Pedido import Pedido, StockInsuficiente, LimitePedidos
+from model.Usuario import Usuario
 cliente = Blueprint('cliente', __name__)
 
 # Categorías cuyo producto admite cremas adicionales.
@@ -15,6 +16,7 @@ CATEGORIAS_CON_CREMAS = ("Hamburguesas", "Salchipapas")
 RE_DNI = re.compile(r"^\d{8}$")
 RE_TEL = re.compile(r"^\d{9}$")
 RE_HORA = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+RE_CORREO = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _cliente_nombre():
@@ -29,19 +31,19 @@ def _ruta_local(destino):
 @cliente.route("/")
 def home():
     user = session.get("cliente.auth", None)
-    categorias = [c for c in CategoriaProducto.obtener_categorias() if c[1] != "Cremas"]
+    categorias = [c for c in CategoriaProducto.obtener_categorias(solo_activas=True) if c[1] != "Cremas"]
     return render_template(
         "client/index.html",
         cliente=user["nombres"] if user else None,
         categorias=categorias,
         favoritos=Producto.destacados(4),
-        totales=Producto.contar_por_categoria(),
+        totales=Producto.contar_por_categoria(solo_activos=True),
     )
 
 @cliente.route("/productos/<string:categoria>")
 def productos_categoria(categoria):
     user = session.get("cliente.auth", None)
-    categorias = CategoriaProducto.obtener_categorias()
+    categorias = CategoriaProducto.obtener_categorias(solo_activas=True)
     productos = Producto.getProductosCategoria(categoria)
 
     orden = request.args.get("orden", "recomendados")
@@ -63,8 +65,11 @@ def productos_categoria(categoria):
 
 @cliente.route("/carta")
 def carta():
-    categorias = CategoriaProducto.obtener_categorias()
-    productos = Producto.obtener_productos()
+    categorias = CategoriaProducto.obtener_categorias(solo_activas=True)
+    productos = Producto.obtener_productos(solo_activos=True)
+    # Sugerencias para el autocompletado del buscador (nombres + categorías).
+    sugerencias = sorted({p["nombre"] for p in productos}
+                         | {c[1] for c in categorias if c[1] != "Cremas"})
 
     q = (request.args.get("q") or "").strip()
     if q:
@@ -72,6 +77,7 @@ def carta():
         productos = [
             p for p in productos
             if ql in p["nombre"].lower() or ql in (p["descripcion"] or "").lower()
+            or ql in (p["nombreCategoria"] or "").lower()
         ]
 
     orden = request.args.get("orden", "recomendados")
@@ -87,6 +93,7 @@ def carta():
         cliente=_cliente_nombre(),
         q=q,
         orden=orden,
+        sugerencias=sugerencias,
         categorias=categorias,
         productos=productos,
     )
@@ -124,6 +131,54 @@ def cancelar_pedido(id_pedido):
     return redirect(url_for("cliente.mis_pedidos"))
 
 
+@cliente.route("/mi-cuenta", methods=["GET", "POST"])
+def mi_cuenta():
+    user = session.get("cliente.auth", None)
+    if not user:
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.mi_cuenta")))
+
+    if request.method == "POST":
+        nombres = (request.form.get("nombres") or "").strip()
+        apellidos = (request.form.get("apellidos") or "").strip()
+        correo = (request.form.get("correo") or "").strip()
+        dni = (request.form.get("dni") or "").strip()
+        telefono = (request.form.get("telefono") or "").strip()
+        contra = request.form.get("contraseña") or ""
+        contra2 = request.form.get("contraseña2") or ""
+
+        error = None
+        if dni and not RE_DNI.match(dni):
+            error = "El DNI debe tener 8 dígitos."
+        elif correo and not RE_CORREO.match(correo):
+            error = "Ingresa un correo válido."
+        elif telefono and not RE_TEL.match(telefono):
+            error = "El teléfono debe tener 9 dígitos."
+        elif contra and len(contra) < 8:
+            error = "La nueva contraseña debe tener al menos 8 caracteres."
+        elif contra and contra != contra2:
+            error = "Las contraseñas nuevas no coinciden."
+        if error is None:
+            error = Usuario.actualizar_perfil(user["idUsuario"], nombres, apellidos, correo, dni, telefono, contra)
+
+        if error:
+            flash(error, "error")
+        else:
+            d = Usuario.obtener_dict(user["idUsuario"])
+            session["cliente.auth"].update({
+                "nombres": d["nombres"], "apellidos": d["apellidos"],
+                "correo": d["correo"], "dni": d["dni"], "telefono": d["telefono"],
+            })
+            session.modified = True
+            flash("Tus datos se actualizaron.", "ok")
+        return redirect(url_for("cliente.mi_cuenta"))
+
+    return render_template(
+        "client/mi-cuenta.html",
+        cliente=_cliente_nombre(),
+        datos=Usuario.obtener_dict(user["idUsuario"]),
+    )
+
+
 @cliente.route("/nosotros")
 def nosotros():
     return render_template("client/nosotros.html", cliente=_cliente_nombre())
@@ -148,8 +203,8 @@ def formulario_registro_cliente():
 @cliente.route("/producto/<int:id>")
 def comprar_producto(id):
     producto = Producto.obtener_producto_por_id(id)
-    if producto is None:
-        return redirect(url_for("cliente.home"))
+    if producto is None or not producto.get("activo", True):
+        return redirect(url_for("cliente.carta"))
     cremas = (
         Producto.getProductosCategoria("Cremas")
         if producto["nombreCategoria"] in CATEGORIAS_CON_CREMAS

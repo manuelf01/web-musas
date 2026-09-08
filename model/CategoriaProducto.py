@@ -26,14 +26,26 @@ class CategoriaProducto:
         conexion.commit()
         conexion.close()
 
-    def obtener_categorias():
+    def obtener_categorias(solo_activas=False):
         conexion = obtener_conexion()
         categoria = []
         with conexion.cursor() as cursor:
-            cursor.execute("SELECT * FROM categoriaProducto")
+            if solo_activas:
+                cursor.execute("SELECT * FROM categoriaProducto WHERE activo = 1 ORDER BY idCategoria")
+            else:
+                cursor.execute("SELECT * FROM categoriaProducto ORDER BY idCategoria")
             categoria = cursor.fetchall()
         conexion.close()
         return categoria
+
+    @staticmethod
+    def cambiar_estado(idCategoria, activo):
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute("UPDATE categoriaProducto SET activo = %s WHERE idCategoria = %s",
+                           (1 if activo else 0, idCategoria))
+        conexion.commit()
+        conexion.close()
 
     def eliminar_categoria(idCategoria):
         conexion = obtener_conexion()

@@ -6,15 +6,8 @@
 <div class="adm-list-head">
   <div class="adm-head" style="margin-bottom: 0;">
     <div>
-      <h1>Usuarios
-        <span class="adm-count-pill">{{ conteos.total }} registrados</span>
-      </h1>
-      <p class="adm-sub">Equipo interno y clientes registrados de Las Musas.</p>
-      <p style="margin: 6px 0 0; font-size: 13px; font-weight: 600;">
-        <span style="color: var(--musa-exito); white-space: nowrap;">● {{ conteos.clientes }} cliente{{ 's' if conteos.clientes != 1 }}</span>
-        &nbsp;&nbsp;
-        <span style="color: var(--musa-brasa); white-space: nowrap;">● {{ conteos.admins }} admin{{ 's' if conteos.admins != 1 }}</span>
-      </p>
+      <h1>Usuarios <span class="adm-count-pill">{{ conteos.total }} cuentas</span></h1>
+      <p class="adm-sub">Gestión de accesos. Solo el superusuario entra aquí y asigna roles.</p>
     </div>
     <button type="button" class="btn-brasa" data-user-abrir data-modo="crear">
       <i class="bi bi-person-plus"></i> Agregar usuario
@@ -22,53 +15,76 @@
   </div>
 </div>
 
+<form class="adm-actionbar" method="get" action="{{ url_for('admin.usuarios.home') }}">
+  <input type="hidden" name="rol" value="{{ filtro }}" />
+  <input type="hidden" name="estado" value="{{ estado }}" />
+  <div class="adm-search">
+    <i class="bi bi-search"></i>
+    <input type="search" name="q" value="{{ q }}" list="usr-sug" autocomplete="off"
+           placeholder="Buscar por nombre, DNI o correo…" />
+    <datalist id="usr-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
+  </div>
+</form>
+
 <div class="adm-chips">
-  <a class="adm-chip2 {{ 'is-active' if filtro == 'todos' }}" href="{{ url_for('admin.usuarios.home') }}">Todos <b>{{ conteos.total }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if filtro == 'admin' }}" href="{{ url_for('admin.usuarios.home', rol='admin') }}">Admin <b>{{ conteos.admins }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if filtro == 'cliente' }}" href="{{ url_for('admin.usuarios.home', rol='cliente') }}">Cliente <b>{{ conteos.clientes }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'todos' }}" href="{{ url_for('admin.usuarios.home', estado=estado) }}">Todos <b>{{ conteos.total }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'superusuario' }}" href="{{ url_for('admin.usuarios.home', rol='superusuario', estado=estado) }}">Superusuario <b>{{ conteos.superusuario }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'administrador' }}" href="{{ url_for('admin.usuarios.home', rol='administrador', estado=estado) }}">Administrador <b>{{ conteos.administrador }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'usuario' }}" href="{{ url_for('admin.usuarios.home', rol='usuario', estado=estado) }}">Usuario <b>{{ conteos.usuario }}</b></a>
+  <span style="width:1px; background: var(--musa-borde); margin: 0 4px;"></span>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'baja' }}" href="{{ url_for('admin.usuarios.home', rol=filtro, estado='baja') }}">De baja <b>{{ conteos.de_baja }}</b></a>
 </div>
 
 <section class="adm-card">
   {% if usuarios %}
     <div class="adm-tabla-wrap">
       <table class="adm-tabla">
-        <thead>
-          <tr><th>Usuario</th><th>Correo</th><th>Teléfono</th><th>Rol</th><th>Acciones</th></tr>
-        </thead>
+        <thead><tr><th>Usuario</th><th>Correo</th><th>Teléfono</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
           {% for u in usuarios %}
-            <tr>
+            {% set yo = (u.idUsuario|string == usuario.idUsuario|string) %}
+            <tr style="{{ 'opacity:.55;' if not u.activo }}">
               <td>
                 <div class="adm-prod-cel">
-                  <span class="adm-thumb" style="font-size:14px; font-family: 'Space Grotesk', sans-serif; color: var(--musa-brasa);">{{ u.iniciales }}</span>
-                  <div>
-                    <strong>{{ u.nombreCompleto }}</strong>
-                    <p>DNI {{ u.dni }}
-                      {% if u.noShows %}· <span class="adm-faltas">{{ u.noShows }} no-show(s)</span>{% endif %}
-                    </p>
-                  </div>
+                  <span class="adm-thumb" style="font-size:13px; font-family:'Space Grotesk',sans-serif; color:var(--musa-brasa);">{{ u.iniciales }}</span>
+                  <div><strong>{{ u.nombreCompleto }}{% if yo %} <span style="color:var(--musa-texto-suave); font-weight:400;">(tú)</span>{% endif %}</strong>
+                    <p>DNI {{ u.dni }}{% if u.noShows %} · {{ u.noShows }} no-show(s){% endif %}</p></div>
                 </div>
               </td>
               <td>{{ u.correo }}</td>
               <td>{{ u.telefono }}</td>
-              <td><span class="adm-badge-rol {{ 'admin' if u.esAdmin else 'cliente' }}">{{ u.rol }}</span></td>
               <td>
-                {% if u.esAdmin %}
+                <span class="adm-badge-rol {{ 'admin' if u.esPanel else 'cliente' }}"
+                      style="{{ 'background: #7a3cd1; color:#fff;' if u.esSuper }}">{{ u.rolTexto }}</span>
+              </td>
+              <td>
+                {% if u.activo %}<span class="adm-badge-rol cliente">Activo</span>
+                {% else %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
+              </td>
+              <td>
+                {% if u.esSuper %}
+                  {% if yo %}<a class="adm-btn-sm" href="{{ url_for('admin.perfil.home') }}"><i class="bi bi-person-gear"></i> Mi perfil</a>
+                  {% else %}<span style="color: var(--musa-texto-suave); font-size: 12px;"><i class="bi bi-shield-lock"></i> Cuenta protegida</span>{% endif %}
+                {% else %}
                   <div class="acciones">
                     <button type="button" class="adm-btn-sm" data-user-abrir data-modo="editar"
                       data-id="{{ u.idUsuario }}" data-nombre="{{ u.nombreCompleto }}"
-                      data-correo="{{ u.correo }}" data-telefono="{{ u.telefono }}">
+                      data-correo="{{ u.correo }}" data-telefono="{{ u.telefono }}" data-rol="{{ u.rol }}">
                       <i class="bi bi-pencil"></i> Editar
                     </button>
-                    <form action="{{ url_for('admin.usuarios.eliminar') }}" method="POST"
-                          onsubmit="return confirm('¿Eliminar al administrador «{{ u.nombreCompleto }}»?');">
+                    {% if not yo %}
+                    <form action="{{ url_for('admin.usuarios.estado') }}" method="POST">
                       {{ campo_csrf() }}
                       <input type="hidden" name="id" value="{{ u.idUsuario }}" />
-                      <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i></button>
+                      <input type="hidden" name="activar" value="{{ '0' if u.activo else '1' }}" />
+                      {% if u.activo %}
+                        <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-slash-circle"></i> Dar de baja</button>
+                      {% else %}
+                        <button class="adm-btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
+                      {% endif %}
                     </form>
+                    {% endif %}
                   </div>
-                {% else %}
-                  <span style="color: var(--musa-texto-suave); font-size: 12px;">Cuenta de cliente</span>
                 {% endif %}
               </td>
             </tr>
@@ -76,9 +92,9 @@
         </tbody>
       </table>
     </div>
-    <p class="adm-mostrando">{{ usuarios|length }} usuario(s) · filtro: {{ filtro }}</p>
+    <p class="adm-mostrando">{{ usuarios|length }} cuenta(s)</p>
   {% else %}
-    <p class="adm-vacio"><i class="bi bi-people d-block mb-2" style="font-size: 32px;"></i> No hay usuarios en este filtro.</p>
+    <p class="adm-vacio"><i class="bi bi-people d-block mb-2" style="font-size: 32px;"></i> No hay cuentas en este filtro.</p>
   {% endif %}
 </section>
 
@@ -88,13 +104,20 @@
   <div class="adm-panel__head">
     <button type="button" class="adm-panel__cerrar" data-user-cerrar aria-label="Cerrar">&times;</button>
     <h2 data-user-titulo>Agregar usuario</h2>
-    <p data-user-sub>Nuevo administrador del backoffice.</p>
+    <p data-user-sub>Elige el rol y completa los datos de la cuenta.</p>
   </div>
   <form method="post" id="formUsuario">
     {{ campo_csrf() }}
     <input type="hidden" name="id" id="pu-id" />
     <div class="adm-panel__body">
-      <div class="musa-field" data-solo-crear>
+      <div class="musa-field">
+        <label class="musa-field-label" for="pu-rol">Rol</label>
+        <select class="musa-input" id="pu-rol" name="rol" required>
+          {% for valor, texto in roles %}<option value="{{ valor }}">{{ texto }}</option>{% endfor %}
+        </select>
+        <span class="musa-field-hint">Superusuario = acceso total · Administrador = panel sin usuarios · Usuario = cliente</span>
+      </div>
+      <div class="musa-field mt-3" data-solo-crear>
         <label class="musa-field-label" for="pu-dni">DNI</label>
         <input class="musa-input" id="pu-dni" name="dni" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="8 dígitos" />
       </div>
@@ -110,7 +133,7 @@
       </div>
       <div class="musa-field mt-3">
         <label class="musa-field-label" for="pu-correo">Correo</label>
-        <input class="musa-input" id="pu-correo" name="correo" type="email" placeholder="nombre@lasmusas.pe" required />
+        <input class="musa-input" id="pu-correo" name="correo" type="email" placeholder="nombre@correo.com" required />
       </div>
       <div class="musa-field mt-3">
         <label class="musa-field-label" for="pu-telefono">Teléfono</label>
@@ -118,8 +141,7 @@
       </div>
       <div class="musa-field mt-3">
         <label class="musa-field-label" for="pu-contra">
-          <span data-pw-label>Contraseña</span>
-          <span class="musa-field-hint" data-solo-editar hidden>Déjala vacía para no cambiarla</span>
+          Contraseña <span class="musa-field-hint" data-solo-editar hidden>· vacía = no cambiar</span>
         </label>
         <input class="musa-input" id="pu-contra" name="contraseña" type="password" minlength="8" placeholder="Mínimo 8 caracteres" />
       </div>
@@ -145,15 +167,18 @@
 
   function abrir() { panel.classList.add("abierto"); backdrop.classList.add("abierto"); }
   function cerrar() { panel.classList.remove("abierto"); backdrop.classList.remove("abierto"); }
-  function toggle(nodes, mostrar) { nodes.forEach(function (n) { n.hidden = !mostrar; n.querySelectorAll("input").forEach(function (i) { i.disabled = !mostrar; }); }); }
+  function toggle(nodes, on) { nodes.forEach(function (n) {
+    n.hidden = !on; n.querySelectorAll("input").forEach(function (i) { i.disabled = !on; });
+  }); }
 
   document.querySelectorAll("[data-user-abrir]").forEach(function (b) {
     b.addEventListener("click", function () {
       form.reset();
       var editar = b.dataset.modo === "editar";
       form.action = editar ? URL_EDITAR : URL_CREAR;
-      panel.querySelector("[data-user-titulo]").textContent = editar ? "Editar administrador" : "Agregar usuario";
-      panel.querySelector("[data-user-sub]").textContent = editar ? "Actualiza el contacto o la contraseña." : "Nuevo administrador del backoffice.";
+      panel.querySelector("[data-user-titulo]").textContent = editar ? "Editar cuenta" : "Agregar usuario";
+      panel.querySelector("[data-user-sub]").textContent = editar
+        ? "Cambia el contacto, el rol o la contraseña." : "Elige el rol y completa los datos.";
       panel.querySelector("[data-user-btn]").textContent = editar ? "Guardar cambios" : "Guardar usuario";
       toggle(soloCrear, !editar);
       toggle(soloEditar, editar);
@@ -162,6 +187,7 @@
         document.getElementById("pu-id").value = b.dataset.id;
         document.getElementById("pu-correo").value = b.dataset.correo;
         document.getElementById("pu-telefono").value = b.dataset.telefono;
+        document.getElementById("pu-rol").value = b.dataset.rol;
       }
       abrir();
     });

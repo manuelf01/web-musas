@@ -45,11 +45,16 @@
           <a href="{{ url_for('admin.categoria.home') }}" class="{% block nav_categorias %}{% endblock %}" title="Categorías">
             <i class="bi bi-tags"></i> <span>Categorías</span>
           </a>
+          {% if usuario and usuario.rol == 'superusuario' %}
           <a href="{{ url_for('admin.usuarios.home') }}" class="{% block nav_usuarios %}{% endblock %}" title="Usuarios">
             <i class="bi bi-people"></i> <span>Usuarios</span>
           </a>
+          {% endif %}
           <a href="{{ url_for('admin.ventas.home') }}" class="{% block nav_ventas %}{% endblock %}" title="Ventas">
             <i class="bi bi-graph-up"></i> <span>Ventas</span>
+          </a>
+          <a href="{{ url_for('admin.perfil.home') }}" class="{% block nav_perfil %}{% endblock %}" title="Mi perfil">
+            <i class="bi bi-person-gear"></i> <span>Mi perfil</span>
           </a>
         </nav>
       </div>
@@ -62,7 +67,7 @@
           </span>
           <div class="adm-side__user-info">
             <strong>{{ usuario.nombres if usuario else 'Admin' }}</strong>
-            <span>Administrador</span>
+            <span>{{ {'superusuario': 'Superusuario', 'administrador': 'Administrador'}.get(usuario.rol, 'Administrador') if usuario else 'Administrador' }}</span>
           </div>
           <a href="{{ url_for('admin.auth.logout') }}" title="Cerrar sesión" class="adm-side__logout">
             <i class="bi bi-box-arrow-right"></i>

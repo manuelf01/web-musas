@@ -59,7 +59,16 @@ migrations/006_cancelacion_y_noshow.sql
 migrations/007_categoria_imagen.sql
 migrations/008_comprobante_dni.sql
 migrations/009_estado_preparacion.sql
+migrations/010_roles_y_estado.sql
 ```
+
+## Roles y estado (2026-09-08)
+
+`usuario.rol`: superusuario / administrador / usuario (+ `usuario.activo`).
+`producto.activo` y `categoriaProducto.activo` para "dar de baja". La gestión de
+usuarios y la asignación de roles son **solo del superusuario**; los CRUD de
+producto/categoría/usuario usan estado en vez de borrar. Perfil editable en
+`/admin/perfil` (panel) y `/mi-cuenta` (tienda).
 
 ## Estados de pedido (2026-09-08)
 

@@ -72,6 +72,41 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-07 | **Integración del panel del compañero** (`Manuelf`): CRUD productos/categorías/usuarios + ventas/comprobantes sobre el diseño de esta rama; comprobante al entregar; migraciones 007–008; CSRF sin exentos. Ver sección 0 + `MERGE_NOTES.md`. | `git revert` |
 | 2026-09-08 | **Estados de pedido + pedidos solo de registrados** (migración 009). Ver "Estados de pedido 2026-09-08" abajo. | `git revert` + revertir 009 |
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
+
+### Roles y estado 2026-09-08
+Migración **010**: `usuario.rol` ('superusuario'|'administrador'|'usuario') + `usuario.activo`,
+`producto.activo`, `categoriaProducto.activo`. `rol` se deriva del `tipoUsuario`
+previo y el primer admin queda como superusuario. `tipoUsuario` se mantiene
+sincronizado (0 = panel, 1 = cliente) por compatibilidad.
+
+- **3 roles.** `model/Usuario.py`: `ROLES`, `ETIQUETA_ROL`, `_tipo_de_rol`, y métodos
+  `obtener_todos`, `obtener_dict`, `contar_por_rol`, `actualizar_por_admin` (super
+  edita otras cuentas + rol; **rechaza** editar a otro superusuario y promover a
+  superusuario por edición), `actualizar_perfil` (auto-edición), `cambiar_estado`,
+  `login_por_dni`, `existe_dni(dni, excepto_id)`.
+- `model/Autenticacion.py`: `dni_es_admin` y `login_unificado` usan `rol` + `activo`
+  (cuenta dada de baja no inicia sesión).
+- `controllers/admin.py`: el blueprint `admin.usuarios.*` es **solo superusuario**;
+  el administrador entra al panel pero no ve Usuarios.
+- **Gestión de usuarios** (`admin/usuarios/index.html`): chips por rol + "de baja",
+  panel con **selector de rol**, "Dar de baja"/"Reactivar", fila del superusuario
+  protegida (sin editar/baja; solo "Mi perfil" si es la propia).
+- **Perfil**: `controllers/admin_perfil.py` (`/admin/perfil`) para super/admin y
+  `cliente.mi_cuenta` (`/mi-cuenta`) para el rol usuario. Ambos corrigen
+  nombres/apellidos/DNI/correo/teléfono/contraseña y refrescan la sesión.
+- **Estado en productos/categorías**: chips (En carta / Sin stock / De baja / Todos),
+  botón "Dar de baja"/"Reactivar" (reemplaza a Eliminar). La tienda solo muestra lo
+  activo: `Producto.obtener_productos(solo_activos=True)`, `getProductosCategoria`
+  filtra, `precios_por_ids` bloquea inactivos, `CategoriaProducto.obtener_categorias(solo_activas=True)`.
+- **Imagen por enlace**: `subidas.guardar_desde_url(url, subcarpeta)` descarga la
+  imagen de un link de internet (valida esquema, bloquea IPs privadas/SSRF, límite
+  5 MB, verifica con Pillow). El panel de producto/categoría acepta archivo **o** enlace,
+  con **previsualización grande** (`.adm-foto-grande`).
+- **Autocompletado**: `<datalist>` nativo en todas las barras de búsqueda — carta
+  de la tienda y CRUDs de productos/categorías/usuarios/pedidos.
+- **Pedidos**: chips por estado (Por entregar / Recibidos / En cocina / Listos /
+  Recogidos / Todos) + búsqueda server-side con datalist.
 
 ### Panel Stitch 2026-09-08
 Las 4 pantallas del panel + el detalle de comprobante se rehicieron para calzar

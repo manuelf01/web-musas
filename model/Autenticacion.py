@@ -34,11 +34,13 @@ class Autenticacion:
     # ------------------------------------------------------------------
     @staticmethod
     def dni_es_admin(dni):
+        """True si el DNI corresponde a una cuenta de panel (superusuario o admin)."""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT COUNT(*) FROM usuario WHERE dni = %s AND tipoUsuario = %s",
-                (dni, False),
+                "SELECT COUNT(*) FROM usuario WHERE dni = %s "
+                "AND (rol IN ('superusuario','administrador') OR tipoUsuario = 0)",
+                (dni,),
             )
             total = cursor.fetchone()[0]
         conexion.close()
@@ -49,26 +51,19 @@ class Autenticacion:
         """
         Devuelve (fila_usuario, tipo) con tipo 'admin' o 'cliente',
         o un string con el mensaje de error.
-        fila_usuario = SELECT * FROM usuario
-          [0]idUsuario [1]dni [2]nombres [3]apellidos [4]correo
-          [5]numTelf   [6]contraseña [7]tipoUsuario
+        fila_usuario = idUsuario, dni, nombres, apellidos, correo, numTelf,
+                       contraseña, tipoUsuario, rol, activo
         """
-        conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            # Si el DNI existe como admin y como cliente, gana admin (tipoUsuario 0).
-            cursor.execute(
-                "SELECT * FROM usuario WHERE dni = %s ORDER BY tipoUsuario ASC",
-                (dni,),
-            )
-            filas = cursor.fetchall()
-        conexion.close()
-
+        filas = Usuario.login_por_dni(dni)
         if not filas:
             return "No encontramos una cuenta con ese DNI."
 
         for fila in filas:
             if Autenticacion.verificar_password(fila[6], contraseña):
-                tipo = "admin" if fila[7] in (0, False) else "cliente"
+                if len(fila) > 9 and fila[9] == 0:
+                    return "Esta cuenta está dada de baja. Contacta al administrador."
+                rol = fila[8] or ("usuario" if fila[7] in (1, True) else "administrador")
+                tipo = "cliente" if rol == "usuario" else "admin"
                 return (fila, tipo)
 
         return "La contraseña no es correcta."

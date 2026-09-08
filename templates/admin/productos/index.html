@@ -6,9 +6,7 @@
 <div class="adm-list-head">
   <div class="adm-head" style="margin-bottom: 0;">
     <div>
-      <h1>Productos
-        <span class="adm-count-pill">{{ conteos.total }} en carta</span>
-      </h1>
+      <h1>Productos <span class="adm-count-pill">{{ conteos.activos }} en carta</span></h1>
       <p class="adm-sub">Gestión de inventario, recetas y disponibilidad para el turno noche.</p>
     </div>
     <button type="button" class="btn-brasa" data-panel-abrir data-modo="crear">
@@ -18,15 +16,20 @@
 </div>
 
 <form class="adm-actionbar" method="get" action="{{ url_for('admin.productos.home') }}">
+  <input type="hidden" name="estado" value="{{ estado }}" />
   <div class="adm-search">
     <i class="bi bi-search"></i>
-    <input type="text" name="q" value="{{ q }}" placeholder="Buscar por nombre, categoría o descripción…" autocomplete="off" />
+    <input type="search" name="q" value="{{ q }}" list="prod-sug" autocomplete="off"
+           placeholder="Buscar por nombre o categoría…" />
+    <datalist id="prod-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
 
 <div class="adm-chips">
-  <span class="adm-chip2 is-active">En carta <b>{{ conteos.total }}</b></span>
-  <span class="adm-chip2">Sin stock <b>{{ conteos.sin_stock }}</b></span>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'activos' }}" href="{{ url_for('admin.productos.home', estado='activos', q=q) }}">En carta <b>{{ conteos.activos }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'sin_stock' }}" href="{{ url_for('admin.productos.home', estado='sin_stock', q=q) }}">Sin stock <b>{{ conteos.sin_stock }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'baja' }}" href="{{ url_for('admin.productos.home', estado='baja', q=q) }}">De baja <b>{{ conteos.de_baja }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'todos' }}" href="{{ url_for('admin.productos.home', estado='todos', q=q) }}">Todos <b>{{ conteos.total }}</b></a>
   <a class="adm-chip2" href="{{ url_for('admin.categoria.home') }}">Categorías <b>{{ conteos.categorias }}</b></a>
 </div>
 
@@ -35,49 +38,43 @@
     <div class="adm-tabla-wrap">
       <table class="adm-tabla">
         <thead>
-          <tr>
-            <th>Producto</th>
-            <th>Categoría</th>
-            <th class="num">Precio</th>
-            <th class="num">Stock</th>
-            <th>Acciones</th>
-          </tr>
+          <tr><th>Producto</th><th>Categoría</th><th class="num">Precio</th><th class="num">Stock</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           {% for p in productos %}
-            <tr>
+            <tr style="{{ 'opacity:.55;' if not p.activo }}">
               <td>
                 <div class="adm-prod-cel">
-                  {% if p.imagen %}
-                    <img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="" />
-                  {% else %}
-                    <span class="adm-thumb"><i class="bi bi-fire"></i></span>
-                  {% endif %}
-                  <div>
-                    <strong>{{ p.nombre }}</strong>
-                    <p>{{ p.descripcion | truncate(64) }}</p>
-                  </div>
+                  {% if p.imagen %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="" />
+                  {% else %}<span class="adm-thumb"><i class="bi bi-fire"></i></span>{% endif %}
+                  <div><strong>{{ p.nombre }}</strong><p>{{ p.descripcion | truncate(64) }}</p></div>
                 </div>
               </td>
               <td><span class="adm-badge-cat">{{ p.nombreCategoria }}</span></td>
               <td class="num">S/ {{ '%.2f'|format(p.precio or 0) }}</td>
-              <td class="num">
-                <span class="adm-badge-stock {{ 'cero' if not p.existencias }}">{{ p.existencias }}</span>
+              <td class="num"><span class="adm-badge-stock {{ 'cero' if not p.existencias }}">{{ p.existencias }}</span></td>
+              <td>
+                {% if p.activo %}<span class="adm-badge-rol cliente">En carta</span>
+                {% else %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
               </td>
               <td>
                 <div class="acciones">
                   <button type="button" class="adm-btn-sm" data-panel-abrir data-modo="editar"
-                    data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}"
-                    data-descripcion="{{ p.descripcion }}" data-precio="{{ p.precio or 0 }}"
-                    data-existencias="{{ p.existencias }}" data-categoria="{{ p.idCategoria }}"
-                    data-imagen="{{ p.imagen or '' }}">
+                    data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-descripcion="{{ p.descripcion }}"
+                    data-precio="{{ p.precio or 0 }}" data-existencias="{{ p.existencias }}"
+                    data-categoria="{{ p.idCategoria }}" data-imagen="{{ p.imagen or '' }}">
                     <i class="bi bi-pencil"></i> Editar
                   </button>
-                  <form action="{{ url_for('admin.productos.eliminar') }}" method="POST"
-                        onsubmit="return confirm('¿Eliminar «{{ p.nombre }}»? Si aparece en pedidos, mejor ponle stock 0.');">
+                  <form action="{{ url_for('admin.productos.estado') }}" method="POST">
                     {{ campo_csrf() }}
                     <input type="hidden" name="id" value="{{ p.idProducto }}" />
-                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i></button>
+                    <input type="hidden" name="activar" value="{{ '0' if p.activo else '1' }}" />
+                    <input type="hidden" name="volver" value="{{ estado }}" />
+                    {% if p.activo %}
+                      <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-slash-circle"></i> Dar de baja</button>
+                    {% else %}
+                      <button class="adm-btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
+                    {% endif %}
                   </form>
                 </div>
               </td>
@@ -90,12 +87,11 @@
     <div class="adm-pag">{{ pagination.links }}</div>
   {% else %}
     <p class="adm-vacio"><i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i>
-      {{ 'No hay productos que coincidan con la búsqueda.' if q else 'Todavía no hay productos en la carta.' }}
-    </p>
+      {{ 'Sin resultados.' if q else 'No hay productos en este filtro.' }}</p>
   {% endif %}
 </section>
 
-{# ---------------- PANEL DESLIZANTE (agregar / editar) ---------------- #}
+{# ---------------- PANEL agregar / editar ---------------- #}
 <div class="adm-panel__backdrop" data-panel-cerrar></div>
 <aside class="adm-panel" id="panelProducto" aria-hidden="true">
   <div class="adm-panel__head">
@@ -107,15 +103,20 @@
     {{ campo_csrf() }}
     <input type="hidden" name="idProducto" id="pp-id" />
     <div class="adm-panel__body">
-      <label class="adm-drop" for="pp-imagen" id="pp-drop">
-        <span id="pp-drop-txt">
+      <div class="adm-foto-box">
+        <img id="pp-preview" class="adm-foto-grande" hidden alt="Vista previa" />
+        <label class="adm-drop" for="pp-imagen" id="pp-drop">
           <i class="bi bi-image"></i>
           <strong>Arrastra una imagen o explora</strong>
-          <span>PNG, JPG, WEBP hasta 5 MB (recomendado 800×800)</span>
-        </span>
-        <img id="pp-preview" hidden alt="" />
-      </label>
-      <input type="file" id="pp-imagen" name="imagen" accept="image/*" hidden />
+          <span>PNG, JPG, WEBP hasta 5 MB</span>
+        </label>
+        <input type="file" id="pp-imagen" name="imagen" accept="image/*" hidden />
+        <div class="adm-foto-url">
+          <label class="musa-field-label" for="pp-url">…o pega el enlace de una imagen de internet</label>
+          <input class="musa-input" id="pp-url" name="imagen_url" type="url" inputmode="url"
+                 placeholder="https://… (enlace directo a la imagen)" />
+        </div>
+      </div>
 
       <div class="musa-field mt-3">
         <label class="musa-field-label" for="pp-categoria">Categoría</label>
@@ -160,17 +161,19 @@
   var titulo = panel.querySelector("[data-panel-titulo]");
   var btnTxt = panel.querySelector("[data-panel-btn]");
   var preview = document.getElementById("pp-preview");
-  var dropTxt = document.getElementById("pp-drop-txt");
+  var drop = document.getElementById("pp-drop");
+  var url = document.getElementById("pp-url");
   var URL_CREAR = "{{ url_for('admin.productos.guardar') }}";
   var URL_EDITAR = "{{ url_for('admin.productos.actualizar') }}";
 
-  function abrir() { panel.classList.add("abierto"); backdrop.classList.add("abierto"); panel.setAttribute("aria-hidden", "false"); }
-  function cerrar() { panel.classList.remove("abierto"); backdrop.classList.remove("abierto"); panel.setAttribute("aria-hidden", "true"); }
+  function mostrarPreview(src) { preview.src = src; preview.hidden = false; drop.hidden = true; }
+  function limpiarPreview() { preview.hidden = true; drop.hidden = false; }
+  function abrir() { panel.classList.add("abierto"); backdrop.classList.add("abierto"); }
+  function cerrar() { panel.classList.remove("abierto"); backdrop.classList.remove("abierto"); }
 
   document.querySelectorAll("[data-panel-abrir]").forEach(function (b) {
     b.addEventListener("click", function () {
-      form.reset();
-      preview.hidden = true; dropTxt.hidden = false;
+      form.reset(); limpiarPreview();
       if (b.dataset.modo === "editar") {
         titulo.textContent = "Editar producto";
         btnTxt.textContent = "Guardar cambios";
@@ -181,10 +184,7 @@
         document.getElementById("pp-precio").value = b.dataset.precio;
         document.getElementById("pp-existencias").value = b.dataset.existencias;
         document.getElementById("pp-categoria").value = b.dataset.categoria;
-        if (b.dataset.imagen) {
-          preview.src = "/static/img/" + b.dataset.imagen;
-          preview.hidden = false; dropTxt.hidden = true;
-        }
+        if (b.dataset.imagen) mostrarPreview("/static/img/" + b.dataset.imagen);
       } else {
         titulo.textContent = "Agregar producto";
         btnTxt.textContent = "Guardar producto";
@@ -198,10 +198,10 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrar(); });
 
   document.getElementById("pp-imagen").addEventListener("change", function () {
-    var f = this.files[0];
-    if (!f) return;
-    preview.src = URL.createObjectURL(f);
-    preview.hidden = false; dropTxt.hidden = true;
+    if (this.files[0]) { mostrarPreview(URL.createObjectURL(this.files[0])); url.value = ""; }
+  });
+  url.addEventListener("change", function () {
+    if (url.value.trim()) mostrarPreview(url.value.trim());
   });
 })();
 </script>

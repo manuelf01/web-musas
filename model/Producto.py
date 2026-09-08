@@ -9,10 +9,10 @@ class Producto:
         with conexion.cursor() as cursor:
             if type(id) == str:
                 cursor.execute(
-                    "select p.* from producto p inner join categoriaProducto cp on cp.idCategoria = p.idCategoria where cp.nombreCategoria = %s order by p.idProducto", (id,))
+                    "select p.* from producto p inner join categoriaProducto cp on cp.idCategoria = p.idCategoria where cp.nombreCategoria = %s and p.activo = 1 order by p.idProducto", (id,))
             else:
                 cursor.execute(
-                    "select * from producto where idCategoria = %s order by idProducto", (id,))
+                    "select * from producto where idCategoria = %s and activo = 1 order by idProducto", (id,))
             productos = cursor.fetchall()
         conexion.close()
 
@@ -59,7 +59,7 @@ class Producto:
         conexion.close()
 
     _COLS = ("p.idProducto, p.idCategoria, p.nombre, p.descripcion, p.precio, "
-             "p.existencias, p.imagen, p.destacado, p.nota, cp.nombreCategoria")
+             "p.existencias, p.imagen, p.destacado, p.nota, cp.nombreCategoria, p.activo")
 
     @staticmethod
     def _fila_a_dict(f):
@@ -67,20 +67,31 @@ class Producto:
             "idProducto": f[0], "idCategoria": f[1], "nombre": f[2],
             "descripcion": f[3], "precio": f[4], "existencias": f[5],
             "imagen": f[6], "destacado": f[7], "nota": f[8], "nombreCategoria": f[9],
+            "activo": bool(f[10]) if len(f) > 10 and f[10] is not None else True,
         }
 
     @staticmethod
-    def obtener_productos():
+    def obtener_productos(solo_activos=False):
+        cond = " WHERE p.activo = 1" if solo_activos else ""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
                 f"SELECT {Producto._COLS} FROM producto p "
                 "INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria "
-                "ORDER BY p.idCategoria, p.idProducto"
+                f"{cond} ORDER BY p.idCategoria, p.idProducto"
             )
             productos = cursor.fetchall()
         conexion.close()
         return [Producto._fila_a_dict(f) for f in productos]
+
+    @staticmethod
+    def cambiar_estado(id, activo):
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute("UPDATE producto SET activo = %s WHERE idProducto = %s",
+                           (1 if activo else 0, id))
+        conexion.commit()
+        conexion.close()
 
     @staticmethod
     def eliminar_producto(id):
@@ -99,7 +110,7 @@ class Producto:
         with conexion.cursor() as cursor:
             cursor.execute(
                 "SELECT p.idProducto, p.nombre, p.descripcion, p.precio, p.existencias, "
-                "cp.nombreCategoria, p.idCategoria, p.imagen, p.destacado, p.nota "
+                "cp.nombreCategoria, p.idCategoria, p.imagen, p.destacado, p.nota, p.activo "
                 "FROM producto p INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria "
                 "WHERE p.idProducto = %s", (id,))
             seleccion = cursor.fetchone()
@@ -119,6 +130,7 @@ class Producto:
             "imagen": seleccion[7],
             "destacado": seleccion[8],
             "nota": seleccion[9],
+            "activo": bool(seleccion[10]) if seleccion[10] is not None else True,
         }
 
     @staticmethod
@@ -209,7 +221,8 @@ class Producto:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                f"SELECT idProducto, nombre, precio FROM producto WHERE idProducto IN ({marcadores})",
+                f"SELECT idProducto, nombre, precio FROM producto "
+                f"WHERE idProducto IN ({marcadores}) AND activo = 1",
                 ids,
             )
             filas = cursor.fetchall()
@@ -225,7 +238,7 @@ class Producto:
             cursor.execute(
                 f"SELECT {Producto._COLS} FROM producto p "
                 "INNER JOIN categoriaProducto cp ON cp.idCategoria = p.idCategoria "
-                "WHERE cp.nombreCategoria <> 'Cremas' "
+                "WHERE cp.nombreCategoria <> 'Cremas' AND p.activo = 1 AND cp.activo = 1 "
                 "ORDER BY (p.destacado IS NULL), p.existencias DESC, p.idProducto "
                 "LIMIT %s",
                 (limite,),
@@ -235,10 +248,11 @@ class Producto:
         return [Producto._fila_a_dict(f) for f in filas]
 
     @staticmethod
-    def contar_por_categoria():
+    def contar_por_categoria(solo_activos=False):
+        cond = " WHERE activo = 1" if solo_activos else ""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute("SELECT idCategoria, COUNT(*) FROM producto GROUP BY idCategoria")
+            cursor.execute(f"SELECT idCategoria, COUNT(*) FROM producto{cond} GROUP BY idCategoria")
             filas = cursor.fetchall()
         conexion.close()
         return {idc: n for idc, n in filas}

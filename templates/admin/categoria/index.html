@@ -11,9 +11,7 @@
 <div class="adm-list-head">
   <div class="adm-head" style="margin-bottom: 0;">
     <div>
-      <h1>Categorías de productos
-        <span class="adm-count-pill">{{ categorias|length }} totales</span>
-      </h1>
+      <h1>Categorías de productos <span class="adm-count-pill">{{ conteos.activas }} activas</span></h1>
       <p class="adm-sub">Organiza la carta y clasifica los platos de Las Musas.</p>
     </div>
     <button type="button" class="btn-brasa" data-cat-abrir data-modo="crear">
@@ -22,29 +20,53 @@
   </div>
 </div>
 
+<form class="adm-actionbar" method="get" action="{{ url_for('admin.categoria.home') }}">
+  <input type="hidden" name="estado" value="{{ estado }}" />
+  <div class="adm-search">
+    <i class="bi bi-search"></i>
+    <input type="search" name="q" value="{{ q }}" list="cat-sug" autocomplete="off"
+           placeholder="Buscar categoría por nombre o descripción…" />
+    <datalist id="cat-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
+  </div>
+</form>
+
+<div class="adm-chips">
+  <a class="adm-chip2 {{ 'is-active' if estado == 'activas' }}" href="{{ url_for('admin.categoria.home', estado='activas', q=q) }}">Activas <b>{{ conteos.activas }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'baja' }}" href="{{ url_for('admin.categoria.home', estado='baja', q=q) }}">De baja <b>{{ conteos.de_baja }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'todas' }}" href="{{ url_for('admin.categoria.home', estado='todas', q=q) }}">Todas <b>{{ conteos.total }}</b></a>
+</div>
+
 <div class="adm-cat-grid">
   {% for c in categorias %}
-    <article class="adm-cat-card">
+    {% set activa = (c|length <= 4) or c[4] %}
+    <article class="adm-cat-card" style="{{ 'opacity:.6;' if not activa }}">
       <div class="adm-cat-card__top">
         <span class="adm-cat-emoji">
           {% if c[3] %}<img src="{{ url_for('static', filename='img/' ~ c[3]) }}" alt="" />
           {% else %}{{ emojis.get(c[1], "🍴") }}{% endif %}
         </span>
-        <span class="adm-badge-cat">{{ totales.get(c[0], 0) }} productos</span>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+          <span class="adm-badge-cat">{{ totales.get(c[0], 0) }} productos</span>
+          {% if not activa %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
+        </div>
       </div>
       <h3>{{ c[1] }}</h3>
       <p>{{ (c[2] or "Sin descripción.") | truncate(90) }}</p>
       <div class="adm-cat-card__foot">
         <button type="button" class="adm-btn-sm" data-cat-abrir data-modo="editar"
-          data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}"
-          data-imagen="{{ c[3] or '' }}">
+          data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}" data-imagen="{{ c[3] or '' }}">
           <i class="bi bi-pencil"></i> Editar
         </button>
-        <form action="{{ url_for('admin.categoria.eliminar') }}" method="POST"
-              onsubmit="return confirm('¿Eliminar la categoría «{{ c[1] }}»? Solo se puede si no tiene productos.');">
+        <form action="{{ url_for('admin.categoria.estado') }}" method="POST">
           {{ campo_csrf() }}
           <input type="hidden" name="idCategoria" value="{{ c[0] }}" />
-          <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i></button>
+          <input type="hidden" name="activar" value="{{ '0' if activa else '1' }}" />
+          <input type="hidden" name="volver" value="{{ estado }}" />
+          {% if activa %}
+            <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-slash-circle"></i> Dar de baja</button>
+          {% else %}
+            <button class="adm-btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
+          {% endif %}
         </form>
       </div>
     </article>
@@ -78,16 +100,16 @@
           <textarea class="musa-input" id="mc-descripcion" name="descripcion" rows="3"
                     placeholder="Breve texto que se muestra en el encabezado de la sección…"></textarea>
         </div>
-        <div class="musa-field mt-3">
+        <div class="musa-field mt-3 adm-foto-box">
+          <img id="mc-preview" class="adm-foto-grande" hidden alt="Vista previa" />
           <label class="adm-drop" for="mc-imagen" id="mc-drop">
-            <span id="mc-drop-txt">
-              <i class="bi bi-image"></i>
-              <strong>Imagen de la categoría (opcional)</strong>
-              <span>PNG, JPG, WEBP hasta 5 MB</span>
-            </span>
-            <img id="mc-preview" hidden alt="" />
+            <i class="bi bi-image"></i>
+            <strong>Imagen de la categoría (opcional)</strong>
+            <span>PNG, JPG, WEBP hasta 5 MB</span>
           </label>
           <input type="file" id="mc-imagen" name="imagen" accept="image/*" hidden />
+          <input class="musa-input" id="mc-url" name="imagen_url" type="url"
+                 placeholder="…o pega el enlace de una imagen de internet" />
         </div>
       </div>
       <div class="adm-modal__foot">
@@ -107,17 +129,19 @@
   var titulo = modal.querySelector("[data-cat-titulo]");
   var btnTxt = modal.querySelector("[data-cat-btn]");
   var preview = document.getElementById("mc-preview");
-  var dropTxt = document.getElementById("mc-drop-txt");
+  var drop = document.getElementById("mc-drop");
+  var url = document.getElementById("mc-url");
   var URL_CREAR = "{{ url_for('admin.categoria.guardar') }}";
   var URL_EDITAR = "{{ url_for('admin.categoria.actualizar') }}";
 
+  function mostrar(src) { preview.src = src; preview.hidden = false; drop.hidden = true; }
+  function limpiar() { preview.hidden = true; drop.hidden = false; }
   function abrir() { modal.classList.add("abierto"); }
   function cerrar() { modal.classList.remove("abierto"); }
 
   document.querySelectorAll("[data-cat-abrir]").forEach(function (b) {
     b.addEventListener("click", function () {
-      form.reset();
-      preview.hidden = true; dropTxt.hidden = false;
+      form.reset(); limpiar();
       if (b.dataset.modo === "editar") {
         titulo.textContent = "Editar categoría";
         btnTxt.textContent = "Guardar cambios";
@@ -125,7 +149,7 @@
         document.getElementById("mc-id").value = b.dataset.id;
         document.getElementById("mc-nombre").value = b.dataset.nombre;
         document.getElementById("mc-descripcion").value = b.dataset.descripcion;
-        if (b.dataset.imagen) { preview.src = "/static/img/" + b.dataset.imagen; preview.hidden = false; dropTxt.hidden = true; }
+        if (b.dataset.imagen) mostrar("/static/img/" + b.dataset.imagen);
       } else {
         titulo.textContent = "Nueva categoría";
         btnTxt.textContent = "Guardar categoría";
@@ -140,9 +164,9 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrar(); });
 
   document.getElementById("mc-imagen").addEventListener("change", function () {
-    var f = this.files[0]; if (!f) return;
-    preview.src = URL.createObjectURL(f); preview.hidden = false; dropTxt.hidden = true;
+    if (this.files[0]) { mostrar(URL.createObjectURL(this.files[0])); url.value = ""; }
   });
+  url.addEventListener("change", function () { if (url.value.trim()) mostrar(url.value.trim()); });
 })();
 </script>
 {% endblock %}

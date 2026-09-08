@@ -13,7 +13,7 @@ def home():
 
 @admin.before_request
 def verificacion_usuario_logueado():
-    from flask import request
+    from flask import request, flash
     # Rutas de sesión que no requieren estar logueado.
     if request.endpoint in ("admin.auth.login", "admin.auth.logout"):
         return
@@ -21,3 +21,9 @@ def verificacion_usuario_logueado():
     if user is None:
         return redirect(url_for("cliente.auth.login"))
     g.user = user
+
+    # Gestión de usuarios: solo el superusuario.
+    ep = request.endpoint or ""
+    if ep.startswith("admin.usuarios.") and user.get("rol") != "superusuario":
+        flash("Solo un superusuario puede entrar a la gestión de usuarios.", "error")
+        return redirect(url_for("admin.home"))

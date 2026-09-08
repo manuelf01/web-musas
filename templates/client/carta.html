@@ -28,7 +28,11 @@
     <form method="get" class="carta-filtros">
       <div class="carta-buscar">
         <i class="bi bi-search"></i>
-        <input type="search" name="q" value="{{ q }}" placeholder="Busca smash, trufa, cerveza…" autocomplete="off" />
+        <input type="search" name="q" value="{{ q }}" placeholder="Busca smash, trufa, cerveza…"
+               list="carta-sugerencias" autocomplete="off" />
+        <datalist id="carta-sugerencias">
+          {% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}
+        </datalist>
       </div>
       <select name="orden" onchange="this.form.submit()" aria-label="Ordenar">
         <option value="recomendados" {{ 'selected' if orden == 'recomendados' }}>Recomendados</option>
