@@ -28,6 +28,48 @@ def _ruta_local(destino):
     """True si `destino` es una ruta interna segura para redirigir después del login."""
     return bool(destino) and destino.startswith("/") and not destino.startswith("//")
 
+
+MAX_CANT_LINEA = 99   # tope de unidades por línea (un pedido no pide 10.000 hamburguesas)
+
+
+def _entero(valor, defecto=0):
+    """int() tolerante: devuelve `defecto` si no se puede convertir."""
+    try:
+        return int(float(str(valor).strip()))
+    except (TypeError, ValueError):
+        return defecto
+
+
+def _leer_carrito():
+    """Parsea `carrito_json` (viene del localStorage del navegador) de forma
+    defensiva. Devuelve una lista de {idProducto:int>0, cantidad:1..99,
+    cremas:[int]}. Ignora todo lo que venga malformado en vez de reventar."""
+    try:
+        crudo = json.loads(request.form.get("carrito_json") or "[]")
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(crudo, list):
+        return []
+
+    limpio = []
+    for it in crudo:
+        if not isinstance(it, dict):
+            continue
+        idp = _entero(it.get("idProducto"))
+        if idp <= 0:
+            continue
+        cant = _entero(it.get("cantidad"), 1)
+        cant = max(1, min(cant, MAX_CANT_LINEA))
+        cremas_raw = it.get("cremas")
+        cremas = []
+        if isinstance(cremas_raw, (list, tuple)):
+            for cid in cremas_raw:
+                c = _entero(cid)
+                if c > 0 and c not in cremas:
+                    cremas.append(c)
+        limpio.append({"idProducto": idp, "cantidad": cant, "cremas": cremas})
+    return limpio
+
 @cliente.route("/")
 def home():
     user = session.get("cliente.auth", None)
@@ -203,7 +245,7 @@ def formulario_registro_cliente():
 @cliente.route("/producto/<int:id>")
 def comprar_producto(id):
     producto = Producto.obtener_producto_por_id(id)
-    if producto is None or not producto.get("activo", True):
+    if producto is None or not producto.get("disponibleTienda", True):
         return redirect(url_for("cliente.carta"))
     cremas = (
         Producto.getProductosCategoria("Cremas")
@@ -265,41 +307,38 @@ def _procesar_compra(user):
         return redirect(url_for("cliente.auth.login", next=url_for("cliente.pag_compra")))
 
     # --- items del carrito (vienen del localStorage, se re-cotizan contra la BD) ---
-    try:
-        carrito = json.loads(request.form.get("carrito_json") or "[]")
-    except ValueError:
-        carrito = []
+    carrito = _leer_carrito()
     if not carrito:
         return _recotizar(user, "Tu carrito está vacío. Agrega algo de la carta.")
 
-    ids_prod = [it.get("idProducto") for it in carrito]
-    ids_crema = [c for it in carrito for c in (it.get("cremas") or [])]
-    precios = Producto.precios_por_ids(ids_prod + ids_crema)
+    ids_prod = [it["idProducto"] for it in carrito]
+    ids_crema = [c for it in carrito for c in it["cremas"]]
+    precios = Producto.precios_por_ids(ids_prod)
+    precios_crema = Producto.precios_por_ids(ids_crema, solo_cremas=True) if ids_crema else {}
 
     items = []
     for it in carrito:
-        p = precios.get(int(it.get("idProducto", 0)))
+        p = precios.get(it["idProducto"])
         if not p:
             continue
-        cantidad = max(1, int(it.get("cantidad", 1)))
         cremas_ids, cremas_extra = [], 0.0
-        for cid in (it.get("cremas") or []):
-            c = precios.get(int(cid))
+        for cid in it["cremas"]:
+            c = precios_crema.get(cid)
             if c:
-                cremas_ids.append(int(cid))
+                cremas_ids.append(cid)
                 cremas_extra += c["precio"]
         precio_unidad = round(p["precio"] + cremas_extra, 2)
         items.append({
-            "idProducto": int(it["idProducto"]),
+            "idProducto": it["idProducto"],
             "nombre": p["nombre"],
             "precioUnidad": precio_unidad,
-            "cantidad": cantidad,
-            "precioTotal": round(precio_unidad * cantidad, 2),
+            "cantidad": it["cantidad"],
+            "precioTotal": round(precio_unidad * it["cantidad"], 2),
             "cremas": cremas_ids,
         })
 
     if not items:
-        return _recotizar(user, "No pudimos procesar los productos del carrito.")
+        return _recotizar(user, "Los productos de tu carrito ya no están disponibles. Vuelve a la carta.")
 
     # --- datos del formulario (editables aunque haya sesión: puede recoger otra persona) ---
     dni = (request.form.get("dni") or "").strip()

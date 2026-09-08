@@ -62,9 +62,9 @@ def guardar():
     if err:
         flash(err, "error")
         return redirect(url_for("admin.categoria.home"))
-    CategoriaProducto.insertar_categoria(
-        request.form["nombreCategoria"], request.form["descripcion"], imagen)
-    flash("Categoría creada.", "ok")
+    err = CategoriaProducto.insertar_categoria(
+        request.form.get("nombreCategoria"), request.form.get("descripcion"), imagen)
+    flash(err or "Categoría creada.", "error" if err else "ok")
     return redirect(url_for('admin.categoria.home'))
 
 
@@ -74,10 +74,13 @@ def actualizar():
     if err:
         flash(err, "error")
         return redirect(url_for("admin.categoria.home"))
-    CategoriaProducto.actualizar_categoria(
-        request.form["nombreCategoria"], request.form["descripcion"],
-        request.form["idCategoria"], imagen)
-    flash("Categoría actualizada." + (" Imagen cambiada." if imagen else ""), "ok")
+    err = CategoriaProducto.actualizar_categoria(
+        request.form.get("nombreCategoria"), request.form.get("descripcion"),
+        request.form.get("idCategoria"), imagen)
+    if err:
+        flash(err, "error")
+    else:
+        flash("Categoría actualizada." + (" Imagen cambiada." if imagen else ""), "ok")
     return redirect(url_for("admin.categoria.home"))
 
 

@@ -12,6 +12,8 @@ def home():
     q = (request.args.get("q") or "").strip()
     per_page = 8
     page = request.args.get(get_page_parameter(), type=int, default=1)
+    if page < 1:
+        page = 1
 
     total = Comprobante.obtener_total()
     comprobantes = Comprobante.listado_paginado(per_page, (page - 1) * per_page)

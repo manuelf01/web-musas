@@ -17,14 +17,19 @@ class CategoriaProducto:
 
     @staticmethod
     def insertar_categoria(nombreCategoria, descripcion, imagen=None):
+        """Devuelve None si se creó, o un texto de error."""
+        nombre = (nombreCategoria or "").strip()
+        if len(nombre) < 2:
+            return "El nombre de la categoría es obligatorio (mínimo 2 caracteres)."
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO categoriaProducto(nombreCategoria, descripcion, imagen) VALUES (%s, %s, %s)",
-                (nombreCategoria, descripcion, imagen or None),
+                (nombre[:50], (descripcion or "").strip()[:255] or None, imagen or None),
             )
         conexion.commit()
         conexion.close()
+        return None
 
     def obtener_categorias(solo_activas=False):
         conexion = obtener_conexion()
@@ -69,18 +74,25 @@ class CategoriaProducto:
         return juego
 
     def actualizar_categoria(nombreCategoria, descripcion, id, imagen=None):
+        """Devuelve None si se actualizó, o un texto de error."""
+        nombre = (nombreCategoria or "").strip()
+        if len(nombre) < 2:
+            return "El nombre de la categoría es obligatorio (mínimo 2 caracteres)."
+        nombre = nombre[:50]
+        descripcion = (descripcion or "").strip()[:255] or None
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             if imagen:
                 cursor.execute(
                     "UPDATE categoriaProducto SET nombreCategoria=%s, descripcion=%s, imagen=%s WHERE idCategoria=%s",
-                    (nombreCategoria, descripcion, imagen, id))
+                    (nombre, descripcion, imagen, id))
             else:
                 cursor.execute(
                     "UPDATE categoriaProducto SET nombreCategoria=%s, descripcion=%s WHERE idCategoria=%s",
-                    (nombreCategoria, descripcion, id))
+                    (nombre, descripcion, id))
         conexion.commit()
         conexion.close()
+        return None
 
 
     # def obtener_idcategoria_por_nombre(nombreCategoria):

@@ -74,6 +74,34 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
 
+### QA adversarial + fixes 2026-09-08
+Batería de ~120 casos (3 roles) contra una BD limpia `db_musuas_qa`. No había
+nada crítico (auth, CSRF, roles, aritmética, IGV, stock, no-show, cancelación
+todo correcto). Se arreglaron 14 hallazgos:
+
+- **Checkout: 500 ante carrito malformado** → `controllers/cliente.py`: nuevo
+  `_leer_carrito()` que sanea `carrito_json` del localStorage (valida que es
+  lista, `int()` tolerante por ítem, cremas → lista + dedupe + solo ids válidos,
+  cantidad 1..99). Ya no revienta con `idProducto`/`cantidad`/crema no numéricos,
+  ni con `carrito_json` que no es lista, ni con cremas duplicadas.
+- **`Pedido.crear_pedido_completo`**: `dict.fromkeys` en las cremas (por si acaso).
+- **Cremas**: `Producto.precios_por_ids(ids, solo_cremas=True)` — una hamburguesa
+  ya no cuela como "crema" y suma su precio.
+- **CRUD productos: 500 ante datos malos** → `model/Producto.py`: helpers
+  `_a_precio` / `_a_stock` (nunca lanzan, rechazan negativos), `categoria_existe`.
+  `insertar_producto` / `actualizar_producto` devuelven `None` | texto de error.
+  `PRECIO_MAX = 100000`. Ya no se guardan precio/stock negativos ni se revienta
+  con precio "gratis" o categoría inexistente. Controladores muestran el flash.
+- **Categoría dada de baja**: ahora SÍ saca sus productos de la tienda —
+  `obtener_productos(solo_activos)`, `getProductosCategoria`, `precios_por_ids`,
+  `contar_por_categoria(solo_activos)` filtran `cp.activo = 1`;
+  `obtener_producto_por_id` expone `disponibleTienda`; `comprar_producto` lo usa.
+- **Categoría nombre vacío** → `insertar_categoria` / `actualizar_categoria`
+  validan (mín. 2 chars) y devuelven error.
+- **CSRF**: `<meta name="csrf-token">` en ambos `base.html` (token siempre disponible).
+- **Paginación productos**: `per_page` 9 → 60 (el filtro en vivo cubre todo el
+  catálogo sin recargar) + guard `page < 1`.
+
 ### Entrega para el compañero 2026-09-08
 - **`sql.sql` reescrito**: crea `db_musuas` desde cero con TODO el esquema
   (migraciones 001–010 ya incluidas) + datos de ejemplo (6 categorías, 20

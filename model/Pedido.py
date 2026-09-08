@@ -271,7 +271,7 @@ class Pedido:
                         (siguiente_detalle, id_pedido, it["idProducto"], it["nombre"],
                          it["precioUnidad"], it["cantidad"], it["precioTotal"]),
                     )
-                    for id_crema in it.get("cremas", []):
+                    for id_crema in dict.fromkeys(it.get("cremas", [])):  # sin duplicados
                         cursor.execute(
                             """INSERT INTO detalleCremas (idPedido, idCrema, idDetalleOrden)
                                VALUES (%s, %s, %s)""",

@@ -30,8 +30,12 @@ def _imagen_del_form(prefijo_ruta):
 def home():
     q = (request.args.get("q") or "").strip()
     estado = request.args.get("estado", "activos")
-    per_page = 9
+    # Alto para que el catálogo entre en una sola página y el filtro en vivo
+    # (que actúa sobre las filas visibles) cubra todo sin recargar.
+    per_page = 60
     page = request.args.get(get_page_parameter(), type=int, default=1)
+    if page < 1:
+        page = 1
 
     catalogo = Producto.obtener_productos()
     sin_stock = sum(1 for p in catalogo if p["activo"] and not p["existencias"])
@@ -87,14 +91,11 @@ def guardar():
     if err:
         flash(err, "error")
         return redirect(url_for("admin.productos.home"))
-    resultado = Producto.insertar_producto(
-        request.form["nombre"], request.form["descripcion"], request.form["precio"],
-        request.form["existencias"], request.form.get("categorias"), imagen,
+    error = Producto.insertar_producto(
+        request.form.get("nombre"), request.form.get("descripcion"), request.form.get("precio"),
+        request.form.get("existencias"), request.form.get("categorias"), imagen,
     )
-    if resultado is False:
-        flash("Completa todos los campos del producto.", "error")
-    else:
-        flash("Producto agregado a la carta.", "ok")
+    flash(error or "Producto agregado a la carta.", "error" if error else "ok")
     return redirect(url_for("admin.productos.home"))
 
 
@@ -105,11 +106,14 @@ def actualizar():
     if err:
         flash(err, "error")
         return redirect(url_for("admin.productos.home"))
-    Producto.actualizar_producto(
-        request.form["nombre"], request.form["descripcion"], request.form["precio"],
-        request.form["existencias"], id, request.form.get("categorias"), imagen,
+    error = Producto.actualizar_producto(
+        request.form.get("nombre"), request.form.get("descripcion"), request.form.get("precio"),
+        request.form.get("existencias"), id, request.form.get("categorias"), imagen,
     )
-    flash("Producto actualizado." + (" Imagen cambiada." if imagen else ""), "ok")
+    if error:
+        flash(error, "error")
+    else:
+        flash("Producto actualizado." + (" Imagen cambiada." if imagen else ""), "ok")
     return redirect(url_for("admin.productos.home"))
 
 

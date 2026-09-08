@@ -1,7 +1,47 @@
 from bd import obtener_conexion
 
+PRECIO_MAX = 100000     # tope defensivo
+
+
+def _a_precio(valor):
+    """Devuelve (precio_float, error). Nunca lanza."""
+    try:
+        p = round(float(str(valor).strip()), 2)
+    except (TypeError, ValueError):
+        return 0.0, "El precio debe ser un número (ej. 18.50)."
+    if p < 0:
+        return 0.0, "El precio no puede ser negativo."
+    if p > PRECIO_MAX:
+        return 0.0, f"El precio no puede pasar de S/ {PRECIO_MAX:,.0f}."
+    return p, None
+
+
+def _a_stock(valor):
+    """Devuelve (stock_int, error). Nunca lanza."""
+    try:
+        s = int(float(str(valor).strip()))
+    except (TypeError, ValueError):
+        return 0, "Las existencias deben ser un número entero."
+    if s < 0:
+        return 0, "Las existencias no pueden ser negativas."
+    return s, None
+
 
 class Producto:
+
+    @staticmethod
+    def categoria_existe(id_categoria):
+        try:
+            idc = int(id_categoria)
+        except (TypeError, ValueError):
+            return False
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM categoriaProducto WHERE idCategoria = %s", (idc,))
+            existe = cursor.fetchone() is not None
+        conexion.close()
+        return existe
+
     @staticmethod
     def getProductosCategoria(id):
         conexion = obtener_conexion()
@@ -9,10 +49,12 @@ class Producto:
         with conexion.cursor() as cursor:
             if type(id) == str:
                 cursor.execute(
-                    "select p.* from producto p inner join categoriaProducto cp on cp.idCategoria = p.idCategoria where cp.nombreCategoria = %s and p.activo = 1 order by p.idProducto", (id,))
+                    "select p.* from producto p inner join categoriaProducto cp on cp.idCategoria = p.idCategoria "
+                    "where cp.nombreCategoria = %s and p.activo = 1 and cp.activo = 1 order by p.idProducto", (id,))
             else:
                 cursor.execute(
-                    "select * from producto where idCategoria = %s and activo = 1 order by idProducto", (id,))
+                    "select p.* from producto p inner join categoriaProducto cp on cp.idCategoria = p.idCategoria "
+                    "where p.idCategoria = %s and p.activo = 1 and cp.activo = 1 order by p.idProducto", (id,))
             productos = cursor.fetchall()
         conexion.close()
 
@@ -36,27 +78,31 @@ class Producto:
 
     @staticmethod
     def insertar_producto(nombre, descripcion, precio, existencias, idCategoria, imagen=None):
-
-        if nombre == "" or descripcion == "" or precio == "" or existencias == "" or idCategoria == "":
-            return False
-
-        nombre = nombre.strip()
-        descripcion = descripcion.strip()
-        precio = float(precio.strip()) if type(precio) == str else precio
-        existencias = int(existencias.strip()) if type(
-            existencias) == str else existencias
-        idCategoria = int(idCategoria.strip()) if type(
-            idCategoria) == str else idCategoria
+        """Devuelve None si se creó, o un texto de error."""
+        nombre = (nombre or "").strip()
+        descripcion = (descripcion or "").strip()
+        if not nombre or not descripcion or str(precio).strip() == "" \
+                or str(existencias).strip() == "" or str(idCategoria).strip() == "":
+            return "Completa todos los campos del producto."
+        precio, err = _a_precio(precio)
+        if err:
+            return err
+        existencias, err = _a_stock(existencias)
+        if err:
+            return err
+        if not Producto.categoria_existe(idCategoria):
+            return "La categoría seleccionada no existe."
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
                 "INSERT INTO producto(idCategoria, nombre, descripcion, precio, existencias, imagen) "
                 "VALUES (%s, %s, %s, %s, %s, %s)",
-                (idCategoria, nombre, descripcion, precio, existencias, imagen or None),
+                (int(idCategoria), nombre[:100], descripcion[:255], precio, existencias, imagen or None),
             )
         conexion.commit()
         conexion.close()
+        return None
 
     _COLS = ("p.idProducto, p.idCategoria, p.nombre, p.descripcion, p.precio, "
              "p.existencias, p.imagen, p.destacado, p.nota, cp.nombreCategoria, p.activo")
@@ -72,7 +118,7 @@ class Producto:
 
     @staticmethod
     def obtener_productos(solo_activos=False):
-        cond = " WHERE p.activo = 1" if solo_activos else ""
+        cond = " WHERE p.activo = 1 AND cp.activo = 1" if solo_activos else ""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
@@ -110,7 +156,7 @@ class Producto:
         with conexion.cursor() as cursor:
             cursor.execute(
                 "SELECT p.idProducto, p.nombre, p.descripcion, p.precio, p.existencias, "
-                "cp.nombreCategoria, p.idCategoria, p.imagen, p.destacado, p.nota, p.activo "
+                "cp.nombreCategoria, p.idCategoria, p.imagen, p.destacado, p.nota, p.activo, cp.activo "
                 "FROM producto p INNER JOIN categoriaProducto cp ON p.idCategoria = cp.idCategoria "
                 "WHERE p.idProducto = %s", (id,))
             seleccion = cursor.fetchone()
@@ -131,32 +177,45 @@ class Producto:
             "destacado": seleccion[8],
             "nota": seleccion[9],
             "activo": bool(seleccion[10]) if seleccion[10] is not None else True,
+            "categoriaActiva": bool(seleccion[11]) if seleccion[11] is not None else True,
+            "disponibleTienda": bool(seleccion[10]) and bool(seleccion[11]),
         }
 
     @staticmethod
     def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria, imagen=None):
+        """Devuelve None si se actualizó, o un texto de error. Los campos vacíos
+        conservan el valor actual."""
+        try:
+            id = int(id)
+        except (TypeError, ValueError):
+            return "Producto no válido."
+        actual = Producto.obtener_producto_por_id(id)
+        if actual is None:
+            return "El producto ya no existe."
 
-        id = int(id)
-        nombre = nombre.strip()
-        descripcion = descripcion.strip()
-        precio = float(precio.strip()) if type(precio) == str else precio
-        existencias = int(existencias.strip()) if type(
-            existencias) == str else existencias
-        idCategoria = int(idCategoria.strip()) if type(
-            idCategoria) == str else idCategoria
+        nombre = (nombre or "").strip() or actual["nombre"]
+        descripcion = (descripcion or "").strip() or actual["descripcion"]
 
-        if nombre == "" or descripcion == "" or precio == "" or existencias == "" or idCategoria == "":
-            producto = Producto.obtener_producto_por_id(id)
-            if nombre == "":
-                nombre = producto["nombre"]
-            if descripcion == "":
-                descripcion = producto["descripcion"]
-            if precio == "":
-                precio = producto["precio"]
-            if existencias == "":
-                existencias = producto["existencias"]
-            if idCategoria == "":
-                idCategoria = producto["idCategoria"]
+        if str(precio).strip() == "":
+            precio = actual["precio"]
+        else:
+            precio, err = _a_precio(precio)
+            if err:
+                return err
+
+        if str(existencias).strip() == "":
+            existencias = actual["existencias"]
+        else:
+            existencias, err = _a_stock(existencias)
+            if err:
+                return err
+
+        if str(idCategoria).strip() == "":
+            idCategoria = actual["idCategoria"]
+        elif not Producto.categoria_existe(idCategoria):
+            return "La categoría seleccionada no existe."
+        idCategoria = int(idCategoria)
+        nombre, descripcion = nombre[:100], descripcion[:255]
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
@@ -175,6 +234,7 @@ class Producto:
                 )
         conexion.commit()
         conexion.close()
+        return None
 
     def obtener_productos_limite(por_categoria=4):
         conexion = obtener_conexion()
@@ -212,17 +272,21 @@ class Producto:
         ]
 
     @staticmethod
-    def precios_por_ids(ids):
-        """{ idProducto: {'nombre':..., 'precio':...} } para los ids dados."""
-        ids = [int(i) for i in ids if str(i).isdigit()]
+    def precios_por_ids(ids, solo_cremas=False):
+        """{ idProducto: {'nombre':..., 'precio':...} } para los ids dados, solo de
+        productos activos de categorías activas. `solo_cremas=True` restringe a la
+        categoría 'Cremas' (para que una hamburguesa no cuele como crema)."""
+        ids = [int(i) for i in ids if str(i).strip().lstrip("-").isdigit() and int(i) > 0]
         if not ids:
             return {}
         marcadores = ",".join(["%s"] * len(ids))
+        extra = " AND cp.nombreCategoria = 'Cremas'" if solo_cremas else ""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                f"SELECT idProducto, nombre, precio FROM producto "
-                f"WHERE idProducto IN ({marcadores}) AND activo = 1",
+                f"SELECT p.idProducto, p.nombre, p.precio FROM producto p "
+                f"INNER JOIN categoriaProducto cp ON cp.idCategoria = p.idCategoria "
+                f"WHERE p.idProducto IN ({marcadores}) AND p.activo = 1 AND cp.activo = 1{extra}",
                 ids,
             )
             filas = cursor.fetchall()
@@ -249,10 +313,15 @@ class Producto:
 
     @staticmethod
     def contar_por_categoria(solo_activos=False):
-        cond = " WHERE activo = 1" if solo_activos else ""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute(f"SELECT idCategoria, COUNT(*) FROM producto{cond} GROUP BY idCategoria")
+            if solo_activos:
+                cursor.execute(
+                    "SELECT p.idCategoria, COUNT(*) FROM producto p "
+                    "INNER JOIN categoriaProducto cp ON cp.idCategoria = p.idCategoria "
+                    "WHERE p.activo = 1 AND cp.activo = 1 GROUP BY p.idCategoria")
+            else:
+                cursor.execute("SELECT idCategoria, COUNT(*) FROM producto GROUP BY idCategoria")
             filas = cursor.fetchall()
         conexion.close()
         return {idc: n for idc, n in filas}

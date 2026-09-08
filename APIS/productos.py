@@ -53,8 +53,8 @@ def insertar_producto():
 
         if validate_idCategoria is not None:
             validate_insert = Producto.insertar_producto(nombre, descripcion, precio, existencias, idCategoria)
-            if validate_insert == False:
-                return jsonify({"Mensaje":"Todos los campos obligatorios", "status:":"0"})
+            if validate_insert:  # None = ok; str/False = error
+                return jsonify({"Mensaje": str(validate_insert), "status:":"0"})
             return jsonify({"Mensaje":"Producto registrado correctamente", "status:":"1"})
         return jsonify({"Mensaje":"No existe la categoria", "status:":"0"})
     except Exception as ex: 
