@@ -57,6 +57,10 @@ class Pedido:
     def _auto_no_show():
         """Marca como 'no recogió' los pedidos de hoy muy vencidos, devuelve stock
         y suma al contador del cliente. Se llama antes de leer franjas / panel."""
+        # En modo demo el reloj no cuenta: no se auto-marca nada como no-show
+        # (si no, los pedidos de prueba desaparecen apenas pasa su hora).
+        if Pedido.DEMO:
+            return
         ahora = datetime.now()
         corte = (ahora - timedelta(minutes=Pedido.GRACIA_NOSHOW_MIN)).strftime("%H:%M:%S")
         conexion = obtener_conexion()
