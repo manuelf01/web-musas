@@ -5,10 +5,13 @@
 
   var base = Number(root.dataset.precio) || 0;
   var qtyEl = document.getElementById("dp-qty");
-  var btnTexto = document.querySelectorAll("[data-dp-btn-texto]");
   var mobPrecio = document.getElementById("dp-mob-precio");
   var mobQty = document.getElementById("dp-mob-qty");
   var qty = 1;
+
+  function btnTextos() {
+    return document.querySelectorAll("[data-dp-btn-texto]");
+  }
 
   function cremasSeleccionadas() {
     return Array.prototype.map.call(
@@ -33,7 +36,7 @@
   function render() {
     var t = total().toFixed(2);
     if (qtyEl) qtyEl.textContent = qty;
-    btnTexto.forEach(function (el) {
+    btnTextos().forEach(function (el) {
       el.textContent = "Agregar al carrito — S/ " + t;
     });
     if (mobPrecio) mobPrecio.textContent = "S/ " + t;
@@ -51,17 +54,43 @@
     c.addEventListener("change", render);
   });
 
+  var agregando = false;
   document.querySelectorAll("[data-agregar]").forEach(function (b) {
     b.addEventListener("click", function () {
-      window.MusasCarrito.agregar({
-        idProducto: Number(root.dataset.id),
-        nombre: root.dataset.nombre,
-        precio: base,
-        imagen: root.dataset.imagen || null,
-        cantidad: qty,
-        cremas: cremasSeleccionadas(),
-      });
-      window.location.href = root.dataset.carritoUrl;
+      if (agregando) return;
+      agregando = true;
+
+      var unidades = qty;
+      window.MusasCarrito.agregarConAnim(
+        {
+          idProducto: Number(root.dataset.id),
+          nombre: root.dataset.nombre,
+          precio: base,
+          imagen: root.dataset.imagen || null,
+          cantidad: unidades,
+          cremas: cremasSeleccionadas(),
+        },
+        b,
+        {
+          href: root.dataset.carritoUrl,
+          mensaje: unidades + "× " + root.dataset.nombre + " en el carrito",
+        }
+      );
+
+      // Estado de confirmación del botón (sin sacar al cliente de la página).
+      var span = b.querySelector("[data-dp-btn-texto]");
+      var icono = b.querySelector("i");
+      var icoPrev = icono ? icono.className : null;
+      b.classList.add("is-ok");
+      if (icono) icono.className = "bi bi-check-lg";
+      if (span) span.textContent = "¡Agregado!";
+      setTimeout(function () {
+        b.classList.remove("is-ok");
+        if (icono && icoPrev) icono.className = icoPrev;
+        qty = 1;
+        render();
+        agregando = false;
+      }, 1400);
     });
   });
 

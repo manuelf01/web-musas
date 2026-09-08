@@ -4,13 +4,21 @@
   "Nueva": "mint",
   "Especial de la casa": "peach", "Para compartir": "peach", "Barril": "peach"
 } %}
+{% set _ph_ico = {
+  "Hamburguesas": "bi-fire", "Salchipapas": "bi-fire", "Salchipapa": "bi-fire",
+  "Bebidas": "bi-cup-straw", "Combos": "bi-bag-heart-fill",
+  "Postres": "bi-cake2-fill", "Cremas": "bi-droplet-half",
+  "Piqueos": "bi-egg-fried", "Acompañamientos": "bi-basket-fill"
+} %}
 <article class="producto-card" data-filtro-item data-filtro-texto="{{ p.nombre }} {{ p.descripcion }} {{ p.nombreCategoria or '' }}"
          data-reveal data-reveal-delay="{{ (loop.index0 % 4) if loop is defined else 0 }}">
   <div class="producto-card__media">
     {% if p.imagen %}
       <img src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="{{ p.nombre }}" loading="lazy" />
     {% else %}
-      <div class="producto-card__ph"><i class="bi bi-fire"></i></div>
+      <div class="producto-card__ph" data-cat="{{ p.nombreCategoria or '' }}">
+        <i class="bi {{ _ph_ico.get(p.nombreCategoria, 'bi-fire') }}"></i>
+      </div>
     {% endif %}
     {% if p.destacado %}
       <span class="producto-card__badge" data-tono="{{ _tonos.get(p.destacado, 'mostaza') }}">{{ p.destacado }}</span>

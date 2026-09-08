@@ -45,10 +45,17 @@
         return;
       }
       if (!items || !items.length) return;
-      // Se suma al carrito actual (no lo reemplaza).
+      // Se suma al carrito actual (no lo reemplaza) y se queda en la página.
       var actual = window.MusasCarrito.leer();
       window.MusasCarrito.guardar(actual.concat(items));
-      window.location.href = "/carrito";
+      window.MusasCarrito.volar(b);
+      var n = items.reduce(function (s, it) {
+        return s + Number(it.cantidad || 1);
+      }, 0);
+      window.MusasCarrito.toast(n + " producto(s) agregado(s) al carrito", {
+        href: "/carrito",
+        accion: "Ver carrito",
+      });
     });
   });
 })();

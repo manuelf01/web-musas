@@ -653,10 +653,25 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
   align-items: center;
   justify-content: center;
   font-size: 64px;
-  color: rgba(219, 66, 0, 0.28);
+  color: rgba(219, 66, 0, 0.32);
   background:
-    radial-gradient(circle at 50% 40%, rgba(245, 200, 66, 0.22), transparent 60%),
+    radial-gradient(circle at 50% 38%, rgba(245, 200, 66, 0.22), transparent 62%),
     var(--musa-crema-baja);
+}
+.producto-card__ph[data-cat="Bebidas"] {
+  color: rgba(41, 128, 185, 0.4);
+  background: radial-gradient(circle at 50% 38%, rgba(41, 128, 185, 0.16), transparent 62%), var(--musa-crema-baja);
+}
+.producto-card__ph[data-cat="Postres"] {
+  color: rgba(196, 84, 140, 0.42);
+  background: radial-gradient(circle at 50% 38%, rgba(196, 84, 140, 0.15), transparent 62%), var(--musa-crema-baja);
+}
+.producto-card__ph[data-cat="Cremas"] {
+  color: rgba(46, 125, 91, 0.42);
+  background: radial-gradient(circle at 50% 38%, rgba(46, 125, 91, 0.14), transparent 62%), var(--musa-crema-baja);
+}
+.producto-card__ph[data-cat="Combos"] {
+  color: rgba(219, 66, 0, 0.4);
 }
 .producto-card__badge {
   position: absolute;
@@ -2852,6 +2867,97 @@ body.adm { background: var(--musa-crema); }
 
 @media (max-width: 440px) {
   .anat-lista { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   Micro-interacción "agregar al carrito"
+   ============================================================ */
+/* Rebote del pill del carrito (y su versión en la tabbar móvil) */
+@keyframes musa-cart-bump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.16); }
+  55% { transform: scale(0.94); }
+  100% { transform: scale(1); }
+}
+.musa-cart-pill.is-bump,
+.musa-tabbar a.is-bump { animation: musa-cart-bump 0.6s ease; }
+.musa-cart-pill.is-bump { border-color: var(--musa-brasa); box-shadow: 0 0 0 4px rgba(219, 66, 0, 0.16); }
+
+/* Bolsita que vuela desde el botón hasta el carrito */
+.musa-fly {
+  position: fixed;
+  z-index: 12000;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 999px;
+  background: var(--musa-brasa);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  pointer-events: none;
+  box-shadow: 0 8px 20px rgba(219, 66, 0, 0.4);
+  transition: transform 0.75s cubic-bezier(0.5, -0.2, 0.3, 1), opacity 0.75s ease;
+}
+
+/* Avisos (toasts) */
+.musa-toasts {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 12001;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+.musa-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px 11px 16px;
+  background: var(--musa-carbon);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  box-shadow: 0 12px 30px rgba(26, 21, 18, 0.28);
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.musa-toast.is-visible { opacity: 1; transform: none; }
+.musa-toast i { color: var(--musa-mostaza); }
+.musa-toast__accion {
+  color: #fff;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  background: var(--musa-brasa);
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.musa-toast__accion:hover { filter: brightness(1.08); }
+
+@media (max-width: 640px) {
+  .musa-toasts { bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 12px); }
+}
+
+/* Estado de confirmación del botón "Agregar" */
+.btn-brasa.is-ok { background: var(--musa-exito); pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .musa-cart-pill.is-bump, .musa-tabbar a.is-bump { animation: none; }
+  .musa-toast { transition-duration: 0.01s; }
 }
 
 @media (prefers-reduced-motion: reduce) {

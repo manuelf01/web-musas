@@ -2,6 +2,10 @@
 {% block title %}{{ producto.nombre }} · Las Musas{% endblock %}
 {% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}
 
+{% block meta_desc %}{{ producto.descripcion | truncate(180) }}{% endblock %}
+{% block og_title %}{{ producto.nombre }} — S/ {{ '%.2f'|format(producto.precio or 0) }} · Las Musas{% endblock %}
+{% block og_image %}{% if producto.imagen %}{{ url_for('static', filename='img/' ~ producto.imagen, _external=True) }}{% else %}{{ url_for('static', filename='img/hamburguesas/h-2.jpg', _external=True) }}{% endif %}{% endblock %}
+
 {% set agotado = not producto.existencias or producto.existencias <= 0 %}
 
 {% block content %}
@@ -29,7 +33,15 @@
         {% if producto.imagen %}
           <img src="{{ url_for('static', filename='img/' ~ producto.imagen) }}" alt="{{ producto.nombre }}" />
         {% else %}
-          <div class="producto-card__ph"><i class="bi bi-fire"></i></div>
+          {% set _dp_ico = {
+            "Hamburguesas": "bi-fire", "Salchipapas": "bi-fire",
+            "Bebidas": "bi-cup-straw", "Combos": "bi-bag-heart-fill",
+            "Postres": "bi-cake2-fill", "Cremas": "bi-droplet-half",
+            "Piqueos": "bi-egg-fried", "Acompañamientos": "bi-basket-fill"
+          } %}
+          <div class="producto-card__ph" data-cat="{{ producto.nombreCategoria or '' }}">
+            <i class="bi {{ _dp_ico.get(producto.nombreCategoria, 'bi-fire') }}"></i>
+          </div>
         {% endif %}
         {% if producto.destacado %}
           <span class="dp-media__flag"><i class="bi bi-fire"></i> {{ producto.destacado }}</span>

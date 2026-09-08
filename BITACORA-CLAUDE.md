@@ -75,6 +75,27 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
 | 2026-09-08 | **Modal de confirmación en todos los CRUD** (dar de baja / reactivar / guardar / entregar / cancelar pedido). Ver "Modal de confirmación 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Inicio: sección "Anatomía de Las Musas"** — hamburguesa SVG que se despieza al pasar el cursor / tocar. Ver "Anatomía 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **Agregar al carrito con micro-interacción + preview al compartir + placeholders por categoría.** Ver "Carrito + previews 2026-09-08" abajo. | `git revert` |
+
+### Carrito + previews 2026-09-08
+- **Micro-interacción "agregar al carrito"** (`static/js/carrito.js`, CSS
+  "Micro-interacción"): al agregar, una bolsita vuela del botón al pill del
+  carrito, el pill rebota y sale un **toast** ("Agregado al carrito · Ver
+  carrito"). API nueva: `MusasCarrito.agregarConAnim(item, origenEl, opts)`,
+  `.toast(msg, {href, accion})`, `.volar(el)`, `.rebotar()`.
+- **Detalle de producto** ya **no redirige** al carrito al agregar: se queda en
+  la página, el botón muestra "¡Agregado!" 1.4 s y la cantidad vuelve a 1
+  (`static/js/detalle-producto.js`). Igual en "Repetir pedido" de Mis pedidos.
+- **Vista previa al compartir el enlace** (WhatsApp/redes): meta `og:*` +
+  `twitter:card` + `description` en `templates/client/base.html` (bloques
+  `meta_desc`, `og_title`, `og_desc`, `og_image`). `seleccion-producto.html`
+  los sobreescribe con nombre/precio/imagen del producto. Imagen por defecto:
+  `img/hamburguesas/h-2.jpg`. `url_for(..., _external=True)`.
+- **Placeholders de producto por categoría**: si un producto no tiene foto, en
+  vez del ícono de fuego genérico se muestra el ícono de su categoría
+  (`bi-cup-straw` bebidas, `bi-cake2-fill` postres, etc.) con un tinte suave
+  (`_producto_card.html`, `seleccion-producto.html`, CSS `.producto-card__ph[data-cat]`).
+  **Sigue faltando la foto real por producto** (se sube desde el panel).
 
 ### Anatomía 2026-09-08
 - Sección nueva en `templates/client/index.html` entre el hero y "Cómo funciona":
