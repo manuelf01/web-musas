@@ -6,17 +6,26 @@
 
 ---
 
-## 0. División del trabajo (IMPORTANTE para el merge)
+## 0. División del trabajo + integración (IMPORTANTE)
 
 - **Ramirez (esta rama):** tienda completa (inicio, carta, detalle, carrito, checkout,
   mis pedidos), login/registro unificado, **CRUD de pedidos** + dashboard, e infra
-  transversal (sistema de diseño CSS, seguridad/CSRF, migraciones 001–006, anti no-show,
+  transversal (sistema de diseño CSS, seguridad/CSRF, migraciones, anti no-show,
   animaciones).
-- **Betancurt (rama `Betancurt`):** todo el backoffice de **productos, categorías,
-  usuarios, ventas, reportes, detalle de venta y comprobantes**.
+- **Compañero (rama `origin/Manuelf`, commit `4ce46ae`):** backoffice de **productos,
+  categorías, usuarios, ventas, detalle de venta y comprobantes** — pero además rehízo
+  en paralelo la tienda/login/checkout/esquema con otro diseño y migraciones.
 
-**2026-09-07:** se REVIRTIÓ toda la zona de Betancurt a la versión de `main` para no
-pisar su trabajo. Ver `MERGE_NOTES.md` para la lista exacta y cómo integrar.
+**2026-09-07 — INTEGRACIÓN HECHA.** Decisión del usuario: la base es `Ramirez`; se
+porta la *lógica* del panel de `Manuelf` a este diseño/esquema. NO se hizo `git merge`
+(incompatibles: `keyPedido` numérico vs VARCHAR(64), `precio` FLOAT vs DECIMAL, auth
+distinta, sin no-show en su rama). Lo integrado:
+- CRUD productos/categorías/usuarios con subida de imagen (`subidas.py`), sobre `admin/base.html`.
+- Ventas/comprobantes con paginación (`flask_paginate`); el comprobante se emite al
+  **entregar** el pedido (`Pedido._emitir_comprobante` en `marcar_recogido`), porque el pago es al recojo.
+- Migraciones 007 (`categoriaProducto.imagen`) y 008 (`comprobante.dniNoRegistrado` CHAR(8)).
+- CSRF ya NO tiene módulos exentos: todos los formularios del panel llevan `{{ campo_csrf() }}`.
+Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 
 ---
 
@@ -60,6 +69,7 @@ pisar su trabajo. Ver `MERGE_NOTES.md` para la lista exacta y cómo integrar.
 | 2026-09-07 | **Ancho + animaciones**: contenedores más anchos, banda "Explora" a todo el ancho, grillas fluidas, aparición al scroll. Ver "Ancho + animaciones 2026-09-07". | `git revert` |
 | 2026-09-07 | **Separación del trabajo de Betancurt**: toda su zona vuelve a `main`. Ver `MERGE_NOTES.md` + sección 0. | — |
 | 2026-09-07 | **Fixes: horario de recojo, admin en tienda, carrito compartido**. Ver "Fixes checkout/sesión 2026-09-07" abajo. | `git revert` |
+| 2026-09-07 | **Integración del panel del compañero** (`Manuelf`): CRUD productos/categorías/usuarios + ventas/comprobantes sobre el diseño de esta rama; comprobante al entregar; migraciones 007–008; CSRF sin exentos. Ver sección 0 + `MERGE_NOTES.md`. | `git revert` |
 
 ### Fixes checkout/sesión 2026-09-07
 Reportes del usuario tras probar el flujo:

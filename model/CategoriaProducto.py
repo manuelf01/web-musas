@@ -16,11 +16,13 @@ class CategoriaProducto:
 
 
     @staticmethod
-    def insertar_categoria(nombreCategoria, descripcion):
+    def insertar_categoria(nombreCategoria, descripcion, imagen=None):
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute("INSERT INTO categoriaProducto(nombreCategoria, descripcion) VALUES (%s, %s)",
-            (nombreCategoria, descripcion))
+            cursor.execute(
+                "INSERT INTO categoriaProducto(nombreCategoria, descripcion, imagen) VALUES (%s, %s, %s)",
+                (nombreCategoria, descripcion, imagen or None),
+            )
         conexion.commit()
         conexion.close()
 
@@ -35,10 +37,12 @@ class CategoriaProducto:
 
     def eliminar_categoria(idCategoria):
         conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute("DELETE FROM categoriaProducto WHERE idCategoria = %s", (idCategoria,))
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("DELETE FROM categoriaProducto WHERE idCategoria = %s", (idCategoria,))
             conexion.commit()
-        conexion.close()
+        finally:
+            conexion.close()
 
 
     def obtener_categoria_por_id(idCategoria):
@@ -46,16 +50,23 @@ class CategoriaProducto:
         juego = None
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT idCategoria, nombreCategoria, descripcion FROM categoriaProducto WHERE idCategoria = %s", (idCategoria))
+                "SELECT idCategoria, nombreCategoria, descripcion, imagen FROM categoriaProducto WHERE idCategoria = %s",
+                (idCategoria,))
             juego = cursor.fetchone()
         conexion.close()
         return juego
-    
-    def actualizar_categoria(nombreCategoria, descripcion, id):
+
+    def actualizar_categoria(nombreCategoria, descripcion, id, imagen=None):
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute("UPDATE categoriaProducto SET nombreCategoria = %s, descripcion = %s WHERE idCategoria = %s",
-                        ( nombreCategoria, descripcion, id))
+            if imagen:
+                cursor.execute(
+                    "UPDATE categoriaProducto SET nombreCategoria=%s, descripcion=%s, imagen=%s WHERE idCategoria=%s",
+                    (nombreCategoria, descripcion, imagen, id))
+            else:
+                cursor.execute(
+                    "UPDATE categoriaProducto SET nombreCategoria=%s, descripcion=%s WHERE idCategoria=%s",
+                    (nombreCategoria, descripcion, id))
         conexion.commit()
         conexion.close()
 

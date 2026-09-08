@@ -1,85 +1,51 @@
-{% extends "admin/main.html" %} {% block titulo %} Editar categoria {% endblock
-%} {% block contenido %}
-<section class="w-50 m-auto">
-  <h3 class="m-3 fs-5 fw-bold">Editar Usuario</h3>
-  <form
-    action="{{url_for('admin.usuarios.actualizar')}}"
-    method="post"
-    class="d-flex flex-column justify-content-center"
-  >
-    {# Enviar el id en un campo oculto #}
-    <input type="hidden" name="id" value="{{userUsuario[0]}}" />
-    <div class="mb-3">
-      <label for="dni" class="form-label">Dni:</label>
-      <input
-        value="{{userUsuario[1]}}"
-        disabled
-        required
-        type="text"
-        class="form-control"
-        placeholder="dni"
-        name="dni"
-        id="dni"
-      />
+{% extends "admin/base.html" %}
+{% block title %}Editar usuario · Backoffice Las Musas{% endblock %}
+{% block nav_usuarios %}is-active{% endblock %}
+
+{% block content %}
+<div class="adm-head">
+  <div>
+    <h1>Editar usuario</h1>
+    <p><i class="bi bi-pencil"></i> {{ userUsuario[2] }} {{ userUsuario[3] }} · DNI {{ userUsuario[1] }}</p>
+  </div>
+  <a href="{{ url_for('admin.usuarios.home') }}" class="adm-btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<section class="adm-card">
+  <form action="{{ url_for('admin.usuarios.actualizar') }}" method="post" class="adm-form">
+    {{ campo_csrf() }}
+    <input type="hidden" name="id" value="{{ userUsuario[0] }}" />
+
+    <div class="row g-3">
+      <div class="col-sm-4 musa-field">
+        <label class="musa-field-label">DNI</label>
+        <input value="{{ userUsuario[1] }}" disabled class="musa-input" />
+      </div>
+      <div class="col-sm-4 musa-field">
+        <label class="musa-field-label">Nombres</label>
+        <input value="{{ userUsuario[2] }}" disabled class="musa-input" />
+      </div>
+      <div class="col-sm-4 musa-field">
+        <label class="musa-field-label">Apellidos</label>
+        <input value="{{ userUsuario[3] }}" disabled class="musa-input" />
+      </div>
     </div>
-    <div class="mb-3">
-      <label for="nombres" class="form-label">Nombres:</label>
-      <input
-        disabled
-        value="{{userUsuario[2]}}"
-        required
-        type="text"
-        class="form-control"
-        name="nombres"
-        id="nombres"
-      />
+
+    <div class="musa-field">
+      <label class="musa-field-label" for="correo">Correo</label>
+      <input value="{{ userUsuario[4] }}" type="email" class="musa-input" name="correo" id="correo" />
     </div>
-    <div class="mb-3">
-      <label for="apellidos" class="form-label">Apellidos:</label>
-      <input
-        value="{{userUsuario[3]}}"
-        disabled
-        required
-        type="text"
-        class="form-control"
-        name="apellidos"
-        id="apellidos"
-      />
+    <div class="musa-field">
+      <label class="musa-field-label" for="telefono">Teléfono</label>
+      <input value="{{ userUsuario[5] }}" type="text" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" class="musa-input" name="telefono" id="telefono" />
     </div>
-    <div class="mb-3">
-      <label for="correo" class="form-label">Correo:</label>
-      <input
-        value="{{userUsuario[4]}}"
-        type="text"
-        class="form-control"
-        name="correo"
-        id="correo"
-      />
+    <div class="musa-field">
+      <label class="musa-field-label" for="contraseña">Nueva contraseña <span class="musa-field-hint">déjalo vacío para no cambiarla</span></label>
+      <input type="password" class="musa-input" name="contraseña" id="contraseña" />
     </div>
-    <div class="mb-3">
-      <label for="telefono" class="form-label">Teléfono:</label>
-      <input
-        value="{{userUsuario[5]}}"
-        type="text"
-        class="form-control"
-        name="telefono"
-        id="telefono"
-      />
-    </div>
-    <div class="mb-3">
-      <label for="contraseña" class="form-label">Nueva contraseña:</label>
-      <input
-        type="password"
-        class="form-control"
-        name="contraseña"
-        id="contraseña"
-      />
-    </div>
-    <div class="d-flex justify-content-end gap-2">
-      <button type="submit" class="btn btn-success mt-2">Guardar</button>
-      <a href="{{url_for('admin.usuarios.home')}}" class="btn btn-primary mt-2"
-        >Volver</a
-      >
+    <div class="adm-form__acciones">
+      <a href="{{ url_for('admin.usuarios.home') }}" class="adm-btn-sm">Cancelar</a>
+      <button type="submit" class="btn-brasa"><i class="bi bi-check-lg"></i> Guardar cambios</button>
     </div>
   </form>
 </section>

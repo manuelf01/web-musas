@@ -1,62 +1,58 @@
-{% extends "admin/main.html" %} {% block titulo %} Discos {% endblock %} {%
-block contenido %}
+{% extends "admin/base.html" %}
+{% block title %}Categorías · Backoffice Las Musas{% endblock %}
+{% block nav_categorias %}is-active{% endblock %}
 
-<section class="section m-3">
-  <div class="columns">
-    <div class="column">
-      <h3 class="is-size-3 m-3 fs-5 fw-bold">Categoría Productos</h3>
+{% block content %}
+<div class="adm-head">
+  <div>
+    <h1>Categorías</h1>
+    <p><i class="bi bi-tags"></i> Agrupan los productos de la carta. «Cremas» es la categoría de salsas.</p>
+  </div>
+  <a href="{{ url_for('admin.categoria.agregar') }}" class="btn-brasa">
+    <i class="bi bi-plus-lg"></i> Nueva categoría
+  </a>
+</div>
 
-      <table class="table">
+<section class="adm-card">
+  {% if categorias %}
+    <div class="adm-tabla-wrap">
+      <table class="adm-tabla">
         <thead>
-          <tr>
-            <th>Id Categoría</th>
-            <th>Nombre Categoría</th>
-            <th>Descripción</th>
-            <th>Editar</th>
-            <th>Eliminar</th>
-          </tr>
+          <tr><th>#</th><th>Imagen</th><th>Nombre</th><th>Descripción</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           {% for categoria in categorias %}
-          <tr>
-            <td>{{categoria[0]}}</td>
-            <td>{{categoria[1]}}</td>
-            <td>{{categoria[2]}}</td>
-            <td>
-              {# Pasar el id (lo que hay en categoria[0] )#}
-              <a
-                href="{{url_for('admin.categoria.editar', id=categoria[0])}}"
-                class="btn btn-info"
-                >Editar</a
-              >
-            </td>
-            <td>
-              <form
-                action="{{url_for('admin.categoria.eliminar')}}"
-                method="POST"
-              >
-                <input
-                  type="hidden"
-                  name="idCategoria"
-                  value="{{categoria[0]}}"
-                />
-                <button class="btn btn-danger">Eliminar</button>
-              </form>
-            </td>
-          </tr>
+            <tr>
+              <td class="num">{{ categoria[0] }}</td>
+              <td>
+                {% if categoria[3] %}
+                  <img class="adm-foto-mini" src="{{ url_for('static', filename='img/' ~ categoria[3]) }}" alt="" />
+                {% else %}
+                  <span class="adm-foto-mini adm-foto-mini--vacia"><i class="bi bi-image"></i></span>
+                {% endif %}
+              </td>
+              <td><strong>{{ categoria[1] }}</strong></td>
+              <td style="color: var(--musa-texto-suave);">{{ categoria[2] or '—' }}</td>
+              <td>
+                <div class="acciones">
+                  <a href="{{ url_for('admin.categoria.editar', id=categoria[0]) }}" class="adm-btn-sm">
+                    <i class="bi bi-pencil"></i> Editar
+                  </a>
+                  <form action="{{ url_for('admin.categoria.eliminar') }}" method="POST"
+                        onsubmit="return confirm('¿Eliminar la categoría «{{ categoria[1] }}»? Sus productos quedarán sin categoría.');">
+                    {{ campo_csrf() }}
+                    <input type="hidden" name="idCategoria" value="{{ categoria[0] }}" />
+                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i> Eliminar</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
-      <div class="text-end">
-        <a href="{{url_for('admin.categoria.agregar')}}" class="btn btn-success"
-          >Agregar</a
-        >
-      </div>
     </div>
-
-    {% if hecho: %}
-    <div>"No se puede borrar"</div>
-    {% endif %}
-  </div>
+  {% else %}
+    <p class="adm-vacio">Todavía no hay categorías.</p>
+  {% endif %}
 </section>
 {% endblock %}

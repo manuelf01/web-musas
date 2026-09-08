@@ -51,18 +51,11 @@ jwt = JWT(app, authenticate, identity)
 app.jinja_env.globals["campo_csrf"] = campo_csrf
 app.jinja_env.globals["csrf_token"] = token_csrf
 
-# Módulos del compañero (Betancurt) que aún no tienen el token CSRF en sus
-# formularios. Quedan exentos hasta que él los integre con {{ campo_csrf() }}.
-_CSRF_MODULOS_PENDIENTES = ("admin.productos.", "admin.categoria.", "admin.usuarios.", "admin.ventas.")
-
-
 @app.before_request
 def _proteger_csrf():
     if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
         return
     ep = request.endpoint or ""
-    if ep.startswith(_CSRF_MODULOS_PENDIENTES):
-        return
     # Las APIs JSON (JWT, /api/*) no se pueden falsificar desde otra web sin CORS;
     # el CSRF solo aplica a los tipos que un <form> del navegador puede enviar.
     ctype = (request.content_type or "").split(";")[0].strip()

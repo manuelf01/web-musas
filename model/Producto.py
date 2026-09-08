@@ -35,7 +35,7 @@ class Producto:
         return lista_diccionarios
 
     @staticmethod
-    def insertar_producto(nombre, descripcion, precio, existencias, idCategoria):
+    def insertar_producto(nombre, descripcion, precio, existencias, idCategoria, imagen=None):
 
         if nombre == "" or descripcion == "" or precio == "" or existencias == "" or idCategoria == "":
             return False
@@ -51,9 +51,9 @@ class Producto:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO producto(idCategoria, nombre, descripcion, precio, existencias) "
-                "VALUES (%s, %s, %s, %s, %s)",
-                (idCategoria, nombre, descripcion, precio, existencias),
+                "INSERT INTO producto(idCategoria, nombre, descripcion, precio, existencias, imagen) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (idCategoria, nombre, descripcion, precio, existencias, imagen or None),
             )
         conexion.commit()
         conexion.close()
@@ -122,7 +122,7 @@ class Producto:
         }
 
     @staticmethod
-    def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria):
+    def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria, imagen=None):
 
         id = int(id)
         nombre = nombre.strip()
@@ -148,11 +148,19 @@ class Producto:
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute(
-                "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, existencias=%s, "
-                "idCategoria=%s WHERE idProducto=%s",
-                (nombre, descripcion, precio, existencias, idCategoria, id),
-            )
+            if imagen:
+                # Solo se cambia la imagen si se subió una nueva.
+                cursor.execute(
+                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, existencias=%s, "
+                    "idCategoria=%s, imagen=%s WHERE idProducto=%s",
+                    (nombre, descripcion, precio, existencias, idCategoria, imagen, id),
+                )
+            else:
+                cursor.execute(
+                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, existencias=%s, "
+                    "idCategoria=%s WHERE idProducto=%s",
+                    (nombre, descripcion, precio, existencias, idCategoria, id),
+                )
         conexion.commit()
         conexion.close()
 
