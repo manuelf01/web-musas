@@ -49,7 +49,24 @@ python app.py                   # http://127.0.0.1:5000
 
 # Para probar el checkout fuera del horario 6-10 p.m.:
 set MUSAS_DEMO=1 && python app.py
+
+# 5. Tests
+pip install -r requirements-dev.txt
+pytest -q
 ```
+
+### Tests (`tests/`, pytest)
+- `tests/conftest.py` levanta una base **aparte** `db_musuas_test` a partir de
+  `sql.sql` (le quita `CREATE DATABASE` / `USE` para no tocar la real) y apunta
+  `bd.db` a ella. La base real **nunca** se toca.
+- Fixtures: `bd_limpia` (re-siembra la base; pídela en tests que escriben),
+  `client` / `admin_client` / `cliente_client` (test client con sesión puesta),
+  `csrf` (token para los POST).
+- CI: `.github/workflows/tests.yml` corre `pytest` contra un servicio
+  `mariadb:10.4` en cada push a `Ramirez`/`main` y en cada PR.
+- **Nunca** ejecutar `sql.sql` ni `db/backup_db_musuas.sql` con `mysql < archivo`:
+  llevan `USE db_musuas` dentro y recrean la base real. Solo phpMyAdmin, o el
+  flujo de `conftest.py` (que los limpia antes).
 
 **Cuentas de ejemplo** (creadas por `sql.sql`, contraseña de todas: `Musas2026`):
 

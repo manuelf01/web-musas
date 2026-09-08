@@ -1,5 +1,6 @@
 .venv
 __pycache__
+.pytest_cache
 cfg.py
 DigiCertGlobalRootCA.crt.pem
 static/js/config.js

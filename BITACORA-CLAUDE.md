@@ -80,6 +80,24 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **`idPedido` / `idDetalleOrden` → AUTO_INCREMENT** (migración 011). Ver "AUTO_INCREMENT 2026-09-08" abajo. | `git revert` + revertir 011 |
 | 2026-09-08 | **Seguimiento del pedido para el cliente**: línea de tiempo en vivo en «Mis pedidos» (Recibido → En cocina → Listo → Recogido). Ver "Seguimiento cliente 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
+
+### Tests + CI 2026-09-08
+- **`tests/`** con pytest (67 casos, ~9 s). `tests/conftest.py` construye una base
+  **de pruebas** `db_musuas_test` desde `sql.sql` quitándole las líneas
+  `CREATE DATABASE` / `USE` (que apuntan a la base real) y pone `bd.db` a ella.
+  La base real no se toca; la de pruebas se borra al terminar.
+- Fixtures: `bd_limpia` (re-siembra), `client` / `admin_client` / `cliente_client`
+  (test client con sesión), `csrf` (token para POST).
+- Cubre: política de contraseña, CSRF, flujo del pedido (aritmética pu·cant,
+  stock, estados, comprobante con IGV, AUTO_INCREMENT), reglas (límite de
+  activos, cancelación por estado), CRUD de productos/categorías (validaciones,
+  baja que oculta de la carta), roles de usuario, sanitización del carrito,
+  sugeridos del upsell, humo de rutas, `/pulso` y `/mis-pedidos/estado`.
+- **`.github/workflows/tests.yml`**: corre `pytest` contra `mariadb:10.4` en cada
+  push a `Ramirez`/`main` y en cada PR. `requirements-dev.txt` = requirements + pytest.
+- **Lección del incidente**: `sql.sql` y el backup llevan `USE db_musuas` — nunca
+  correrlos con `mysql < archivo`; solo phpMyAdmin o el flujo de `conftest.py`.
 
 ### Upsell carrito 2026-09-08
 - **`Producto.sugeridos(ids_en_carrito, limite=4)`**: complementos activos y con
