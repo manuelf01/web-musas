@@ -1,110 +1,28 @@
 <!DOCTYPE html>
-<html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap"
-      rel="stylesheet"
-    />
-
-    <!-- <link 
-      rel="stylesheet" 
-      href="https://cdn.jsdelivr.net/npm/bulma@0.9.2/css/bulma.min.css"
-    > -->
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
-      crossorigin="anonymous"
-    />
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/normalize.css')}}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/global.css')}}"
-    />
-    <!-- <link rel="stylesheet" href="../styles/styles.css" /> -->
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/header.css')}}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/footer.css')}}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/button-carrito.css')}}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/categorias.css')}}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/seccion-presentacion.css')}}"
-    />
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/mostrar-productos.css')}}"
-    />
-
-    <link
-      rel="stylesheet"
-      href="{{url_for('static', filename = 'styles/admin/global.css')}}"
-    />
-    <title>Musas</title>
-  </head>
-  <body>
-    <main class="content-col">
-      <div class="lg">
-        <div></div>
-        <nav class="lg-items">
-          <a href="{{url_for('admin.home')}}">
-            <img
-              src="{{url_for('static', filename = 'img/logo.jpg')}}"
-              alt="Logo"
-            />
-          </a>
-          <a class="item" href="{{url_for('admin.pedidos.home')}}">Pedidos </a>
-          <a class="item" href="{{url_for('admin.productos.home')}}">
-            Productos
-          </a>
-          <a class="item" href="{{url_for('admin.categoria.home')}}">
-            Categoria productos
-          </a>
-          <a class="item" href="{{url_for('admin.usuarios.home')}}">
-            Usuarios
-          </a>
-
-          <a class="item" href="{{url_for('admin.ventas.home')}}"> Ventas </a>
-        </nav>
-
-        {% if usuario: %}
-
-        <div>
-          <p style="font-size: 15px; color: var(--color1)">
-            Nombre de usuario : {{usuario["nombres"]}}
-          </p>
-        </div>
-        <div>
-          <a href="{{url_for('admin.auth.logout')}}">
-            <button class="btn btn-danger">Cerrar sesión</button>
-          </a>
-        </div>
-        {% endif %}
-      </div>
-      <div>{%block contenido %} {% endblock %}</div>
-    </main>
-    <script
-      type="module"
-      src="{{url_for('static', filename = 'js/admin/pedidos.js')}}"
-    ></script>
-  </body>
-</html>
+<html lang="es"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#201b18" /><link rel="icon" href="{{ url_for('static',filename='img/logo.jpg') }}" /><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" /><link rel="stylesheet" href="{{ url_for('static',filename='styles/normalize.css') }}" /><link rel="stylesheet" href="{{ url_for('static',filename='styles/musas-design.css') }}" /><title>{% block titulo %}Backoffice{% endblock %} | Las Musas</title></head>
+<body class="admin-body">
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <a class="musas-brand" href="{{ url_for('admin.home') }}">LAS MUSAS<small>BURGER JOINT · BACKOFFICE</small></a>
+    <nav class="admin-nav">
+      <a class="{% if request.endpoint == 'admin.home' %}is-active{% endif %}" href="{{ url_for('admin.home') }}"><span class="admin-nav__icon">▦</span>Resumen</a>
+      <a class="{% if request.blueprint == 'admin.pedidos' %}is-active{% endif %}" href="{{ url_for('admin.pedidos.home') }}"><span class="admin-nav__icon">▤</span>Pedidos</a>
+      <a class="{% if request.blueprint == 'admin.productos' %}is-active{% endif %}" href="{{ url_for('admin.productos.home') }}"><span class="admin-nav__icon">☰</span>Productos</a>
+      <a class="{% if request.blueprint == 'admin.categoria' %}is-active{% endif %}" href="{{ url_for('admin.categoria.home') }}"><span class="admin-nav__icon">◇</span>Categorías</a>
+      <a class="{% if request.blueprint == 'admin.usuarios' %}is-active{% endif %}" href="{{ url_for('admin.usuarios.home') }}"><span class="admin-nav__icon">♙</span>Usuarios</a>
+      <a class="{% if request.blueprint == 'admin.ventas' %}is-active{% endif %}" href="{{ url_for('admin.ventas.home') }}"><span class="admin-nav__icon">↗</span>Ventas</a>
+    </nav>
+    {% if usuario %}<div class="admin-profile"><span class="user-avatar">{{ usuario['nombres'][:1]|upper }}</span><div><strong>{{ usuario['nombres'] }}</strong><small>Administrador</small></div><form action="{{ url_for('admin.auth.logout') }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}" /><button class="logout-icon" type="submit" title="Cerrar sesión">↪</button></form></div>{% endif %}
+  </aside>
+  <section class="admin-main">
+    <header class="admin-topbar"><button class="admin-menu-button musas-btn musas-btn--secondary" style="display:none" type="button">☰</button><span class="admin-topbar__label">Local nocturno · Miraflores</span><div style="display:flex;align-items:center;gap:12px"><span class="status-pill status-pill--success">● Sistema activo</span><a class="user-avatar" href="{{ url_for('cliente.home') }}" title="Ver tienda">⌂</a></div></header>
+    {% with mensajes=get_flashed_messages(with_categories=true) %}{% if mensajes %}<div class="flash-stack">{% for categoria,mensaje in mensajes %}<div class="alert alert-{{ categoria }}">{{ mensaje }}</div>{% endfor %}</div>{% endif %}{% endwith %}
+    <main class="admin-content">{% block contenido %}
+      <div class="admin-page-head"><div><span class="section-kicker">Backoffice en vivo</span><h1>Resumen</h1><p>Bienvenido, {{ usuario['nombres'] if usuario else 'administrador' }}. Control operativo del local.</p></div><a class="musas-btn musas-btn--primary" href="{{ url_for('admin.productos.formulario_agregar') }}">＋ Nuevo producto</a></div>
+      <div class="dashboard-grid"><article class="metric-card"><span class="metric-card__icon">🔥</span><strong>{{ productos|length if productos else 0 }}</strong><span>Productos activos</span></article><article class="metric-card"><span class="metric-card__icon" style="background:#ffe392">▤</span><strong>En vivo</strong><span>Pedidos de hoy</span></article><article class="metric-card"><span class="metric-card__icon" style="background:#dff2e9">S/</span><strong>Ventas</strong><span>Consulta comprobantes</span></article><article class="metric-card"><span class="metric-card__icon" style="background:#eee7e3">♙</span><strong>30 min</strong><span>Duración de sesión segura</span></article></div>
+      <div class="promo-banner"><div><small>Operación nocturna</small><h3>Todo tu sistema, ahora bajo una sola identidad visual.</h3><p>Productos, stock, usuarios, pedidos y ventas conservan su lógica.</p></div><a class="musas-btn musas-btn--primary" href="{{ url_for('admin.pedidos.home') }}">Ver pedidos</a></div>
+    {% endblock %}</main>
+  </section>
+</div>
+<script src="{{ url_for('static',filename='js/admin/shell.js') }}"></script><script type="module" src="{{ url_for('static',filename='js/admin/pedidos.js') }}"></script>
+</body></html>

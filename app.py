@@ -1,12 +1,11 @@
 
-import collections
-import collections.abc
-collections.Mapping = collections.abc.Mapping
+import os
+import secrets
 
-from flask import Flask, request
-from flask_jwt import JWT
+from flask import Flask
+from flask_jwt_extended import JWTManager
 from flask_swagger_ui import get_swaggerui_blueprint
-from Token.usuario import authenticate, identity
+from flask_wtf.csrf import CSRFProtect
 from controllers.admin import *
 from controllers.cliente import *
 from controllers.autenticacion import *
@@ -25,9 +24,19 @@ from APIS.detalleComprobante import api_detalleComprobante
 from APIS.detalleCremas import api_detalleCremas
 from APIS.comprobante import api_comprobante
 from APIS.transacciones import transaccion
+from APIS.autenticacion import api_autenticacion
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "secret-key"
-jwt = JWT(app, authenticate, identity)
+secret_key = os.getenv("SECRET_KEY") or secrets.token_hex(32)
+app.config.update(
+    SECRET_KEY=secret_key,
+    JWT_SECRET_KEY=os.getenv("JWT_SECRET_KEY") or secret_key,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true",
+    MAX_CONTENT_LENGTH=5 * 1024 * 1024,
+)
+jwt = JWTManager(app)
+csrf = CSRFProtect(app)
 
 # swagger
 SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
@@ -74,11 +83,27 @@ app.register_blueprint(api_detalleComprobante)
 app.register_blueprint(api_detalleCremas)
 app.register_blueprint(api_comprobante)
 app.register_blueprint(transaccion)
+app.register_blueprint(api_autenticacion)
 
-app.secret_key = "mysecretkey"
+# Las API usan JWT o son endpoints públicos de la tienda; CSRF se reserva para
+# formularios que autentican mediante cookie de sesión.
+for api_blueprint in (
+    api_productos,
+    api_usuarios,
+    api_registro_pedidos,
+    api_detalleOrden,
+    api_categoriaProducto,
+    api_detalleComprobante,
+    api_detalleCremas,
+    api_comprobante,
+    transaccion,
+    api_autenticacion,
+):
+    csrf.exempt(api_blueprint)
+
 # Iniciar el servidor
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.getenv("FLASK_DEBUG", "false").lower() == "true")
 
 # print(app.url_map)

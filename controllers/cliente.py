@@ -23,7 +23,7 @@ def productos_categoria(categoria):
 
 @cliente.route("/formulario_registro_cliente")
 def formulario_registro_cliente():
-     return render_template("client/registro.html")
+     return redirect(url_for("cliente.auth.registro"))
 
 @cliente.route("/producto/<int:id>")
 def comprar_producto(id):

@@ -1,42 +1,20 @@
-{% extends "client/main.html" %} {% block titulo %} Registrarse {% endblock %}
+{% extends "client/main.html" %}
+{% block titulo %}Iniciar sesión | Las Musas{% endblock %}
 {% block contenido %}
-<section class="w-50 m-auto mt-5 mb-3 h-100">
-  <div class="h-100 d-flex flex-column justify-content-center">
-    <h3 class="m-3 fs-5 fw-bold">Iniciar sesión</h3>
-    <form
-      action="{{url_for('cliente.auth.login')}}"
-      method="post"
-      class="d-flex flex-column justify-content-center"
-    >
-      <div class="mb-3">
-        <label for="usuario" class="form-label">Dni:</label>
-        <input
-          required
-          type="number"
-          class="form-control"
-          name="usuario"
-          id="dni"
-        />
-      </div>
-      <div class="mb-3">
-        <label for="contraseña" class="form-label">Contraseña:</label>
-        <input
-          type="password"
-          class="form-control"
-          name="contraseña"
-          id="contraseña"
-        />
-      </div>
-      <div class="d-flex justify-content-end gap-2">
-        <a
-          href="{{url_for('cliente.auth.registro')}}"
-          class="btn btn-primary mt-2"
-        >
-          Registrarse
-        </a>
-        <button type="submit" class="btn btn-success mt-2">Iniciar</button>
-      </div>
+<main class="auth-layout">
+  <aside class="auth-photo"><span class="eyebrow">Brasas nocturnas · Lima</span><h2>Pasión, fuego &amp; sazón.</h2><p>Carne madurada, pan brioche recién horneado y salsas de autor. El punto de encuentro tras la medianoche.</p></aside>
+  <section class="auth-panel-new"><div class="auth-box">
+    <a class="section-link" href="{{ url_for('cliente.home') }}">← Volver a la carta</a>
+    <div style="margin-top:30px"><span class="auth-kicker">Área clientes</span><h1>Iniciar sesión</h1><p class="page-subtitle">Accede con tu DNI. El personal también puede usar su usuario administrativo.</p></div>
+    <form class="auth-form" action="{{ url_for('cliente.auth.login') }}" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div><label for="usuario">DNI o nombre de usuario</label><input class="form-control" required type="text" name="usuario" id="usuario" value="{{ request.form.get('usuario','') }}" autocomplete="username" placeholder="Ej. 74289103" /></div>
+      <div><label for="contraseña">Contraseña</label><input class="form-control" required type="password" name="contraseña" id="contraseña" autocomplete="current-password" placeholder="Tu contraseña" /></div>
+      <div class="captcha-inline"><div><label>Verificación humana</label><div class="captcha-question">{{ captcha_pregunta }}</div></div><div><label for="captcha">Resultado</label><input class="form-control" required inputmode="numeric" type="text" name="captcha" id="captcha" autocomplete="off" /></div></div>
+      <button class="musas-btn musas-btn--primary" type="submit" style="width:100%">Iniciar sesión →</button>
     </form>
-  </div>
-</section>
+    <p class="page-subtitle" style="text-align:center;margin-top:22px">¿Aún no tienes cuenta? <a class="section-link" href="{{ url_for('cliente.auth.registro') }}">Regístrate aquí</a></p>
+    <p class="field-help" style="margin-top:38px">🔒 Tus datos se protegen mediante una sesión segura.</p>
+  </div></section>
+</main>
 {% endblock %}

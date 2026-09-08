@@ -1,77 +1,28 @@
-import { IDCATEGORIACREMAS, SERVER, mapCremas } from "./config.js";
 import { obtenerCremas } from "./fetchApis.js";
-const containerProductos = document.querySelector(".productos-comprar");
+import { obtenerCarrito } from "./carritoStorage.js";
 
-document.addEventListener("DOMContentLoaded", async () => {
-  await obtenerCremas(SERVER, IDCATEGORIACREMAS, mapCremas);
-  showProductos();
-});
+const mapCremas = new Map();
+const contenedor = document.querySelector(".productos-comprar");
 
-function showProductos() {
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    const producto = JSON.parse(localStorage.getItem(key));
-
-    const div = document.createElement("div");
-    const divImagen = document.createElement("div");
-    const img = document.createElement("img");
-    const divInformacion = document.createElement("div");
-    const divCremas = document.createElement("div");
-    const listaCremas = document.createElement("ul");
-    const precio = document.createElement("p");
-    const nombre = document.createElement("p");
-    const cantidad = document.createElement("p");
-    const precioTotal = document.createElement("p");
-
-    listaCremas.classList.add("d-flex", "gap-2");
-    const p = document.createElement("p");
-    p.textContent = "Cremas: ";
-    p.classList.add("fw-bold");
-    const idCremas = producto.cremas;
-
-    idCremas.forEach((id) => {
-      const li = document.createElement("li");
-      const p = document.createElement("p");
-      p.textContent = mapCremas.get(id);
-      li.appendChild(p);
-      listaCremas.appendChild(li);
-    });
-    divCremas.appendChild(p);
-    divCremas.appendChild(listaCremas);
-
-    precio.textContent = `Precio unidad: ${producto.precio}`;
-    nombre.textContent = producto.nombre;
-    cantidad.textContent = `Cantidad: ${producto.cantidad}`;
-    precioTotal.textContent = `Precio total: ${producto.precioTotal}`;
-
-    div.classList.add(
-      "d-flex",
-      "gap-2",
-      "align-items-center",
-      "justify-content-center",
-      `producto-carrito-${key}`,
-      "mb-3"
-    );
-
-    precio.classList.add("precio");
-    nombre.classList.add("nombre", "fw-bold", "fs-6", "text-center");
-    cantidad.classList.add("cantidad");
-    precioTotal.classList.add("precioTotal");
-
-    divImagen.classList.add("w-50", "text-center");
-    img.src = "/static/img/hamburguesas/h-2.jpg";
-    img.alt = "Imagen de la hamburguesa";
-    img.style.width = "200px";
-    divInformacion.classList.add("w-50");
-    divInformacion.appendChild(nombre);
-    divInformacion.appendChild(precio);
-    divInformacion.appendChild(cantidad);
-    divInformacion.appendChild(precioTotal);
-    divInformacion.appendChild(divCremas);
-    divImagen.appendChild(img);
-
-    div.appendChild(divImagen);
-    div.appendChild(divInformacion);
-    containerProductos.appendChild(div);
-  }
+function moneda(valor) { return `S/ ${Number(valor).toFixed(2)}`; }
+function pintar() {
+  if (!contenedor) return;
+  const carrito = obtenerCarrito();
+  contenedor.replaceChildren();
+  carrito.forEach((producto) => {
+    const fila = document.createElement("div");
+    fila.className = "summary-line";
+    const detalle = document.createElement("span");
+    const nombre = document.createElement("strong");
+    nombre.textContent = `${producto.cantidad}× ${producto.nombre}`;
+    detalle.appendChild(nombre);
+    const salsas = (producto.cremas || []).map((id) => mapCremas.get(id)).filter(Boolean).join(", ");
+    if (salsas) { const small = document.createElement("small"); small.className = "field-help"; small.textContent = salsas; detalle.appendChild(small); }
+    const precio = document.createElement("strong"); precio.textContent = moneda(Number(producto.precio) * Number(producto.cantidad));
+    fila.append(detalle, precio); contenedor.appendChild(fila);
+  });
+  const total = carrito.reduce((suma, item) => suma + Number(item.precio) * Number(item.cantidad), 0);
+  const salida = document.querySelector("#checkout-total"); if (salida) salida.textContent = moneda(total);
 }
+
+document.addEventListener("DOMContentLoaded", async () => { await obtenerCremas(mapCremas); pintar(); });

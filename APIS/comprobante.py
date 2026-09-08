@@ -1,6 +1,6 @@
 # insertar, obtener todos, obtener por dni
 from flask import Blueprint, request, jsonify
-from flask_jwt import jwt_required
+from security import admin_required
 from model.DetalleOrden import DetalleOrden
 from model.Comprobante import Comprobante
 from model.Usuario import Usuario
@@ -9,7 +9,7 @@ api_comprobante = Blueprint('api_comprobante', __name__)
 
 
 @api_comprobante.route("/obtener_comprobantes")
-@jwt_required()
+@admin_required()
 def obtener_comprobante():
     try:
         comprobantes = Comprobante.obtener_comprobante()
@@ -24,7 +24,7 @@ def obtener_comprobante():
 
 
 @api_comprobante.route('/obtener_comprobante_cliente/<int:id>')
-@jwt_required()
+@admin_required()
 def obtener_comprobante_cliente(id):
     try:
         validarUsuario = Usuario.validar_usuario_id(id)

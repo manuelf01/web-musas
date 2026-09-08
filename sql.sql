@@ -27,7 +27,7 @@ CREATE TABLE detalleComprobante (
 CREATE TABLE detalleCremas (
   idPedido       int(11) NOT NULL, 
   idCrema        int(11) NOT NULL, 
-  idDetalleOrden int(11) NOT NULL, 
+  idDetalleOrden int(11) NOT NULL AUTO_INCREMENT,
   PRIMARY KEY (idPedido, 
   idCrema, 
   idDetalleOrden));
@@ -46,21 +46,26 @@ CREATE TABLE producto (
   idCategoria smallint(6) NOT NULL, 
   nombre      varchar(100) NOT NULL, 
   descripcion varchar(255) NOT NULL, 
-  precio      float, 
-  existencias smallint(6), 
+  precio      decimal(10,2) NOT NULL,
+  existencias int unsigned DEFAULT 0 NOT NULL,
+  imagen      varchar(255),
   PRIMARY KEY (idProducto));
 CREATE TABLE registroPedido (
-  idPedido         int(11) NOT NULL, 
+  idPedido         int(11) NOT NULL AUTO_INCREMENT,
   idUsuario        int(11), 
   dniNoRegistrado  char(8) NOT NULL, 
+  nombres          varchar(100) NOT NULL,
   numeroTelefono   char(9) NOT NULL, 
   estadoRecojo     tinyint(1) DEFAULT false NOT NULL, 
   horaRecojo       time NOT NULL, 
   fechaPedido      date DEFAULT (CURRENT_DATE) NOT NULL, 
   estadoBoleta     tinyint(1) NOT NULL, 
   billeteraDigital tinyint(1) NOT NULL, 
-  keyPedido        smallint(6) NOT NULL, 
-  PRIMARY KEY (idPedido));
+  keyPedido        varchar(64) NOT NULL,
+  PRIMARY KEY (idPedido),
+  UNIQUE KEY uq_registroPedido_keyPedido (keyPedido),
+  KEY idx_registroPedido_fechaPedido (fechaPedido),
+  KEY idx_registroPedido_estadoRecojo (estadoRecojo));
 CREATE TABLE usuario (
   idUsuario   int(11) NOT NULL AUTO_INCREMENT, 
   dni         char(8) NOT NULL, 
@@ -68,9 +73,16 @@ CREATE TABLE usuario (
   apellidos   varchar(100) NOT NULL, 
   correo      varchar(200) NOT NULL, 
   numTelf     char(9) NOT NULL, 
-  contraseña  varchar(100) NOT NULL, 
-  tipoUsuario tinyint(1) NOT NULL, 
-  PRIMARY KEY (idUsuario));
+  contraseña  varchar(255) NOT NULL,
+  tipoUsuario tinyint(1) NOT NULL,
+  nombreUsuario varchar(20),
+  intentosFallidos tinyint unsigned DEFAULT 0 NOT NULL,
+  bloqueadoHasta datetime,
+  bloqueoPermanente tinyint(1) DEFAULT 0 NOT NULL,
+  PRIMARY KEY (idUsuario),
+  UNIQUE KEY uq_usuario_dni (dni),
+  UNIQUE KEY uq_usuario_correo (correo),
+  UNIQUE KEY uq_usuario_nombreUsuario (nombreUsuario));
 ALTER TABLE detalleComprobante ADD CONSTRAINT FKdetalleCom998263 FOREIGN KEY (idComprobante) REFERENCES comprobante (idComprobante);
 ALTER TABLE detalleOrden ADD CONSTRAINT FKdetalleOrd26951 FOREIGN KEY (idProducto) REFERENCES producto (idProducto);
 ALTER TABLE detalleCremas ADD CONSTRAINT FKdetalleCre999352 FOREIGN KEY (idDetalleOrden, idPedido) REFERENCES detalleOrden (idDetalleOrden, idPedido);

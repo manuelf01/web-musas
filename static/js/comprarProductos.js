@@ -1,17 +1,22 @@
 import { SERVER } from "./config.js";
 import { transaccionCompra } from "./fetchApis.js";
+import { guardarPedido, obtenerCarrito, vaciarCarrito } from "./carritoStorage.js";
 const btnComprar = document.querySelector("#comprar-producto");
-btnComprar.addEventListener("click", comprarProductos);
+btnComprar?.addEventListener("click", comprarProductos);
 
 async function comprarProductos(e) {
   e.preventDefault();
+  const formulario = document.querySelector("#form-compra");
+  if (!formulario?.checkValidity()) {
+    formulario?.reportValidity();
+    return;
+  }
   const dni = document.querySelector("#dni").value;
   const nombres = document.querySelector("#nombres").value;
   const telefono = document.querySelector("#telefono").value;
   const horaRecojo = document.querySelector("#hora-recojo").value;
-  const checkboxes = document.querySelectorAll("input[type=checkbox]");
-  const boleta = checkboxes[0].checked;
-  const billeteraDigital = checkboxes[1].checked;
+  const boleta = document.querySelector("#boleta").checked;
+  const billeteraDigital = document.querySelector("#billetera-digital").checked;
   let id = document.querySelector("#idUsuario");
   if (id) {
     id = id.value;
@@ -26,39 +31,29 @@ async function comprarProductos(e) {
     billeteraDigital,
   };
   const productos = arregloProductos();
+  if (!productos.length) {
+    alert("Tu carrito está vacío");
+    window.location.href = `${SERVER}/carrito`;
+    return;
+  }
   const objetoTransaccion = {
     datosPedido,
     productos,
   };
-  console.log(objetoTransaccion);
   const rpta = await transaccionCompra(objetoTransaccion);
-  console.log(rpta);
-  if (rpta.status == "1") {
-    guardarPedidos();
-    localStorage.clear();
+  if (rpta?.status === "1") {
+    guardarPedido(rpta.pedido, productos);
+    vaciarCarrito();
     alert("Compra realizada con éxito");
     window.location.href = `${SERVER}/`;
+  } else {
+    alert(rpta?.mensaje ?? "No se pudo realizar la compra");
   }
-}
-function guardarPedidos() {
-  const listaPedidos = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    const pedido = localStorage.getItem(key);
-
-    listaPedidos.push(pedido);
-  }
-  localStorage.setItem("mis_pedidos", JSON.stringify(listaPedidos));
-  console.log(listaPedidos);
 }
 function arregloProductos() {
-  const productos = [];
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    const producto = JSON.parse(localStorage.getItem(key));
-    productos.push(producto);
-  }
-
-  return productos;
+  return obtenerCarrito().map(({ idProducto, cantidad, cremas }) => ({
+    idProducto,
+    cantidad,
+    cremas,
+  }));
 }

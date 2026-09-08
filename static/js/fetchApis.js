@@ -1,17 +1,11 @@
-import { datosAutorizacion, SERVER } from "./config.js";
+import { SERVER } from "./config.js";
 
-let token;
-
-async function obtenerCremas(SERVER, IDCATEGORIACREMAS, mapCremas) {
-  const url = `${SERVER}/get_productos_categoria/${IDCATEGORIACREMAS}`;
+async function obtenerCremas(mapCremas) {
+  const url = `${SERVER}/get_productos_categoria_nombre/${encodeURIComponent("Cremas")}`;
 
   try {
-    await autorizacion(SERVER);
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `JWT ${token.access_token}`,
-      },
-    });
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("No se pudieron obtener las cremas");
     const data = await response.json();
 
     data.productos.forEach((crema) => {
@@ -25,15 +19,14 @@ async function obtenerCremas(SERVER, IDCATEGORIACREMAS, mapCremas) {
 async function transaccionCompra(datosTransaccion) {
   const url = `${SERVER}/transaccion_compra`;
   try {
-    await autorizacion();
     const response = await fetch(url, {
       method: "POST",
       body: JSON.stringify(datosTransaccion),
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token.access_token}`,
       },
     });
+    if (!response.ok && response.status >= 500) throw new Error("Error del servidor");
     return response.json();
   } catch (error) {
     console.log(error);
@@ -43,30 +36,15 @@ async function transaccionCompra(datosTransaccion) {
 async function transaccionComprobante(datosTransaccion) {
   const url = `${SERVER}/transaccion_comprobante`;
   try {
-    await autorizacion();
     const response = await fetch(url, {
       method: "POST",
       body: JSON.stringify(datosTransaccion),
       headers: {
         "Content-Type": "application/json",
-        Authorization: `JWT ${token.access_token}`,
       },
     });
+    if (!response.ok && response.status >= 500) throw new Error("Error del servidor");
     return response.json();
-  } catch (error) {
-    console.log(error);
-  }
-}
-async function autorizacion() {
-  try {
-    const accesToken = await fetch(`${SERVER}/auth`, {
-      method: "POST",
-      body: JSON.stringify(datosAutorizacion),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    token = await accesToken.json();
   } catch (error) {
     console.log(error);
   }

@@ -1,135 +1,28 @@
-{% extends "client/main.html" %} {% block titulo %} Comprar producto {% endblock
-%} {% block contenido %}
-
-<section class="mt-5 mb-3 row m-auto">
-  <div class="col-lg-6">
-    <h3 class="m-3 fs-5 fw-bold">Productos</h3>
-    <div class="productos-comprar"></div>
-  </div>
-  <div class="col-lg-6">
-    <h3 class="m-3 fs-5 fw-bold">Datos compra</h3>
-    <form
-      action=""
-      method="post"
-      class="d-flex flex-column justify-content-center m-5"
-    >
-      {% if sesion %}
-      <input
-        type="hidden"
-        name="idUsuario"
-        value="{{idUsuario}}"
-        id="idUsuario"
-      />
-      {% endif %}
-      <div class="mb-3">
-        <label for="dni" class="form-label">Dni:</label>
-        {% if sesion %}
-        <input
-          required
-          disabled
-          type="number"
-          class="form-control"
-          name="dni"
-          id="dni"
-          value="{{dni}}"
-        />
-        {% else %}
-        <input
-          required
-          type="number"
-          class="form-control"
-          name="dni"
-          id="dni"
-        />
-        {% endif %}
+{% extends "client/main.html" %}
+{% block titulo %}Finalizar pedido | Las Musas{% endblock %}
+{% block contenido %}
+<main class="page-shell"><div class="musas-container">
+  <div class="breadcrumb"><a href="{{ url_for('cliente.home') }}">Inicio</a> / <a href="{{ url_for('cliente.pag_carrito') }}">Carrito</a> / Finalizar pedido</div>
+  <span class="section-kicker">● Retiro en mostrador</span><h1 class="page-title">Finalizar pedido</h1><p class="page-subtitle">Retiro en Calle Schell 385, Miraflores · Cocina artesanal activa.</p>
+  <div class="checkout-layout" style="margin-top:30px">
+    <form id="form-compra" class="surface-card form-card" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />{% if sesion %}<input type="hidden" name="idUsuario" value="{{ idUsuario }}" id="idUsuario" />{% endif %}
+      <h2 class="form-section-title"><span class="step-number">1</span> Datos de quien recoge</h2>
+      <div class="form-grid">
+        <div><label for="dni">Documento de identidad (DNI)</label><input required inputmode="numeric" pattern="[0-9]{8}" maxlength="8" type="text" class="form-control" name="dni" id="dni" value="{{ dni if sesion else '' }}" {% if sesion %}readonly{% endif %} placeholder="Ingresa 8 dígitos" /></div>
+        <div><label for="telefono">Teléfono de contacto</label><input required inputmode="numeric" pattern="[0-9]{9}" maxlength="9" type="tel" class="form-control" name="telefono" id="telefono" value="{{ telefono if sesion else '' }}" {% if sesion %}readonly{% endif %} placeholder="987 654 321" /></div>
+        <div class="field--full"><label for="nombres">Nombres y apellidos</label><input required minlength="2" type="text" class="form-control" name="nombres" id="nombres" value="{{ (cliente + ' ' + apellidos) if sesion else '' }}" {% if sesion %}readonly{% endif %} placeholder="Nombre de quien recoge" /></div>
+        <div class="field--full"><label for="hora-recojo">¿A qué hora pasas a recoger?</label><input required type="time" class="form-control" name="hora-recojo" id="hora-recojo" /></div>
       </div>
-      <div class="mb-3">
-        <label for="nombres" class="form-label">Nombres:</label>
-        {% if sesion %}
-        <input
-          required
-          disabled
-          type="text"
-          class="form-control"
-          name="nombres"
-          id="nombres"
-          value="{{cliente + ' ' + apellidos}}"
-        />
-        {% else %}
-        <input
-          required
-          type="text"
-          class="form-control"
-          name="nombres"
-          id="nombres"
-        />
-        {% endif %}
-      </div>
-      <div class="mb-3">
-        <label for="telefono" class="form-label">Número telefono:</label>
-        {% if sesion %}
-        <input
-          disabled
-          type="number"
-          class="form-control"
-          name="telefono"
-          id="telefono"
-          value="{{telefono}}"
-        />
-        {% else %}
-        <input
-          type="number"
-          class="form-control"
-          name="telefono"
-          id="telefono"
-        />
-        {% endif %}
-      </div>
-      <div class="mb-3">
-        <label for="hora-recojo" class="form-label">Hora recojo:</label>
-        <input
-          type="time"
-          class="form-control"
-          name="hora-recojo"
-          id="hora-recojo"
-        />
-      </div>
-      <div class="form-check">
-        <input
-          type="checkbox"
-          class="form-check-input"
-          id="boleta"
-          name="boleta"
-        />
-        <label class="form-check-label" for="exampleCheck1">Boleta</label>
-      </div>
-      <div class="form-check">
-        <input
-          type="checkbox"
-          class="form-check-input"
-          id="billetera-digital"
-          name="billeteraDigital"
-        />
-        <label class="form-check-label" for="exampleCheck1"
-          >Billetera digital</label
-        >
-      </div>
-
-      <div class="text-end mt-2">
-        <button id="comprar-producto" type="submit" class="btn btn-success">
-          Comprar
-        </button>
-      </div>
+      <hr style="margin:30px 0;border-color:var(--musas-border)" />
+      <h2 class="form-section-title"><span class="step-number">2</span> Comprobante y forma de pago</h2>
+      <label class="option-card" style="margin-bottom:12px"><input type="checkbox" class="form-check-input" id="boleta" name="boleta" /><span><strong>Emitir boleta electrónica</strong><small>Se asociará a los datos ingresados.</small></span></label>
+      <label class="option-card"><input type="checkbox" class="form-check-input" id="billetera-digital" name="billeteraDigital" /><span><strong>Pagar con billetera digital</strong><small>Yape o Plin al confirmar el pedido.</small></span></label>
+      <button id="comprar-producto" type="submit" class="musas-btn musas-btn--primary" style="width:100%;margin-top:24px">Confirmar pedido →</button>
     </form>
+    <aside class="surface-card cart-summary"><h2 style="font-size:23px">Tu pedido para llevar</h2><div class="productos-comprar"></div><div class="summary-total"><span>Total a pagar</span><strong id="checkout-total">S/ 0.00</strong></div><p class="field-help" style="text-align:center">Te avisaremos cuando tu pedido esté listo para retirar.</p></aside>
   </div>
-</section>
-
-<script
-  src="{{url_for('static', filename = 'js/mostrarProductosCompra.js')}}"
-  type="module"
-></script>
-<script
-  src="{{url_for('static', filename= 'js/comprarProductos.js')}}"
-  type="module"
-></script>
+</div></main>
+<script src="{{ url_for('static', filename='js/mostrarProductosCompra.js') }}" type="module"></script>
+<script src="{{ url_for('static', filename='js/comprarProductos.js') }}" type="module"></script>
 {% endblock %}

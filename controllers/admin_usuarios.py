@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, request, url_for, g
+from flask import Blueprint, flash, g, redirect, render_template, request, url_for
 from model.Usuario import Usuario
 usuarios = Blueprint('usuarios', __name__, url_prefix='/usuarios')
 
@@ -28,7 +28,11 @@ def actualizar():
     correo = request.form["correo"]
     numTel = request.form["telefono"]
     contra = request.form["contraseña"]
-    Usuario.actualizar_usuario(correo, numTel, contra, id, False)
+    error = Usuario.actualizar_usuario(correo, numTel, contra, id, False)
+    if error:
+        flash(error, "danger")
+        return redirect(url_for("admin.usuarios.form_editar", id=id))
+    flash("Usuario actualizado correctamente.", "success")
     return redirect(url_for("admin.usuarios.home"))
 
 
@@ -47,8 +51,18 @@ def guardar():
     correo = request.form["correo"]
     numTel = request.form["telefono"]
     contra = request.form["contraseña"]
-    if (Usuario.obtener_usuario_dni_tipo(dni, False) is None):
-        Usuario.insertar_usuario(
-            dni, nombres, apellidos, correo, numTel, contra, False)
-        return redirect(url_for("admin.usuarios.home"))
-    return redirect(url_for("admin.usuarios.form_agregar"))
+    error = Usuario.insertar_usuario(
+        dni, nombres, apellidos, correo, numTel, contra, False
+    )
+    if error:
+        flash(error, "danger")
+        return redirect(url_for("admin.usuarios.form_agregar"))
+    flash("Administrador creado correctamente.", "success")
+    return redirect(url_for("admin.usuarios.home"))
+
+
+@usuarios.route("/desbloquear", methods=["POST"])
+def desbloquear():
+    Usuario.desbloquear_usuario(request.form["id"])
+    flash("Cuenta desbloqueada correctamente.", "success")
+    return redirect(url_for("admin.usuarios.home"))

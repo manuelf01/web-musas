@@ -1,77 +1,27 @@
-{% extends "client/main.html" %} {% block contenido %}
-<section class="seccion-presentacion">
-  <div class="seccion-presentacion-content">
-    <div class="presentacion-logo">
-      <img
-        src="{{url_for('static', filename = 'img/logo.jpg')}}"
-        alt="Logo Musas"
-      />
-    </div>
-    <div class="presentacion-texto">
-      <h2>Las Musas</h2>
-      <p>6:00 p.m - 10:00 p.m</p>
-    </div>
-  </div>
+{% extends "client/main.html" %}
+{% from "client/_components.html" import product_card %}
+{% block titulo %}Las Musas | Hamburguesas artesanales{% endblock %}
+{% block contenido %}
+<section class="hero">
+  <div class="musas-container"><div class="hero__content">
+    <span class="eyebrow">● Abierto ahora · Miraflores &amp; Barranco</span>
+    <h1>Las Musas</h1>
+    <p>Carne Angus certificada, pan brioche artesanal y el fuego de las brasas nocturnas de Lima.</p>
+    <div class="hero__actions"><a class="musas-btn musas-btn--primary" href="#carta">Ver la carta →</a><span class="musas-btn" style="color:#fff;background:rgba(255,255,255,.12)">Entrega promedio 35 min</span></div>
+  </div></div>
 </section>
-<!-- Menú de categorias -->
-<div class="categorias-content">
-  <div class="categorias">
-    <div class="categorias-in">
-      {% for categoria in categorias %} {% if categoria[1] != "Cremas" %}
-      <a
-        href="{{url_for('cliente.productos_categoria', categoria = categoria[1])}}"
-        class="text-black"
-      >
-        <div class="categoria-item">
-          <!-- <div>
-            <img src="#" alt="Categoria" />
-          </div> -->
-          <p>{{categoria[1]}}</p>
-        </div>
-      </a>
-      {% endif %} {% endfor %}
-    </div>
-  </div>
-</div>
 
-<main class="productos">
-  {% for categoria in categorias %} {% if categoria[1] != "Cremas" %}
-  <div>
-    <div class="cabecera">
-      <h2>Productos {{categoria[1]}}</h2>
-      <a
-        href="{{url_for('cliente.productos_categoria', categoria=categoria[1])}}"
-      >
-        <button class="ver-mas">Ver más</button>
-      </a>
-    </div>
-    <div class="show-producto d-flex justify-content-around">
-      {% for producto in productos %} {% if producto["idCategoria"] ==
-      categoria[0] %}
-      <div class="card p-0" style="width: 300px">
-        <img
-          class="card-img-top"
-          src="{{url_for('static', filename = 'img/hamburguesas/ha-1.jpg')}}"
-          alt=""
-        />
-        <div class="card-body">
-          <h4 class="card-title">{{producto["nombre"]}}</h4>
-          <div>
-            <p class="card-text">{{producto["descripcion"]}}</p>
-            <p class="card-text">Precio: {{producto["precio"]}}</p>
-          </div>
+<nav class="category-bar categorias-content" aria-label="Categorías"><div class="musas-container category-scroll categorias categorias-in">
+  {% for categoria in categorias %}{% if categoria[1] != "Cremas" %}<a class="category-chip" href="{{ url_for('cliente.productos_categoria', categoria=categoria[1]) }}">{{ ['🍔','🍟','🥤','🔥','🍰'][loop.index0 % 5] }} {{ categoria[1] }}</a>{% endif %}{% endfor %}
+</div></nav>
 
-          <a
-            href="{{url_for('cliente.comprar_producto', id=producto['idProducto'])}}"
-            class="btn btn-primary w-100"
-            >Comprar</a
-          >
-        </div>
-      </div>
-
-      {% endif %} {% endfor %}
-    </div>
-  </div>
-  {% endif %} {% endfor %}
+<main class="musas-container menu-sections" id="carta">
+  {% for categoria in categorias %}{% if categoria[1] != "Cremas" %}
+  <section class="menu-section">
+    <header class="section-heading"><div><span class="section-kicker">Hechas al momento</span><h2>{{ categoria[1] }}</h2><p>{{ categoria[2] }}</p></div><a class="section-link" href="{{ url_for('cliente.productos_categoria', categoria=categoria[1]) }}">Ver más →</a></header>
+    <div class="product-grid">{% for producto in productos %}{% if producto['idCategoria'] == categoria[0] %}{{ product_card(producto) }}{% endif %}{% endfor %}</div>
+  </section>
+  {% if loop.index == 1 %}<aside class="promo-banner"><div><small>Promo nocturna exclusiva</small><h3>2×1 en cervezas artesanales de barril</h3><p>Válido en pedidos mayores a S/ 45.00 de 8:00 p.m. a 10:00 p.m.</p></div><span style="font-size:36px">🍻</span></aside>{% endif %}
+  {% endif %}{% endfor %}
 </main>
 {% endblock %}
