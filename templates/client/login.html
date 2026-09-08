@@ -100,6 +100,7 @@
 
       <form action="{{ url_for('cliente.auth.login') }}" method="post" class="d-flex flex-column gap-3">
         {{ campo_csrf() }}
+        <input type="hidden" name="next" value="{{ next or '' }}" />
         <div class="musa-field">
           <label for="usuario" class="musa-field-label">
             Documento de Identidad (DNI)

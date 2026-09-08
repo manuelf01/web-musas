@@ -70,6 +70,27 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-07 | **Separación del trabajo de Betancurt**: toda su zona vuelve a `main`. Ver `MERGE_NOTES.md` + sección 0. | — |
 | 2026-09-07 | **Fixes: horario de recojo, admin en tienda, carrito compartido**. Ver "Fixes checkout/sesión 2026-09-07" abajo. | `git revert` |
 | 2026-09-07 | **Integración del panel del compañero** (`Manuelf`): CRUD productos/categorías/usuarios + ventas/comprobantes sobre el diseño de esta rama; comprobante al entregar; migraciones 007–008; CSRF sin exentos. Ver sección 0 + `MERGE_NOTES.md`. | `git revert` |
+| 2026-09-08 | **Estados de pedido + pedidos solo de registrados** (migración 009). Ver "Estados de pedido 2026-09-08" abajo. | `git revert` + revertir 009 |
+
+### Estados de pedido 2026-09-08
+Tres pedidos del usuario:
+1. **"Arreglar lo del no recogió"** — `_auto_no_show()` solo marca "no recogió" si el
+   pedido estaba **LISTO** (`estadoPrep = 2`) y el cliente no vino + 45 min de gracia.
+   Si nunca se preparó, es problema del local → se queda para que el admin lo resuelva
+   a mano. (Sigue además el guard de `MUSAS_DEMO`.)
+2. **Estados reales** (migración 009, columna `registroPedido.estadoPrep` al final):
+   `0 recibido` → `1 en preparación` → `2 listo` → recogido / cancelado / no_show.
+   - El cliente **solo puede cancelar mientras está "recibido"**. Apenas la cocina le
+     da a "Empezar preparación", el botón Cancelar desaparece y sale "Ya en cocina".
+   - El admin (panel Pedidos) tiene botón **"Empezar preparación" / "Marcar listo"**
+     además de Entregar (con clave) / No recogió / Cancelar.
+   - `model.Pedido.estado_pedido()` centraliza el estado canónico; lo usan
+     `historial_cliente`, `pedidos_de_hoy`, `obtener_pedido_completo`, `diccionario_pedidos`.
+3. **Pedidos solo de usuarios registrados** — `/compra` exige `session["cliente.auth"]`
+   (redirige a `/login?next=/compra`). Se quitó todo el flujo de invitado: el captcha
+   del checkout (`compra_captcha`, campo `captcha`), el `session["pedidos_propios"]`,
+   y `_identidad()`. `crear_pedido_completo` siempre recibe `idUsuario`. Login ahora
+   respeta `?next=` (solo rutas internas).
 
 ### Fixes checkout/sesión 2026-09-07
 Reportes del usuario tras probar el flujo:

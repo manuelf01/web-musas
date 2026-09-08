@@ -64,6 +64,14 @@ def _datos_sesion(fila):
 #   - Si el DNI es de un administrador  -> además exige el captcha, va a /admin
 #   - Si es un cliente                  -> entra directo a la tienda
 # ----------------------------------------------------------------------
+def _destino_post_login(defecto):
+    """Ruta interna a la que volver tras el login (?next=...), si es segura."""
+    destino = request.values.get("next") or ""
+    if destino.startswith("/") and not destino.startswith("//"):
+        return destino
+    return defecto
+
+
 @auth.route("/login", methods=["GET", "POST"])
 def login():
     # El acceso admin antiguo (/admin/login) ahora apunta al login unificado.
@@ -81,6 +89,7 @@ def login():
                 "client/login.html",
                 form=request.form.to_dict(),
                 mostrar_captcha=es_admin,
+                next=request.values.get("next", ""),
             )
 
         if _login_bloqueado():
@@ -122,9 +131,9 @@ def login():
         _limpiar_fallos_login()
         session.pop("admin.auth", None)
         session["cliente.auth"] = _datos_sesion(fila)
-        return redirect(url_for("cliente.home"))
+        return redirect(_destino_post_login(url_for("cliente.home")))
 
-    return render_template("client/login.html")
+    return render_template("client/login.html", next=request.args.get("next", ""))
 
 
 @auth.route("/login/captcha")

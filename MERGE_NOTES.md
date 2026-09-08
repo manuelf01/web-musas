@@ -58,7 +58,15 @@ migrations/005_producto_precio_stock_no_nulo.sql
 migrations/006_cancelacion_y_noshow.sql
 migrations/007_categoria_imagen.sql
 migrations/008_comprobante_dni.sql
+migrations/009_estado_preparacion.sql
 ```
+
+## Estados de pedido (2026-09-08)
+
+`registroPedido.estadoPrep`: 0 recibido · 1 en preparación · 2 listo. El cliente
+solo cancela en "recibido"; el admin avanza el estado desde el panel de Pedidos.
+Los pedidos son **solo de usuarios registrados** (se quitó el checkout de invitado
+y su captcha).
 
 ## Flujo de entrega
 

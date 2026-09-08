@@ -61,7 +61,16 @@
                 <span class="ped-aviso"><i class="bi bi-exclamation-triangle-fill"></i> {{ p.noShows }} pedido(s) no recogido(s) antes</span>
               {% endif %}
             </div>
-            <span class="ped-hora"><i class="bi bi-clock"></i> {{ p.hora }}</span>
+            <div class="ped-card__estado">
+              <span class="ped-hora"><i class="bi bi-clock"></i> {{ p.hora }}</span>
+              {% if p.estado == 'listo' %}
+                <span class="ped-badge listo"><i class="bi bi-bag-check-fill"></i> Listo</span>
+              {% elif p.estado == 'preparando' %}
+                <span class="ped-badge preparando"><i class="bi bi-fire"></i> En cocina</span>
+              {% else %}
+                <span class="ped-badge recibido"><i class="bi bi-inbox"></i> Recibido</span>
+              {% endif %}
+            </div>
           </div>
 
           <div class="ped-card__lineas">
@@ -78,6 +87,19 @@
               {% if p.boleta %} · pide boleta{% endif %}
             </span>
           </div>
+
+          {% if p.puede_avanzar %}
+          <form method="post" action="{{ url_for('admin.pedidos.preparar') }}" class="ped-avanzar">
+            {{ campo_csrf() }}
+            <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
+            <input type="hidden" name="estado" value="{{ estado }}" />
+            {% if p.prep == 0 %}
+              <button type="submit" class="btn-contorno w-100"><i class="bi bi-fire"></i> Empezar preparación</button>
+            {% else %}
+              <button type="submit" class="btn-contorno w-100"><i class="bi bi-bag-check"></i> Marcar listo para recojo</button>
+            {% endif %}
+          </form>
+          {% endif %}
 
           <form method="post" action="{{ url_for('admin.pedidos.confirmar') }}" class="ped-confirmar">
             {{ campo_csrf() }}

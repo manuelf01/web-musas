@@ -1524,8 +1524,18 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
   flex-shrink: 0;
 }
 .mp-estado.pendiente { background: rgba(219, 66, 0, 0.12); color: var(--musa-brasa); }
+.mp-estado.preparando { background: rgba(245, 200, 66, 0.22); color: #7a5c00; }
+.mp-estado.listo { background: rgba(46, 125, 91, 0.14); color: var(--musa-exito); }
 .mp-estado.recogido { background: rgba(46, 125, 91, 0.14); color: var(--musa-exito); }
 .mp-estado.cancelado { background: rgba(196, 51, 29, 0.12); color: var(--musa-peligro); }
+
+.mp-nota-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--musa-texto-suave);
+}
 
 .mp-card__items { padding: 14px 20px; display: flex; flex-direction: column; gap: 8px; }
 .mp-linea { font-size: 14px; }
@@ -1820,6 +1830,22 @@ body.adm { background: var(--musa-crema); }
   font-size: 13px;
   white-space: nowrap;
 }
+
+.ped-card__estado { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.ped-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ped-badge.recibido { background: rgba(26, 21, 18, 0.08); color: var(--musa-texto-suave); }
+.ped-badge.preparando { background: rgba(245, 200, 66, 0.28); color: #7a5c00; }
+.ped-badge.listo { background: rgba(46, 125, 91, 0.16); color: var(--musa-exito); }
+.ped-avanzar { padding: 0 18px 12px; }
 
 .ped-card__lineas { padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; }
 .ped-linea { display: flex; gap: 10px; }

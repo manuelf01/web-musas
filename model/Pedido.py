@@ -34,6 +34,27 @@ _ACTIVO = "estadoRecojo = 0 AND cancelado = 0 AND noShow = 0"
 # (los ya recogidos sí ocuparon cocina, cuentan).
 _OCUPA_CUPO = "cancelado = 0 AND noShow = 0"
 
+# Estados de preparación (columna registroPedido.estadoPrep).
+PREP_RECIBIDO = 0     # recién hecho — el cliente todavía puede cancelar
+PREP_PREPARANDO = 1   # la cocina ya empezó — el cliente ya NO puede cancelar
+PREP_LISTO = 2        # empacado, esperando que lo recojan
+_PREP_LABEL = {0: "recibido", 1: "preparando", 2: "listo"}
+
+
+def estado_pedido(recogido, cancelado, no_show, prep):
+    """Estado canónico de un pedido para mostrar en la tienda y el panel."""
+    if cancelado:
+        return "cancelado"
+    if no_show:
+        return "no_show"
+    if recogido:
+        return "recogido"
+    if prep >= PREP_LISTO:
+        return "listo"
+    if prep >= PREP_PREPARANDO:
+        return "preparando"
+    return "recibido"
+
 
 class Pedido:
 
@@ -66,10 +87,14 @@ class Pedido:
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
+                # Solo cuenta como "no recogió" si la cocina ya dejó el pedido
+                # LISTO y el cliente no vino. Si nunca se preparó, es problema del
+                # local, no del cliente: se queda para que el admin lo resuelva.
                 cursor.execute(
                     f"SELECT idPedido, idUsuario FROM registroPedido "
-                    f"WHERE fechaPedido = %s AND {_ACTIVO} AND horaRecojo < %s",
-                    (ahora.date(), corte),
+                    f"WHERE fechaPedido = %s AND {_ACTIVO} AND estadoPrep = %s "
+                    f"AND horaRecojo < %s",
+                    (ahora.date(), PREP_LISTO, corte),
                 )
                 vencidos = cursor.fetchall()
                 for id_pedido, id_usuario in vencidos:
@@ -319,16 +344,44 @@ class Pedido:
         return id_comp
 
     @staticmethod
-    def cancelar_pedido(id_pedido, id_usuario=None, dni=None, saltar_dueno=False):
-        """Cancela un pedido pendiente: libera el cupo y devuelve el stock.
-        `saltar_dueno=True` cuando el llamador ya verificó la propiedad (admin o
-        pedido de invitado presente en la sesión).
-        Devuelve 'ok' | 'no_permitido' | 'no_cancelable'."""
+    def avanzar_preparacion(id_pedido):
+        """La cocina hace avanzar el pedido: recibido -> preparando -> listo.
+        Devuelve el nuevo estado ('preparando' | 'listo') o None si no aplica."""
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT idUsuario, dniNoRegistrado, estadoRecojo, cancelado, noShow "
+                    "SELECT estadoPrep FROM registroPedido WHERE idPedido = %s AND " + _ACTIVO,
+                    (id_pedido,),
+                )
+                fila = cursor.fetchone()
+                if fila is None or fila[0] >= PREP_LISTO:
+                    return None
+                nuevo = fila[0] + 1
+                cursor.execute(
+                    "UPDATE registroPedido SET estadoPrep = %s "
+                    "WHERE idPedido = %s AND estadoPrep = %s AND " + _ACTIVO,
+                    (nuevo, id_pedido, fila[0]),
+                )
+                if cursor.rowcount != 1:
+                    return None
+            conexion.commit()
+            return _PREP_LABEL[nuevo]
+        finally:
+            conexion.close()
+
+    @staticmethod
+    def cancelar_pedido(id_pedido, id_usuario=None, dni=None, saltar_dueno=False):
+        """Cancela un pedido: libera el cupo y devuelve el stock.
+        `saltar_dueno=True` cuando el llamador ya verificó la propiedad (admin).
+        El cliente solo puede cancelar mientras el pedido está 'recibido'; una vez
+        que la cocina empezó (`estadoPrep >= 1`) ya no. El admin puede siempre.
+        Devuelve 'ok' | 'no_permitido' | 'no_cancelable' | 'en_preparacion'."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "SELECT idUsuario, dniNoRegistrado, estadoRecojo, cancelado, noShow, estadoPrep "
                     "FROM registroPedido WHERE idPedido = %s",
                     (id_pedido,),
                 )
@@ -341,6 +394,8 @@ class Pedido:
                         return "no_permitido"
                 if fila[2] == 1 or fila[3] == 1 or fila[4] == 1:
                     return "no_cancelable"
+                if not saltar_dueno and fila[5] >= PREP_PREPARANDO:
+                    return "en_preparacion"
 
                 cursor.execute(
                     "UPDATE registroPedido SET cancelado = 1 WHERE idPedido = %s AND " + _ACTIVO,
@@ -402,10 +457,10 @@ class Pedido:
             cursor.execute(
                 "SELECT rp.idPedido, rp.dniNoRegistrado, rp.nombres, rp.numeroTelefono, "
                 "rp.estadoRecojo, rp.horaRecojo, rp.estadoBoleta, rp.billeteraDigital, "
-                "rp.keyPedido, rp.notas, COALESCE(u.noShows, 0) "
+                "rp.keyPedido, rp.notas, COALESCE(u.noShows, 0), rp.estadoPrep "
                 "FROM registroPedido rp LEFT JOIN usuario u ON u.idUsuario = rp.idUsuario "
                 f"WHERE rp.fechaPedido = %s{cond} "
-                "ORDER BY rp.estadoRecojo, rp.horaRecojo, rp.idPedido",
+                "ORDER BY rp.estadoRecojo, rp.estadoPrep DESC, rp.horaRecojo, rp.idPedido",
                 (date.today(),),
             )
             cab = cursor.fetchall()
@@ -452,6 +507,8 @@ class Pedido:
             hora = str(timedelta(seconds=c[5].seconds))[:5] if hasattr(c[5], "seconds") else str(c[5])[:5]
             its = lin_idx.get(c[0], [])
             nombre = c[2] or "Invitado"
+            prep = int(c[11] or 0)
+            estado = estado_pedido(bool(c[4]), False, False, prep)
             salida.append({
                 "idPedido": c[0],
                 "cliente": nombre,
@@ -459,6 +516,9 @@ class Pedido:
                 "dni": (c[1][:4] + "****") if c[1] else "",
                 "telefono": c[3],
                 "recogido": bool(c[4]),
+                "prep": prep,
+                "estado": estado,
+                "puede_avanzar": prep < PREP_LISTO and not c[4],
                 "hora": hora,
                 "boleta": bool(c[6]),
                 "digital": bool(c[7]),
@@ -636,7 +696,7 @@ class Pedido:
         with conexion.cursor() as cursor:
             cursor.execute(
                 "SELECT idPedido, estadoRecojo, horaRecojo, fechaPedido, estadoBoleta, "
-                "billeteraDigital, keyPedido, cancelado, noShow FROM registroPedido "
+                "billeteraDigital, keyPedido, cancelado, noShow, estadoPrep FROM registroPedido "
                 "WHERE idUsuario = %s ORDER BY idPedido DESC",
                 (id_usuario,),
             )
@@ -692,19 +752,14 @@ class Pedido:
             its = lineas_idx.get(c[0], [])
             total = sum(it["pagado"] for it in its)
             recogido, cancelado, no_show = bool(c[1]), bool(c[7]), bool(c[8])
-            if recogido:
-                estado = "recogido"
-            elif cancelado:
-                estado = "cancelado"
-            elif no_show:
-                estado = "no_show"
-            else:
-                estado = "pendiente"
+            prep = int(c[9] or 0)
+            estado = estado_pedido(recogido, cancelado, no_show, prep)
             salida.append({
                 "idPedido": c[0],
                 "recogido": recogido,
                 "estado": estado,
-                "cancelable": estado == "pendiente",
+                "activo": estado in ("recibido", "preparando", "listo"),
+                "cancelable": estado == "recibido",
                 "hora": hora,
                 "fecha": fecha,
                 "boleta": bool(c[4]),
@@ -723,7 +778,7 @@ class Pedido:
             cursor.execute(
                 "SELECT idPedido, idUsuario, dniNoRegistrado, nombres, numeroTelefono, "
                 "estadoRecojo, cancelado, noShow, horaRecojo, estadoBoleta, billeteraDigital, "
-                "keyPedido, notas FROM registroPedido WHERE idPedido = %s",
+                "keyPedido, notas, estadoPrep FROM registroPedido WHERE idPedido = %s",
                 (id_pedido,),
             )
             p = cursor.fetchone()
@@ -767,6 +822,8 @@ class Pedido:
             "estadoRecojo": p[5],
             "cancelado": bool(p[6]),
             "noShow": bool(p[7]),
+            "estadoPrep": int(p[13] or 0),
+            "estado": estado_pedido(bool(p[5]), bool(p[6]), bool(p[7]), int(p[13] or 0)),
             "horaRecojo": hora[:5] if len(hora) >= 5 else hora,
             "estadoBoleta": p[9],
             "billeteraDigital": p[10],
@@ -836,10 +893,14 @@ class Pedido:
 
     @staticmethod
     def diccionario_pedidos(pedidos):
-        # Orden de columnas de registroPedido (tras migraciones 004 y 006):
+        # Orden de columnas de registroPedido (tras migraciones 004, 006 y 009):
         # 0 idPedido 1 idUsuario 2 dniNoRegistrado 3 nombres 4 numeroTelefono
         # 5 estadoRecojo 6 cancelado 7 noShow 8 horaRecojo 9 fechaPedido
-        # 10 estadoBoleta 11 billeteraDigital 12 keyPedido 13 notas
+        # 10 estadoBoleta 11 billeteraDigital 12 keyPedido 13 notas 14 estadoPrep
+        _ETIQUETA = {
+            "recibido": "Recibido", "preparando": "En preparación", "listo": "Listo para recojo",
+            "recogido": "Recogido", "cancelado": "Cancelado", "no_show": "No recogido",
+        }
         list = []
         for pedido in pedidos:
             diccionario = dict()
@@ -852,14 +913,10 @@ class Pedido:
             diccionario["dniNoRegistrado"] = pedido[2]
             diccionario["nombres"] = pedido[3]
             diccionario["numeroTelefono"] = pedido[4]
-            if pedido[6] == 1:
-                diccionario["estadoRecojo"] = "Cancelado"
-            elif pedido[7] == 1:
-                diccionario["estadoRecojo"] = "No recogido"
-            elif pedido[5] == 1:
-                diccionario["estadoRecojo"] = "Recogido"
-            else:
-                diccionario["estadoRecojo"] = "En proceso"
+            prep = pedido[14] if len(pedido) > 14 else 0
+            diccionario["estadoRecojo"] = _ETIQUETA[
+                estado_pedido(pedido[5] == 1, pedido[6] == 1, pedido[7] == 1, prep or 0)
+            ]
             diccionario["horaRecojo"] = horaRecojo
             diccionario["fechaPedido"] = fechaPedido
             diccionario["estadoBoleta"] = "Si" if pedido[10] == 1 else "No"

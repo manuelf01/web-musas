@@ -2,12 +2,11 @@ import json
 import re
 
 from flask import (
-    Blueprint, render_template, session, redirect, url_for, request, flash, send_file,
+    Blueprint, render_template, session, redirect, url_for, request, flash,
 )
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
 from model.Pedido import Pedido, StockInsuficiente, LimitePedidos
-from seguridad import generar_texto_captcha, generar_imagen_captcha
 cliente = Blueprint('cliente', __name__)
 
 # Categorías cuyo producto admite cremas adicionales.
@@ -23,10 +22,9 @@ def _cliente_nombre():
     return user["nombres"] if user else None
 
 
-def _identidad():
-    """Cualquier sesión autenticada (cliente o admin). Un admin que navega la
-    tienda no es un bot: se le puede saltar el captcha del checkout."""
-    return session.get("cliente.auth") or session.get("admin.auth")
+def _ruta_local(destino):
+    """True si `destino` es una ruta interna segura para redirigir después del login."""
+    return bool(destino) and destino.startswith("/") and not destino.startswith("//")
 
 @cliente.route("/")
 def home():
@@ -109,23 +107,20 @@ def mis_pedidos():
 @cliente.route("/mis-pedidos/<int:id_pedido>/cancelar", methods=["POST"])
 def cancelar_pedido(id_pedido):
     user = session.get("cliente.auth", None)
-    propios = session.get("pedidos_propios", [])
-    por_sesion = id_pedido in propios
-    if not user and not por_sesion:
-        flash("No pudimos identificar ese pedido.", "error")
-        return redirect(url_for("cliente.mis_pedidos"))
+    if not user:
+        flash("Inicia sesión para gestionar tus pedidos.", "error")
+        return redirect(url_for("cliente.auth.login"))
 
-    resultado = Pedido.cancelar_pedido(
-        id_pedido,
-        id_usuario=user["idUsuario"] if user else None,
-        saltar_dueno=por_sesion,
-    )
+    resultado = Pedido.cancelar_pedido(id_pedido, id_usuario=user["idUsuario"])
     if resultado == "ok":
         flash(f"Pedido N° {id_pedido} cancelado. Se liberó tu cupo.", "ok")
     elif resultado == "no_permitido":
         flash("Ese pedido no está a tu nombre.", "error")
+    elif resultado == "en_preparacion":
+        flash("Ese pedido ya entró a cocina y no se puede cancelar. "
+              "Si no puedes recogerlo, avísanos por WhatsApp.", "error")
     else:
-        flash("Ese pedido ya no se puede cancelar (en preparación, recogido o vencido).", "error")
+        flash("Ese pedido ya no se puede cancelar (recogido, cancelado o vencido).", "error")
     return redirect(url_for("cliente.mis_pedidos"))
 
 
@@ -176,6 +171,11 @@ def pag_carrito():
 def pag_compra():
     user = session.get("cliente.auth", None)
 
+    # Los pedidos son solo de clientes registrados (control de no-shows).
+    if user is None:
+        flash("Inicia sesión o crea tu cuenta para finalizar el pedido.", "error")
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.pag_compra")))
+
     if request.method == "POST":
         return _procesar_compra(user)
 
@@ -183,19 +183,8 @@ def pag_compra():
         "client/compra.html",
         cliente=_cliente_nombre(),
         sesion=user,
-        invitado=_identidad() is None,
         franjas=Pedido.franjas_recojo(),
     )
-
-
-@cliente.route("/compra/captcha")
-def compra_captcha():
-    """Imagen del captcha para el checkout de invitados."""
-    texto = generar_texto_captcha()
-    session["captcha_compra"] = texto
-    resp = send_file(generar_imagen_captcha(texto), mimetype="image/png")
-    resp.headers["Cache-Control"] = "no-store, max-age=0"
-    return resp
 
 
 def _recotizar(user, mensaje):
@@ -205,13 +194,16 @@ def _recotizar(user, mensaje):
         "client/compra.html",
         cliente=_cliente_nombre(),
         sesion=user,
-        invitado=_identidad() is None,
         form=request.form.to_dict(),
         franjas=Pedido.franjas_recojo(),
     )
 
 
 def _procesar_compra(user):
+    if user is None:
+        flash("Inicia sesión para finalizar el pedido.", "error")
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.pag_compra")))
+
     # --- items del carrito (vienen del localStorage, se re-cotizan contra la BD) ---
     try:
         carrito = json.loads(request.form.get("carrito_json") or "[]")
@@ -253,7 +245,7 @@ def _procesar_compra(user):
     dni = (request.form.get("dni") or "").strip()
     nombres = ((request.form.get("nombres") or "") + " " + (request.form.get("apellidos") or "")).strip()
     telefono = (request.form.get("telefono") or "").strip()
-    id_usuario = user["idUsuario"] if user else None
+    id_usuario = user["idUsuario"]
 
     hora = (request.form.get("hora_recojo") or "").strip()
     boleta = bool(request.form.get("boleta"))
@@ -271,13 +263,6 @@ def _procesar_compra(user):
         error = "Elige una hora de recojo."
     elif not Pedido.franja_disponible(hora):
         error = "Esa franja se llenó o ya pasó. Elige otra."
-    elif _identidad() is None:
-        # Invitado sin cuenta: se exige el captcha para frenar pedidos automatizados.
-        # Un cliente o admin logueado ya está identificado y se lo salta.
-        esperado = session.pop("captcha_compra", None)
-        ingresado = (request.form.get("captcha") or "").strip().upper()
-        if not esperado or ingresado != esperado:
-            error = "El código de verificación no coincide. Escríbelo de nuevo."
 
     if error:
         return _recotizar(user, error)
@@ -297,10 +282,6 @@ def _procesar_compra(user):
             "Recoge o cancela alguno antes de hacer otro.",
         )
 
-    # Recordar qué pedidos puede ver este visitante (registrado o invitado).
-    propios = session.get("pedidos_propios", [])
-    propios.append(id_pedido)
-    session["pedidos_propios"] = propios[-20:]
     return redirect(url_for("cliente.pedido_confirmado", id_pedido=id_pedido))
 
 
@@ -310,12 +291,9 @@ def pedido_confirmado(id_pedido):
     if pedido is None:
         return redirect(url_for("cliente.home"))
 
-    # La palabra clave de recojo es sensible: solo la ve quien hizo el pedido
-    # (invitado con el pedido en su sesión) o el cliente dueño de la cuenta.
+    # La palabra clave de recojo es sensible: solo la ve el cliente dueño del pedido.
     user = session.get("cliente.auth", None)
-    es_propio = id_pedido in session.get("pedidos_propios", [])
-    es_dueno = user is not None and pedido.get("idUsuario") == user["idUsuario"]
-    if not (es_propio or es_dueno):
+    if user is None or pedido.get("idUsuario") != user["idUsuario"]:
         return redirect(url_for("cliente.mis_pedidos"))
 
     return render_template(

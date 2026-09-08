@@ -22,6 +22,20 @@ def home():
     )
 
 
+@pedidos.route("/preparar", methods=["POST"])
+def preparar():
+    id_pedido = request.form.get("idPedido")
+    estado = request.form.get("estado", "pendiente")
+    nuevo = Pedido.avanzar_preparacion(id_pedido)
+    if nuevo == "preparando":
+        flash(f"Pedido N° {id_pedido} en preparación. El cliente ya no puede cancelarlo.", "ok")
+    elif nuevo == "listo":
+        flash(f"Pedido N° {id_pedido} marcado como listo para recojo.", "ok")
+    else:
+        flash(f"No se pudo avanzar el pedido N° {id_pedido}.", "error")
+    return redirect(url_for("admin.pedidos.home", estado=estado))
+
+
 @pedidos.route("/confirmar", methods=["POST"])
 def confirmar():
     id_pedido = request.form.get("idPedido")
