@@ -2702,3 +2702,163 @@ body.adm { background: var(--musa-crema); }
   .musa-confirm__backdrop, .musa-confirm__card { transition-duration: 0.01s; }
   .musa-confirm.is-abierto .musa-confirm__icono { animation: none; }
 }
+
+/* ============================================================
+   INICIO · "Anatomía de Las Musas" — hamburguesa que se disecciona
+   ============================================================ */
+.musa-anatomia {
+  padding: 76px 0;
+  background: linear-gradient(180deg, var(--musa-crema) 0%, var(--musa-crema-baja) 100%);
+  overflow: hidden;
+}
+.musa-anatomia__inner {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 48px;
+  align-items: center;
+}
+.musa-anatomia__texto h2 { font-size: 32px; font-weight: 700; margin: 0 0 12px; }
+.musa-anatomia__texto p {
+  color: var(--musa-texto-suave);
+  max-width: 40ch;
+  margin: 0 0 22px;
+  line-height: 1.55;
+}
+
+.musa-anatomia__pieza { position: relative; }
+.anat-burger {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.anat-burger svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 22px 26px rgba(26, 21, 18, 0.16));
+  transition: transform 0.5s cubic-bezier(0.34, 1.3, 0.4, 1);
+}
+.anat-burger:hover svg,
+.anat-burger:focus-visible svg,
+.anat-burger.abierto svg { transform: scale(1.03); }
+.anat-burger:focus-visible {
+  outline: 2px solid var(--musa-brasa);
+  outline-offset: 8px;
+  border-radius: 18px;
+}
+
+.anat-capa {
+  transform: translateY(0);
+  transition: transform 0.6s cubic-bezier(0.34, 1.3, 0.4, 1);
+  transition-delay: var(--d, 0s);
+}
+.anat-burger:hover .anat-capa,
+.anat-burger:focus-visible .anat-capa,
+.anat-burger.abierto .anat-capa {
+  transform: translateY(calc(var(--step, 0) * 20px));
+}
+
+.anat-tag {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.anat-burger:hover .anat-tag,
+.anat-burger:focus-visible .anat-tag,
+.anat-burger.abierto .anat-tag {
+  opacity: 1;
+  transition-delay: calc(var(--d, 0s) + 0.18s);
+}
+.anat-tag line { stroke: var(--musa-carbon); stroke-width: 1.4; stroke-dasharray: 2 3; }
+.anat-tag circle { fill: var(--musa-brasa); }
+.anat-tag text {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--musa-carbon);
+}
+
+.anat-hint {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--musa-texto-suave);
+  background: #fff;
+  border: 1px solid var(--musa-borde);
+  border-radius: 999px;
+  box-shadow: var(--musa-sombra);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.musa-anatomia__pieza:hover .anat-hint,
+.anat-burger:focus-visible ~ .anat-hint,
+.anat-burger.abierto ~ .anat-hint {
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+}
+
+/* Lista de ingredientes (solo se ve en pantallas chicas, donde no hay hover) */
+.anat-lista { display: none; }
+
+@media (max-width: 900px) {
+  .musa-anatomia { padding: 56px 0; }
+  .musa-anatomia__inner { grid-template-columns: 1fr; gap: 26px; text-align: center; }
+  .musa-anatomia__texto p { margin-left: auto; margin-right: auto; }
+  .anat-burger { max-width: 300px; pointer-events: none; }
+  .anat-hint { display: none; }
+  .anat-tag { display: none; }
+
+  .anat-lista {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 18px;
+    max-width: 440px;
+    margin: 22px auto 0;
+    padding: 0;
+    list-style: none;
+    text-align: left;
+  }
+  .anat-lista li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 9px;
+    align-items: center;
+    font-size: 13px;
+  }
+  .anat-lista__punto {
+    grid-row: 1 / 3;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--musa-brasa);
+  }
+  .anat-lista strong { font-family: "Space Grotesk", sans-serif; font-size: 13px; }
+  .anat-lista span:last-child { color: var(--musa-texto-suave); font-size: 11.5px; }
+}
+
+@media (max-width: 440px) {
+  .anat-lista { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anat-capa {
+    transition: none;
+    transform: translateY(calc(var(--step, 0) * 20px));
+  }
+  .anat-tag { transition: none; opacity: 1; }
+  .anat-hint { display: none; }
+}

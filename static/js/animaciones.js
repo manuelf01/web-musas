@@ -32,3 +32,28 @@
     });
   }, 2500);
 })();
+
+/* "Anatomía de Las Musas": click para fijar/soltar el despiece; en pantallas
+   táctiles (sin hover) se abre solo al entrar en el viewport. */
+(function () {
+  var burger = document.querySelector(".anat-burger");
+  if (!burger) return;
+
+  burger.addEventListener("click", function () {
+    var abierto = burger.classList.toggle("abierto");
+    burger.setAttribute("aria-pressed", abierto ? "true" : "false");
+  });
+
+  var tactil = window.matchMedia && window.matchMedia("(hover: none)").matches;
+  if (tactil && "IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        burger.classList.add("abierto");
+        burger.setAttribute("aria-pressed", "true");
+        io.disconnect();
+      });
+    }, { threshold: 0.55 });
+    io.observe(burger);
+  }
+})();

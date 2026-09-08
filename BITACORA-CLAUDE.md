@@ -74,6 +74,23 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
 | 2026-09-08 | **Modal de confirmación en todos los CRUD** (dar de baja / reactivar / guardar / entregar / cancelar pedido). Ver "Modal de confirmación 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **Inicio: sección "Anatomía de Las Musas"** — hamburguesa SVG que se despieza al pasar el cursor / tocar. Ver "Anatomía 2026-09-08" abajo. | `git revert` |
+
+### Anatomía 2026-09-08
+- Sección nueva en `templates/client/index.html` entre el hero y "Cómo funciona":
+  hamburguesa dibujada **100 % en SVG** (sin fotos), 6 capas (`.anat-capa`) que
+  se separan en el aire con etiquetas (`.anat-tag`) al hacer `:hover`/`:focus`
+  sobre el `<button class="anat-burger">`, o con la clase `.abierto`.
+- Cada capa lleva `--step` (cuánto se aleja, ×20 px) y `--d` (retardo escalonado).
+  Solo se anima `transform: translateY` → 60 fps. CSS en `musas-theme.css`
+  (bloque "Anatomía de Las Musas").
+- `static/js/animaciones.js`: clic = fija/suelta el despiece; en pantallas sin
+  hover (`matchMedia("(hover: none)")`) un `IntersectionObserver` lo abre solo al
+  entrar en pantalla.
+- Móvil (`≤900px`): se ocultan las etiquetas del SVG y se muestra una lista
+  HTML `.anat-lista` con los 6 ingredientes + descripción corta.
+- `prefers-reduced-motion`: se muestra ya despiezada y etiquetada, sin movimiento.
+- Sin backend ni BD.
 
 ### Modal de confirmación 2026-09-08
 - Componente reutilizable en `static/js/ui-comun.js` (+ CSS `.musa-confirm*` en
