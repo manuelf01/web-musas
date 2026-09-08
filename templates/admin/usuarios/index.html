@@ -21,7 +21,7 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="usr-sug" autocomplete="off"
-           placeholder="Buscar por nombre, DNI o correo…" />
+           data-filtro-vivo="#usr-lista" placeholder="Escribe para filtrar por nombre, DNI o correo…" />
     <datalist id="usr-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
@@ -35,7 +35,7 @@
   <a class="adm-chip2 {{ 'is-active' if estado == 'baja' }}" href="{{ url_for('admin.usuarios.home', rol=filtro, estado='baja') }}">De baja <b>{{ conteos.de_baja }}</b></a>
 </div>
 
-<section class="adm-card">
+<section class="adm-card" id="usr-lista">
   {% if usuarios %}
     <div class="adm-tabla-wrap">
       <table class="adm-tabla">
@@ -43,7 +43,8 @@
         <tbody>
           {% for u in usuarios %}
             {% set yo = (u.idUsuario|string == usuario.idUsuario|string) %}
-            <tr style="{{ 'opacity:.55;' if not u.activo }}">
+            <tr data-filtro-item data-filtro-texto="{{ u.nombreCompleto }} {{ u.dni }} {{ u.correo }} {{ u.rolTexto }}"
+                style="{{ 'opacity:.55;' if not u.activo }}">
               <td>
                 <div class="adm-prod-cel">
                   <span class="adm-thumb" style="font-size:13px; font-family:'Space Grotesk',sans-serif; color:var(--musa-brasa);">{{ u.iniciales }}</span>
@@ -93,6 +94,7 @@
       </table>
     </div>
     <p class="adm-mostrando">{{ usuarios|length }} cuenta(s)</p>
+    <p class="adm-vacio" data-filtro-vacio hidden>Ninguna cuenta coincide con la búsqueda.</p>
   {% else %}
     <p class="adm-vacio"><i class="bi bi-people d-block mb-2" style="font-size: 32px;"></i> No hay cuentas en este filtro.</p>
   {% endif %}
@@ -143,7 +145,10 @@
         <label class="musa-field-label" for="pu-contra">
           Contraseña <span class="musa-field-hint" data-solo-editar hidden>· vacía = no cambiar</span>
         </label>
-        <input class="musa-input" id="pu-contra" name="contraseña" type="password" minlength="8" placeholder="Mínimo 8 caracteres" />
+        <div class="musa-pass">
+          <input class="musa-input" id="pu-contra" name="contraseña" type="password" minlength="8" placeholder="Mínimo 8 caracteres" autocomplete="new-password" />
+          <button type="button" class="musa-toggle" data-toggle-pass="pu-contra" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye"></i></button>
+        </div>
       </div>
     </div>
     <div class="adm-panel__foot">

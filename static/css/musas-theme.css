@@ -2596,3 +2596,26 @@ body.adm { background: var(--musa-crema); }
 }
 .adm-foto-url .musa-field-label { margin-bottom: 4px; }
 .adm-panel .adm-drop { min-height: 150px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+/* --- campo de contraseña con botón "ver" --- */
+.musa-pass { position: relative; }
+.musa-pass .musa-input { padding-right: 44px; }
+.musa-pass .musa-toggle { right: 4px; }
+
+/* --- cuadros de subida de imagen: todo del mismo tamaño --- */
+.adm-foto-box { display: flex; flex-direction: column; gap: 12px; }
+.adm-foto-box .adm-drop,
+.adm-foto-box .adm-foto-grande {
+  width: 100%;
+  height: 190px;
+  border-radius: 16px;
+  box-sizing: border-box;
+}
+.adm-foto-box .adm-foto-grande { object-fit: cover; border: 1px solid var(--musa-borde); background: #fff; }
+.adm-foto-box .adm-drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; margin: 0; padding: 16px;
+}
+.adm-foto-box .adm-drop i { margin: 0 0 2px; }
+.adm-foto-url-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--musa-texto-suave); }
+.adm-foto-url-row::before, .adm-foto-url-row::after { content: ""; flex: 1; height: 1px; background: var(--musa-borde); }

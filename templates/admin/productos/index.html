@@ -20,7 +20,7 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="prod-sug" autocomplete="off"
-           placeholder="Buscar por nombre o categoría…" />
+           data-filtro-vivo="#prod-lista" placeholder="Escribe para filtrar por nombre o categoría…" />
     <datalist id="prod-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
@@ -33,7 +33,7 @@
   <a class="adm-chip2" href="{{ url_for('admin.categoria.home') }}">Categorías <b>{{ conteos.categorias }}</b></a>
 </div>
 
-<section class="adm-card">
+<section class="adm-card" id="prod-lista">
   {% if productos %}
     <div class="adm-tabla-wrap">
       <table class="adm-tabla">
@@ -42,7 +42,8 @@
         </thead>
         <tbody>
           {% for p in productos %}
-            <tr style="{{ 'opacity:.55;' if not p.activo }}">
+            <tr data-filtro-item data-filtro-texto="{{ p.nombre }} {{ p.nombreCategoria }} {{ p.descripcion }}"
+                style="{{ 'opacity:.55;' if not p.activo }}">
               <td>
                 <div class="adm-prod-cel">
                   {% if p.imagen %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="" />
@@ -84,6 +85,7 @@
       </table>
     </div>
     <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ pagination.total }} productos</p>
+    <p class="adm-vacio" data-filtro-vacio hidden>Ningún producto de esta página coincide con la búsqueda.</p>
     <div class="adm-pag">{{ pagination.links }}</div>
   {% else %}
     <p class="adm-vacio"><i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i>
@@ -104,18 +106,17 @@
     <input type="hidden" name="idProducto" id="pp-id" />
     <div class="adm-panel__body">
       <div class="adm-foto-box">
-        <img id="pp-preview" class="adm-foto-grande" hidden alt="Vista previa" />
+        <img id="pp-preview" class="adm-foto-grande" hidden alt="Vista previa"
+             onclick="document.getElementById('pp-imagen').click()" style="cursor: pointer;" />
         <label class="adm-drop" for="pp-imagen" id="pp-drop">
           <i class="bi bi-image"></i>
           <strong>Arrastra una imagen o explora</strong>
           <span>PNG, JPG, WEBP hasta 5 MB</span>
         </label>
         <input type="file" id="pp-imagen" name="imagen" accept="image/*" hidden />
-        <div class="adm-foto-url">
-          <label class="musa-field-label" for="pp-url">…o pega el enlace de una imagen de internet</label>
-          <input class="musa-input" id="pp-url" name="imagen_url" type="url" inputmode="url"
-                 placeholder="https://… (enlace directo a la imagen)" />
-        </div>
+        <div class="adm-foto-url-row">o pega un enlace</div>
+        <input class="musa-input" id="pp-url" name="imagen_url" type="url" inputmode="url"
+               placeholder="https://… (enlace directo a la imagen)" />
       </div>
 
       <div class="musa-field mt-3">

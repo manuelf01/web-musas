@@ -74,6 +74,24 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
 
+### Ajustes UX 2026-09-08 (búsqueda viva, ver contraseña, carrito con login)
+- **`static/js/ui-comun.js`** (nuevo, cargado en ambos `base.html`):
+  - Filtrado **en vivo sin Enter**: `<input data-filtro-vivo="#scope">` oculta los
+    `[data-filtro-item]` que no coinciden mientras se escribe (con `[data-filtro-seccion]`
+    y `[data-filtro-vacio]` opcionales). Aplicado en carta de la tienda y CRUDs de
+    productos / categorías / usuarios / pedidos. El `<form method=get>` sigue como
+    respaldo (Enter) para búsquedas más allá de la página actual.
+  - Mostrar/ocultar contraseña por delegación (`[data-toggle-pass="<id>"]`). Se quitó
+    el JS inline duplicado de login.html y registro.html.
+- **Botón "ver contraseña"** en: agregar/editar usuario, Mi perfil y Mi cuenta
+  (`.musa-pass` + `.musa-toggle`).
+- **Cuadros de imagen simétricos**: dropzone y previsualización comparten
+  `190px` de alto y bordes; separador "o pega un enlace"; el preview grande llena
+  el espacio y al clicarlo abre el selector de archivo.
+- **Carrito solo con sesión**: `/carrito` y `/compra` redirigen a `/login?next=…`
+  si no hay `cliente.auth`. El detalle de producto muestra "Inicia sesión para pedir"
+  en vez del botón de agregar; el ícono de carrito del header/tabbar apunta al login.
+
 ### Roles y estado 2026-09-08
 Migración **010**: `usuario.rol` ('superusuario'|'administrador'|'usuario') + `usuario.activo`,
 `producto.activo`, `categoriaProducto.activo`. `rol` se deriva del `tipoUsuario`

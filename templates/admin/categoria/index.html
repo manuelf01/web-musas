@@ -25,7 +25,7 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="cat-sug" autocomplete="off"
-           placeholder="Buscar categoría por nombre o descripción…" />
+           data-filtro-vivo="#cat-grid" placeholder="Escribe para filtrar por nombre o descripción…" />
     <datalist id="cat-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
@@ -36,10 +36,11 @@
   <a class="adm-chip2 {{ 'is-active' if estado == 'todas' }}" href="{{ url_for('admin.categoria.home', estado='todas', q=q) }}">Todas <b>{{ conteos.total }}</b></a>
 </div>
 
-<div class="adm-cat-grid">
+<div class="adm-cat-grid" id="cat-grid">
   {% for c in categorias %}
     {% set activa = (c|length <= 4) or c[4] %}
-    <article class="adm-cat-card" style="{{ 'opacity:.6;' if not activa }}">
+    <article class="adm-cat-card" data-filtro-item data-filtro-texto="{{ c[1] }} {{ c[2] or '' }}"
+             style="{{ 'opacity:.6;' if not activa }}">
       <div class="adm-cat-card__top">
         <span class="adm-cat-emoji">
           {% if c[3] %}<img src="{{ url_for('static', filename='img/' ~ c[3]) }}" alt="" />
@@ -101,15 +102,17 @@
                     placeholder="Breve texto que se muestra en el encabezado de la sección…"></textarea>
         </div>
         <div class="musa-field mt-3 adm-foto-box">
-          <img id="mc-preview" class="adm-foto-grande" hidden alt="Vista previa" />
+          <img id="mc-preview" class="adm-foto-grande" hidden alt="Vista previa"
+               onclick="document.getElementById('mc-imagen').click()" style="cursor: pointer;" />
           <label class="adm-drop" for="mc-imagen" id="mc-drop">
             <i class="bi bi-image"></i>
             <strong>Imagen de la categoría (opcional)</strong>
             <span>PNG, JPG, WEBP hasta 5 MB</span>
           </label>
           <input type="file" id="mc-imagen" name="imagen" accept="image/*" hidden />
+          <div class="adm-foto-url-row">o pega un enlace</div>
           <input class="musa-input" id="mc-url" name="imagen_url" type="url"
-                 placeholder="…o pega el enlace de una imagen de internet" />
+                 placeholder="https://… (enlace directo a la imagen)" />
         </div>
       </div>
       <div class="adm-modal__foot">

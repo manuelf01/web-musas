@@ -52,11 +52,17 @@
     <div class="row g-3">
       <div class="col-sm-6 musa-field">
         <label class="musa-field-label" for="mc-c1">Nueva contraseña</label>
-        <input class="musa-input" id="mc-c1" name="contraseña" type="password" minlength="8" autocomplete="new-password" />
+        <div class="musa-pass">
+          <input class="musa-input" id="mc-c1" name="contraseña" type="password" minlength="8" autocomplete="new-password" />
+          <button type="button" class="musa-toggle" data-toggle-pass="mc-c1" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye"></i></button>
+        </div>
       </div>
       <div class="col-sm-6 musa-field">
         <label class="musa-field-label" for="mc-c2">Repite la contraseña</label>
-        <input class="musa-input" id="mc-c2" name="contraseña2" type="password" minlength="8" autocomplete="new-password" />
+        <div class="musa-pass">
+          <input class="musa-input" id="mc-c2" name="contraseña2" type="password" minlength="8" autocomplete="new-password" />
+          <button type="button" class="musa-toggle" data-toggle-pass="mc-c2" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye"></i></button>
+        </div>
       </div>
     </div>
 

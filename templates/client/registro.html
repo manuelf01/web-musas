@@ -211,15 +211,7 @@
 
 {% block scripts %}
 <script>
-  document.querySelectorAll("[data-toggle-pass]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var input = document.getElementById(btn.dataset.togglePass);
-      var visible = input.type === "text";
-      input.type = visible ? "password" : "text";
-      btn.querySelector("i").className = visible ? "bi bi-eye" : "bi bi-eye-slash";
-    });
-  });
-
+  // (mostrar/ocultar contraseña lo maneja ui-comun.js)
   (function () {
     var input = document.getElementById("contrasena");
     var bars = document.getElementById("strength-bars");

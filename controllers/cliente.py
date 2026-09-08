@@ -213,12 +213,17 @@ def comprar_producto(id):
     return render_template(
         "client/seleccion-producto.html",
         cliente=_cliente_nombre(),
+        logueado=bool(session.get("cliente.auth")),
         producto=producto,
         cremas=cremas,
     )
 
 @cliente.route("/carrito")
 def pag_carrito():
+    # El carrito y el pedido son solo para clientes registrados.
+    if not session.get("cliente.auth"):
+        flash("Inicia sesión o crea tu cuenta para armar tu pedido.", "error")
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.pag_carrito")))
     return render_template("client/carrito.html", cliente=_cliente_nombre())
 
 

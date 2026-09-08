@@ -18,7 +18,7 @@
   {% endwith %}
 {% endif %}
 
-<div class="musa-shell carta-wrap">
+<div class="musa-shell carta-wrap" id="carta-live">
   <div class="carta-head">
     <div class="carta-head__titulo">
       <h1>Nuestra carta</h1>
@@ -28,8 +28,8 @@
     <form method="get" class="carta-filtros">
       <div class="carta-buscar">
         <i class="bi bi-search"></i>
-        <input type="search" name="q" value="{{ q }}" placeholder="Busca smash, trufa, cerveza…"
-               list="carta-sugerencias" autocomplete="off" />
+        <input type="search" name="q" value="{{ q }}" placeholder="Escribe para filtrar: smash, trufa, cerveza…"
+               list="carta-sugerencias" data-filtro-vivo="#carta-live" autocomplete="off" />
         <datalist id="carta-sugerencias">
           {% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}
         </datalist>
@@ -61,9 +61,10 @@
       </div>
     {% endif %}
   {% else %}
+  <p class="carta-busqueda-info" data-filtro-vacio hidden>Ningún producto coincide con tu búsqueda.</p>
   {% for categoria in visibles %}
     {% set items = productos | selectattr("idCategoria", "equalto", categoria[0]) | list %}
-    <section class="musa-cat-section" id="cat-{{ categoria[0] }}">
+    <section class="musa-cat-section" id="cat-{{ categoria[0] }}" data-filtro-seccion>
       <div class="musa-cat-head">
         <div>
           <span class="eyebrow">{{ eyebrows.get(categoria[1], "De la carta") }}</span>

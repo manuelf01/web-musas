@@ -222,15 +222,7 @@
 
 {% block scripts %}
 <script>
-  // Mostrar / ocultar contraseña
-  document.querySelectorAll("[data-toggle-pass]").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var input = document.getElementById(btn.dataset.togglePass);
-      var visible = input.type === "text";
-      input.type = visible ? "password" : "text";
-      btn.querySelector("i").className = visible ? "bi bi-eye" : "bi bi-eye-slash";
-    });
-  });
+  // (mostrar/ocultar contraseña lo maneja ui-comun.js)
 
   // DNI solo dígitos
   var dni = document.getElementById("usuario");

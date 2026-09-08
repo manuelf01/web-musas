@@ -4,7 +4,8 @@
   "Nueva": "mint",
   "Especial de la casa": "peach", "Para compartir": "peach", "Barril": "peach"
 } %}
-<article class="producto-card" data-reveal data-reveal-delay="{{ (loop.index0 % 4) if loop is defined else 0 }}">
+<article class="producto-card" data-filtro-item data-filtro-texto="{{ p.nombre }} {{ p.descripcion }} {{ p.nombreCategoria or '' }}"
+         data-reveal data-reveal-delay="{{ (loop.index0 % 4) if loop is defined else 0 }}">
   <div class="producto-card__media">
     {% if p.imagen %}
       <img src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="{{ p.nombre }}" loading="lazy" />

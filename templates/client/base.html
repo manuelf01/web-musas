@@ -40,7 +40,7 @@
         </nav>
 
         <div class="d-flex align-items-center gap-3">
-          <a href="{{ url_for('cliente.pag_carrito') }}" class="musa-cart-pill">
+          <a href="{{ url_for('cliente.pag_carrito') if cliente else url_for('cliente.auth.login', next=url_for('cliente.pag_carrito')) }}" class="musa-cart-pill">
             <span class="musa-cart-count" data-carrito-count>0</span>
             <span data-carrito-total>S/ 0.00</span>
             <i class="bi bi-bag"></i>
@@ -83,7 +83,7 @@
       <a href="{{ url_for('cliente.carta') }}" class="{% block tab_carta %}{% endblock %}">
         <i class="bi bi-card-list"></i><span>Carta</span>
       </a>
-      <a href="{{ url_for('cliente.pag_carrito') }}" class="{% block tab_carrito %}{% endblock %}">
+      <a href="{{ url_for('cliente.pag_carrito') if cliente else url_for('cliente.auth.login', next=url_for('cliente.pag_carrito')) }}" class="{% block tab_carrito %}{% endblock %}">
         <i class="bi bi-bag"></i><span>Carrito</span>
         <span class="musa-tabbar__badge" data-carrito-count hidden>0</span>
       </a>
@@ -170,6 +170,7 @@
     </script>
     {% endif %}
     <script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/ui-comun.js') }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

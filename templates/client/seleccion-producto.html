@@ -124,10 +124,16 @@
             <span id="dp-qty">1</span>
             <button type="button" data-step="1" aria-label="Agregar uno">+</button>
           </div>
+          {% if not logueado %}
+          <a class="btn-brasa flex-grow-1" href="{{ url_for('cliente.auth.login', next=request.path) }}">
+            <i class="bi bi-box-arrow-in-right"></i> Inicia sesión para pedir
+          </a>
+          {% else %}
           <button type="button" class="btn-brasa flex-grow-1" data-agregar {{ 'disabled' if agotado }}>
             <i class="bi bi-bag-plus"></i>
             <span data-dp-btn-texto>Agregar al carrito — S/ {{ '%.2f'|format(producto.precio or 0) }}</span>
           </button>
+          {% endif %}
         </div>
 
         <div class="dp-reassure">
@@ -138,7 +144,7 @@
   </div>
 
   <!-- Barra flotante móvil -->
-  {% if not agotado %}
+  {% if not agotado and logueado %}
   <div class="dp-mobile-bar">
     <button type="button" data-agregar>
       <span class="d-flex align-items-center gap-2">

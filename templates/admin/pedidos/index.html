@@ -39,7 +39,7 @@
     <input type="hidden" name="estado" value="{{ estado }}" />
     <i class="bi bi-search"></i>
     <input type="search" name="q" id="ped-buscar" value="{{ q }}" list="ped-sug"
-           placeholder="Buscar por cliente, DNI o N° de pedido…" autocomplete="off" />
+           data-filtro-vivo="#ped-lista" placeholder="Escribe para filtrar por cliente, DNI o N° de pedido…" autocomplete="off" />
     <datalist id="ped-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </form>
   <div class="adm-filtros">
@@ -52,12 +52,13 @@
   </div>
 </div>
 
+<div id="ped-lista">
 {# ---------------- PENDIENTES (tarjetas con confirmación) ---------------- #}
 {% if estado != 'recogido' %}
   {% if pendientes %}
     <div class="ped-grid">
       {% for p in pendientes %}
-        <article class="ped-card" data-buscar="{{ (p.cliente ~ ' ' ~ p.dni ~ ' ' ~ p.idPedido) | lower }}">
+        <article class="ped-card" data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.dni }} {{ p.idPedido }}">
           <div class="ped-card__head">
             <span class="adm-avatar">{{ p.iniciales }}</span>
             <div class="ped-card__cliente">
@@ -157,7 +158,7 @@
         </thead>
         <tbody>
           {% for p in recogidos %}
-            <tr data-buscar="{{ (p.cliente ~ ' ' ~ p.dni ~ ' ' ~ p.idPedido) | lower }}">
+            <tr data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.dni }} {{ p.idPedido }}">
               <td>#{{ p.idPedido }}</td>
               <td>{{ p.cliente }}<br /><span class="muted">DNI {{ p.dni }}</span></td>
               <td>{{ p.hora }}</td>
@@ -174,26 +175,6 @@
   <div class="adm-card"><p class="adm-vacio">Todavía no se ha recogido ningún pedido hoy.</p></div>
 {% endif %}
 
-<p class="ped-nada-busqueda" hidden>Ningún pedido coincide con la búsqueda.</p>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  (function () {
-    var q = document.getElementById("ped-buscar");
-    if (!q) return;
-    var items = document.querySelectorAll("[data-buscar]");
-    var aviso = document.querySelector(".ped-nada-busqueda");
-    q.addEventListener("input", function () {
-      var t = q.value.trim().toLowerCase();
-      var vis = 0;
-      items.forEach(function (el) {
-        var ok = !t || el.dataset.buscar.indexOf(t) !== -1;
-        el.hidden = !ok;
-        if (ok) vis++;
-      });
-      if (aviso) aviso.hidden = !(t && vis === 0);
-    });
-  })();
-</script>
+<p class="adm-vacio" data-filtro-vacio hidden>Ningún pedido coincide con la búsqueda.</p>
+</div>
 {% endblock %}
