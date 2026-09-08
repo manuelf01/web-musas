@@ -2,6 +2,19 @@
 {% block title %}Mis pedidos · Las Musas{% endblock %}
 {% block nav_pedidos %}active{% endblock %}{% block tab_pedidos %}active{% endblock %}
 
+{% macro mp_badge(estado) -%}
+  {%- set m = {
+    'recogido':   ('recogido',  'bi-check-circle-fill',       'Recogido'),
+    'cancelado':  ('cancelado', 'bi-x-circle-fill',           'Cancelado'),
+    'no_show':    ('cancelado', 'bi-exclamation-circle-fill', 'No recogido'),
+    'listo':      ('listo',     'bi-bag-check-fill',          'Listo para recojo'),
+    'preparando': ('preparando','bi-fire',                    'En preparación'),
+    'recibido':   ('pendiente', 'bi-clock-fill',              'Recibido')
+  } -%}
+  {%- set b = m.get(estado, m['recibido']) -%}
+  <span class="mp-estado {{ b[0] }}" data-mp-badge><i class="bi {{ b[1] }}"></i> {{ b[2] }}</span>
+{%- endmacro %}
+
 {% block content %}
 <div class="cx-wrap" id="mis-pedidos">
   <div class="cx-head">
@@ -34,7 +47,9 @@
       <button class="musa-chip" data-filtro="recogido" type="button">Recogidos</button>
     </div>
 
-    <div class="mp-lista">
+    <div id="mp-seg" data-url="{{ url_for('cliente.mis_pedidos_estado') }}" data-firma="{{ firma }}"></div>
+
+    <div class="mp-lista" id="mp-lista">
       {% for p in pedidos %}
         {% set repetir = [] %}
         {% for l in p.lineas if l.disponible %}
@@ -45,26 +60,24 @@
         {% endfor %}
 
         {% set grupo = 'recogido' if p.estado == 'recogido' else ('activo' if p.activo else 'cerrado') %}
-        <article class="mp-card" data-estado="{{ grupo }}" data-reveal data-reveal-delay="{{ loop.index0 % 4 }}">
+        <article class="mp-card" data-estado="{{ grupo }}" data-pedido-id="{{ p.idPedido }}"
+                 data-reveal data-reveal-delay="{{ loop.index0 % 4 }}">
           <div class="mp-card__head">
             <div>
               <strong>Pedido N° {{ p.idPedido }}</strong>
               <span class="mp-card__fecha">{{ p.fecha }} · recojo {{ p.hora }}</span>
             </div>
-            {% if p.estado == 'recogido' %}
-              <span class="mp-estado recogido"><i class="bi bi-check-circle-fill"></i> Recogido</span>
-            {% elif p.estado == 'cancelado' %}
-              <span class="mp-estado cancelado"><i class="bi bi-x-circle-fill"></i> Cancelado</span>
-            {% elif p.estado == 'no_show' %}
-              <span class="mp-estado cancelado"><i class="bi bi-exclamation-circle-fill"></i> No recogido</span>
-            {% elif p.estado == 'listo' %}
-              <span class="mp-estado listo"><i class="bi bi-bag-check-fill"></i> Listo para recojo</span>
-            {% elif p.estado == 'preparando' %}
-              <span class="mp-estado preparando"><i class="bi bi-fire"></i> En preparación</span>
-            {% else %}
-              <span class="mp-estado pendiente"><i class="bi bi-clock-fill"></i> Recibido</span>
-            {% endif %}
+            {{ mp_badge(p.estado) }}
           </div>
+
+          {% if p.activo or p.estado == 'recogido' %}
+          <ol class="mp-timeline" data-mp-timeline data-estado="{{ p.estado }}">
+            <li class="mp-timeline__paso"><span class="mp-timeline__dot"></span><span class="mp-timeline__label">Recibido</span></li>
+            <li class="mp-timeline__paso"><span class="mp-timeline__dot"></span><span class="mp-timeline__label">En cocina</span></li>
+            <li class="mp-timeline__paso"><span class="mp-timeline__dot"></span><span class="mp-timeline__label">Listo</span></li>
+            <li class="mp-timeline__paso"><span class="mp-timeline__dot"></span><span class="mp-timeline__label">Recogido</span></li>
+          </ol>
+          {% endif %}
 
           <div class="mp-card__items">
             {% for l in p.lineas %}
@@ -139,4 +152,5 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/mis-pedidos.js') }}"></script>
+<script src="{{ url_for('static', filename='js/seguimiento-pedido.js') }}" defer></script>
 {% endblock %}

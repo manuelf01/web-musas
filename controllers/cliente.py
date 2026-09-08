@@ -2,7 +2,7 @@ import json
 import re
 
 from flask import (
-    Blueprint, render_template, session, redirect, url_for, request, flash,
+    Blueprint, render_template, session, redirect, url_for, request, flash, jsonify,
 )
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
@@ -142,6 +142,12 @@ def carta():
     )
 
 
+def _firma_estados(pedidos):
+    """Huella de los estados del cliente: cambia cuando la cocina avanza uno."""
+    return "|".join(f'{p["idPedido"]}:{p["estado"]}'
+                    for p in sorted(pedidos, key=lambda p: p["idPedido"]))
+
+
 @cliente.route("/mis-pedidos")
 def mis_pedidos():
     user = session.get("cliente.auth", None)
@@ -151,7 +157,19 @@ def mis_pedidos():
         cliente=_cliente_nombre(),
         logueado=bool(user),
         pedidos=pedidos,
+        firma=_firma_estados(pedidos),
     )
+
+
+@cliente.route("/mis-pedidos/estado")
+def mis_pedidos_estado():
+    """JSON liviano para el seguimiento en vivo del pedido del cliente."""
+    user = session.get("cliente.auth", None)
+    if not user:
+        return jsonify({"estados": {}, "firma": ""})
+    pedidos = Pedido.historial_cliente(user["idUsuario"])
+    estados = {str(p["idPedido"]): p["estado"] for p in pedidos}
+    return jsonify({"estados": estados, "firma": _firma_estados(pedidos)})
 
 
 @cliente.route("/mis-pedidos/<int:id_pedido>/cancelar", methods=["POST"])

@@ -78,6 +78,22 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Agregar al carrito con micro-interacción + preview al compartir + placeholders por categoría.** Ver "Carrito + previews 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Pantalla de cocina en vivo**: el panel de Pedidos se refresca solo y avisa (pitido + banner) cuando entra un pedido nuevo. Ver "Cocina en vivo 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **`idPedido` / `idDetalleOrden` → AUTO_INCREMENT** (migración 011). Ver "AUTO_INCREMENT 2026-09-08" abajo. | `git revert` + revertir 011 |
+| 2026-09-08 | **Seguimiento del pedido para el cliente**: línea de tiempo en vivo en «Mis pedidos» (Recibido → En cocina → Listo → Recogido). Ver "Seguimiento cliente 2026-09-08" abajo. | `git revert` |
+
+### Seguimiento cliente 2026-09-08
+- **Endpoint** `GET /mis-pedidos/estado` (`cliente.mis_pedidos_estado`) →
+  `{estados:{id:estado}, firma}` del cliente logueado.
+- **`templates/client/mis-pedidos.html`**: cada pedido activo (o recogido)
+  muestra `<ol class="mp-timeline" data-estado="...">` con 4 pasos. El estado
+  se pinta con selectores `[data-estado]` + `:nth-child` (pasos hechos en verde,
+  el actual en brasa con pulso). La etiqueta de estado pasó a un macro `mp_badge`.
+- **`static/js/seguimiento-pedido.js`** (solo si hay algún pedido en curso):
+  sondea `/mis-pedidos/estado` cada 20 s. Si la `firma` cambió, actualiza
+  **en el sitio** la línea de tiempo + la etiqueta + (si entró a cocina) cambia
+  el botón «Cancelar» por la nota. Al pasar a **listo** → toast reutilizando
+  `MusasCarrito.toast` + `Notification` si el cliente dio permiso. Estados
+  finales (recogido/cancelado/no_show) → `location.reload()`.
+- Sin cambios de BD.
 
 ### AUTO_INCREMENT 2026-09-08
 - **Bug:** `Pedido.crear_pedido_completo` asignaba `idPedido` e `idDetalleOrden`

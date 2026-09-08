@@ -1552,6 +1552,94 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
   color: var(--musa-texto-suave);
 }
 
+/* ---- Línea de tiempo del pedido (seguimiento en vivo) ---- */
+.mp-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 16px 20px 4px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+.mp-timeline__paso {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+.mp-timeline__paso::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--musa-borde);
+}
+.mp-timeline__paso:first-child::before { display: none; }
+.mp-timeline__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--musa-borde);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--musa-borde);
+  position: relative;
+  z-index: 1;
+}
+.mp-timeline__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--musa-texto-suave);
+  line-height: 1.2;
+}
+
+/* Pasos completados (verde) — la línea que ENTRA al paso también */
+.mp-timeline[data-estado="preparando"] .mp-timeline__paso:nth-child(-n + 1) .mp-timeline__dot,
+.mp-timeline[data-estado="listo"]      .mp-timeline__paso:nth-child(-n + 2) .mp-timeline__dot,
+.mp-timeline[data-estado="recogido"]   .mp-timeline__paso .mp-timeline__dot {
+  background: var(--musa-exito);
+  box-shadow: 0 0 0 1px var(--musa-exito);
+}
+.mp-timeline[data-estado="preparando"] .mp-timeline__paso:nth-child(2)::before,
+.mp-timeline[data-estado="listo"]      .mp-timeline__paso:nth-child(-n + 3)::before,
+.mp-timeline[data-estado="recogido"]   .mp-timeline__paso::before {
+  background: var(--musa-exito);
+}
+.mp-timeline[data-estado="preparando"] .mp-timeline__paso:nth-child(-n + 1) .mp-timeline__label,
+.mp-timeline[data-estado="listo"]      .mp-timeline__paso:nth-child(-n + 2) .mp-timeline__label,
+.mp-timeline[data-estado="recogido"]   .mp-timeline__paso .mp-timeline__label {
+  color: var(--musa-carbon);
+}
+
+/* Paso actual (brasa, con pulso) */
+.mp-timeline[data-estado="recibido"]   .mp-timeline__paso:nth-child(1) .mp-timeline__dot,
+.mp-timeline[data-estado="preparando"] .mp-timeline__paso:nth-child(2) .mp-timeline__dot,
+.mp-timeline[data-estado="listo"]      .mp-timeline__paso:nth-child(3) .mp-timeline__dot {
+  background: var(--musa-brasa);
+  box-shadow: 0 0 0 1px var(--musa-brasa);
+  animation: mp-paso-pulso 1.8s ease-in-out infinite;
+}
+.mp-timeline[data-estado="recibido"]   .mp-timeline__paso:nth-child(1) .mp-timeline__label,
+.mp-timeline[data-estado="preparando"] .mp-timeline__paso:nth-child(2) .mp-timeline__label,
+.mp-timeline[data-estado="listo"]      .mp-timeline__paso:nth-child(3) .mp-timeline__label {
+  color: var(--musa-brasa);
+}
+@keyframes mp-paso-pulso {
+  0%, 100% { box-shadow: 0 0 0 1px var(--musa-brasa), 0 0 0 0 rgba(219, 66, 0, 0.4); }
+  50% { box-shadow: 0 0 0 1px var(--musa-brasa), 0 0 0 6px rgba(219, 66, 0, 0); }
+}
+
+.mp-card--listo {
+  outline: 2px solid var(--musa-exito);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-timeline__dot { animation: none !important; }
+}
+
 .mp-card__items { padding: 14px 20px; display: flex; flex-direction: column; gap: 8px; }
 .mp-linea { font-size: 14px; }
 .mp-linea em { color: var(--musa-peligro); font-style: normal; font-size: 12px; }

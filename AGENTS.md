@@ -168,6 +168,11 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   si entra un pedido nuevo, pitido (WebAudio) + banner `#ped-nuevo` + título
   parpadeante. Si tocas el layout de `admin/pedidos/index.html`, mantené
   `#ped-cocina`, `#ped-lista`, `#ped-chips` y `data-pedido-id` en `.ped-card`.
+- **Seguimiento del pedido (cliente)**: `GET /mis-pedidos/estado` →
+  `{estados, firma}`. `static/js/seguimiento-pedido.js` lo sondea cada 20 s solo
+  si hay un pedido en curso y actualiza en el sitio la `<ol class="mp-timeline">`
+  y la etiqueta (`data-mp-badge`). En `mis-pedidos.html` mantené `#mp-seg`,
+  `data-pedido-id` en `.mp-card` y `data-mp-timeline`.
 - **Búsqueda en vivo**: `static/js/ui-comun.js`. Un `<input data-filtro-vivo="#scope">`
   oculta los `[data-filtro-item]` dentro de `#scope` conforme se teclea
   (sin Enter). Opcional `[data-filtro-seccion]` y `[data-filtro-vacio]`.
