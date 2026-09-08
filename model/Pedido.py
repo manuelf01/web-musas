@@ -239,8 +239,8 @@ class Pedido:
                         "UPDATE producto SET existencias = existencias - %s WHERE idProducto = %s",
                         (pedidas, id_prod),
                     )
-                # El comprobante NO se emite aquí: el pago es al recoger, así que
-                # se genera en marcar_recogido() (venta realmente cobrada).
+                # El comprobante / boleta (tablas comprobante y detalleComprobante)
+                # los genera el MÓDULO DE VENTAS de Betancurt. Aquí no se toca.
 
             conexion.commit()
             return id_pedido, key
@@ -249,53 +249,6 @@ class Pedido:
             raise
         finally:
             conexion.close()
-
-    # ------------------------------------------------------------------
-    # Comprobante: se emite al entregar el pedido (cuando se cobra).
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _emitir_comprobante(cursor, id_pedido):
-        cursor.execute(
-            "SELECT idUsuario, dniNoRegistrado, estadoBoleta FROM registroPedido WHERE idPedido = %s",
-            (id_pedido,),
-        )
-        id_usuario, dni, boleta = cursor.fetchone()
-
-        cursor.execute(
-            "SELECT idProducto, nombreProducto, SUM(cantidad), SUM(precioTotal) "
-            "FROM detalleOrden WHERE idPedido = %s GROUP BY idProducto, nombreProducto",
-            (id_pedido,),
-        )
-        lineas = cursor.fetchall()
-        total = round(sum(float(l[3] or 0) for l in lineas), 2)
-        sub_total = round(total / 1.18, 2)
-        igv = round(total - sub_total, 2)
-        ahora = datetime.now()
-        serie = "B001" if boleta else "NV01"
-
-        cursor.execute(
-            """INSERT INTO comprobante
-               (idPedido, idUsuario, dniNoRegistrado, fechaComprobante, horaComprobante,
-                subTotal, montoTotal, igv, numeroComprobante)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
-            (id_pedido, id_usuario, dni, ahora.date(), ahora.strftime("%H:%M:%S"),
-             sub_total, total, igv, "PENDIENTE"),
-        )
-        id_comp = cursor.lastrowid
-        cursor.execute(
-            "UPDATE comprobante SET numeroComprobante = %s WHERE idComprobante = %s",
-            (f"{serie}-{id_comp:08d}", id_comp),
-        )
-        for id_prod, nombre, cant, sub in lineas:
-            cant = int(cant or 0)
-            sub = round(float(sub or 0), 2)
-            cursor.execute(
-                """INSERT INTO detalleComprobante
-                   (idComprobante, idProducto, nombreProducto, precioUnidad, cantidad, precioTotal)
-                   VALUES (%s, %s, %s, %s, %s, %s)""",
-                (id_comp, id_prod, nombre, round(sub / cant, 2) if cant else 0, cant, sub),
-            )
-        return id_comp
 
     @staticmethod
     def cancelar_pedido(id_pedido, id_usuario=None, dni=None, saltar_dueno=False):
@@ -452,7 +405,8 @@ class Pedido:
     @staticmethod
     def marcar_recogido(id_pedido, key):
         """'ok' | 'clave_mal' | 'no_existe' (ya recogido, cancelado o inexistente).
-        Al entregar se emite el comprobante (la venta se cobra en este momento)."""
+        Marca el pedido como entregado. El comprobante de venta lo genera el
+        módulo de Ventas (Betancurt), no aquí."""
         key = str(key).strip()
         conexion = obtener_conexion()
         try:
@@ -475,7 +429,6 @@ class Pedido:
                 )
                 if cursor.rowcount != 1:
                     return "no_existe"
-                Pedido._emitir_comprobante(cursor, id_pedido)
             conexion.commit()
             return "ok"
         finally:

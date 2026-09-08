@@ -1,75 +1,66 @@
-{% extends "admin/base.html" %}
-{% block title %}Productos · Backoffice Las Musas{% endblock %}
-{% block nav_productos %}is-active{% endblock %}
+{% extends "admin/main.html" %} {% block titulo %} Discos {% endblock %} {%
+block contenido %}
 
-{% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Productos</h1>
-    <p><i class="bi bi-egg-fried"></i> Carta y cremas de la tienda</p>
-  </div>
-  <a href="{{ url_for('admin.productos.formulario_agregar') }}" class="btn-brasa">
-    <i class="bi bi-plus-lg"></i> Nuevo producto
-  </a>
-</div>
-
-<section class="adm-card">
-  {% if productos %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
+<section class="section m-3">
+  <div class="columns">
+    <div class="column">
+      <h3 class="is-size-3 m-3 fs-5 fw-bold">Productos</h3>
+      <table class="table">
         <thead>
           <tr>
             <th>#</th>
-            <th>Producto</th>
             <th>Categoría</th>
-            <th class="num">Precio</th>
-            <th class="num">Stock</th>
-            <th>Acciones</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Precio</th>
+            <th>Existencias</th>
+            <th>Editar</th>
+            <th>Eliminar</th>
           </tr>
         </thead>
         <tbody>
           {% for producto in productos %}
-            <tr>
-              <td class="num">{{ loop.index + pagination.skip }}</td>
-              <td>
-                <div class="adm-prod-cel">
-                  {% if producto['imagen'] %}
-                    <img class="adm-foto-mini" src="{{ url_for('static', filename='img/' ~ producto['imagen']) }}" alt="" />
-                  {% else %}
-                    <span class="adm-foto-mini adm-foto-mini--vacia"><i class="bi bi-image"></i></span>
-                  {% endif %}
-                  <div>
-                    <strong>{{ producto['nombre'] }}</strong>
-                    <div style="color: var(--musa-texto-suave); font-size: 12px;">
-                      {{ producto['descripcion'] | truncate(60) }}
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td>{{ producto['nombreCategoria'] }}</td>
-              <td class="num">S/ {{ '%.2f'|format(producto['precio'] or 0) }}</td>
-              <td class="num">{{ producto['existencias'] }}</td>
-              <td>
-                <div class="acciones">
-                  <a href="{{ url_for('admin.productos.editar', id=producto['idProducto']) }}" class="adm-btn-sm">
-                    <i class="bi bi-pencil"></i> Editar
-                  </a>
-                  <form action="{{ url_for('admin.productos.eliminar') }}" method="POST"
-                        onsubmit="return confirm('¿Eliminar «{{ producto['nombre'] }}»?');">
-                    {{ campo_csrf() }}
-                    <input type="hidden" name="id" value="{{ producto['idProducto'] }}" />
-                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i> Eliminar</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
+          <tr>
+            <td>{{ loop.index + pagination.skip }}</td>
+            <td>{{producto['nombreCategoria']}}</td>
+            <td>{{producto['nombre']}}</td>
+            <td>{{producto['descripcion']}}</td>
+            <td>{{producto['precio']}}</td>
+            <td>{{producto['existencias']}}</td>
+            <td>
+              {# Pasar el id (lo que hay en producto[0]) #}
+              <a
+                href="{{url_for('admin.productos.editar', id=producto['idProducto'])}}"
+                class="btn btn-info"
+                >Editar</a
+              >
+            </td>
+            <td>
+              <form
+                action="{{url_for('admin.productos.eliminar')}}"
+                method="POST"
+              >
+                <input
+                  type="hidden"
+                  name="id"
+                  value="{{producto['idProducto']}}"
+                />
+                <button class="btn btn-danger">Eliminar</button>
+              </form>
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
+      <div class="text-end">
+        <a
+          href="{{url_for('admin.productos.formulario_agregar')}}"
+          class="btn btn-success"
+          >Agregar</a
+        >
+      </div>
+      {{ pagination.links }}
     </div>
-    <div class="adm-pag">{{ pagination.links }}</div>
-  {% else %}
-    <p class="adm-vacio"><i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i> Todavía no hay productos.</p>
-  {% endif %}
+  </div>
 </section>
 {% endblock %}

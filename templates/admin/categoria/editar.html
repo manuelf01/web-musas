@@ -1,46 +1,43 @@
-{% extends "admin/base.html" %}
-{% block title %}Editar categoría · Backoffice Las Musas{% endblock %}
-{% block nav_categorias %}is-active{% endblock %}
-
-{% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Editar categoría</h1>
-    <p><i class="bi bi-pencil"></i> {{ categoria[1] }}</p>
-  </div>
-  <a href="{{ url_for('admin.categoria.home') }}" class="adm-btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
-</div>
-
-<section class="adm-card">
-  <form action="{{ url_for('admin.categoria.actualizar') }}" method="post" enctype="multipart/form-data" class="adm-form">
-    {{ campo_csrf() }}
-    <input type="hidden" name="idCategoria" value="{{ categoria[0] }}" />
-
-    <div class="musa-field">
-      <label class="musa-field-label">Imagen de la categoría</label>
-      <div class="adm-foto-edit">
-        {% if categoria[3] %}
-          <img src="{{ url_for('static', filename='img/' ~ categoria[3]) }}" alt="" class="adm-foto-actual" />
-        {% else %}
-          <span class="adm-foto-actual adm-foto-actual--vacia"><i class="bi bi-image"></i></span>
-        {% endif %}
-        <div>
-          <input type="file" name="imagen" id="imagen" accept="image/*" class="musa-input" />
-          <span class="musa-field-hint">Déjalo vacío para conservar la actual.</span>
-        </div>
-      </div>
+{% extends "admin/main.html" %} {% block titulo %} Editar categoria {% endblock
+%} {% block contenido %}
+<section class="w-50 m-auto">
+  <h3 class="m-3 fs-5 fw-bold">Editar Categoria</h3>
+  <form
+    action="{{url_for('admin.categoria.actualizar')}}"
+    method="post"
+    class="d-flex flex-column justify-content-center"
+  >
+    {# Enviar el id en un campo oculto #}
+    <input type="hidden" name="idCategoria" value="{{categoria[0]}}" />
+    <div class="mb-3">
+      <label for="nombreCategoria">Nombre Categoría:</label>
+      <input
+        value="{{categoria[1]}}"
+        required
+        type="text"
+        class="form-control"
+        placeholder="nombreCategoria"
+        name="nombreCategoria"
+        id="nombreCategoria"
+      />
     </div>
-    <div class="musa-field">
-      <label class="musa-field-label" for="nombreCategoria">Nombre de la categoría</label>
-      <input value="{{ categoria[1] }}" required type="text" class="musa-input" name="nombreCategoria" id="nombreCategoria" />
+    <div class="mb-3">
+      <label class="form-label" for="descripcion">Descripción:</label>
+      <input
+        value="{{categoria[2]}}"
+        required
+        type="text"
+        class="form-control"
+        placeholder="descripcion"
+        name="descripcion"
+        id="descripcion"
+      />
     </div>
-    <div class="musa-field">
-      <label class="musa-field-label" for="descripcion">Descripción</label>
-      <input value="{{ categoria[2] }}" required type="text" class="musa-input" name="descripcion" id="descripcion" />
-    </div>
-    <div class="adm-form__acciones">
-      <a href="{{ url_for('admin.categoria.home') }}" class="adm-btn-sm">Cancelar</a>
-      <button type="submit" class="btn-brasa"><i class="bi bi-check-lg"></i> Guardar cambios</button>
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="submit" class="btn btn-success mt-2">Guardar</button>
+      <a href="{{url_for('admin.categoria.home')}}" class="btn btn-primary mt-2"
+        >Volver</a
+      >
     </div>
   </form>
 </section>

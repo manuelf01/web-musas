@@ -74,13 +74,16 @@ class Usuario:
         return modo
 
     def actualizar_usuario(correo, numTel, contra, id, tipo):
+        # NOTA (Ramirez): esta función es del módulo de Usuarios de Betancurt.
+        # Solo se conserva el hash de la contraseña nueva para que sea compatible
+        # con el login. Si Betancurt reescribe este método, esta versión cede.
         actual = Usuario.obtener_usuario_id_tipo(id, tipo)
         if correo == "" or correo is None:
             correo = actual[3]
         if numTel == "" or numTel is None:
             numTel = actual[4]
         if contra == "" or contra is None:
-            contra = actual[5]           # se conserva el hash actual
+            contra = actual[5]
         else:
             contra = generate_password_hash(contra)
         conexion = obtener_conexion()

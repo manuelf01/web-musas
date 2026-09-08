@@ -1,9 +1,8 @@
-from flask import Blueprint, render_template, redirect, request, url_for, g, flash
+from flask import Blueprint, render_template, redirect, request, url_for, g
 from flask_paginate import Pagination, get_page_parameter
 from controllers.admin import admin
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
-from subidas import guardar_imagen
 
 productos = Blueprint("productos", __name__, url_prefix='/productos')
 
@@ -40,24 +39,15 @@ def guardar():
     precio = request.form["precio"]
     existencias = request.form["existencias"]
     idCategoria = request.form.get("categorias")
-    imagen = guardar_imagen(request.files.get("imagen"), "productos")
-    if request.files.get("imagen") and request.files["imagen"].filename and not imagen:
-        flash("La imagen no es válida (usa JPG, PNG o WEBP, máx. 5 MB).", "error")
-        return redirect(url_for("admin.productos.formulario_agregar"))
-    if Producto.insertar_producto(nombre, descripcion, precio, existencias, idCategoria, imagen) is False:
-        flash("Completa todos los campos del producto.", "error")
-        return redirect(url_for("admin.productos.formulario_agregar"))
-    flash("Producto agregado a la carta.", "ok")
+    Producto.insertar_producto(
+        nombre, descripcion, precio, existencias, idCategoria)
+
     return redirect(url_for("admin.productos.home"))
 
 
 @productos.route("/eliminar_producto", methods=["POST"])
 def eliminar():
-    try:
-        Producto.eliminar_producto(request.form["id"])
-        flash("Producto eliminado.", "ok")
-    except Exception:
-        flash("No se puede eliminar: el producto aparece en pedidos. Ponle stock 0 para ocultarlo.", "error")
+    Producto.eliminar_producto(request.form["id"])
     return redirect(url_for("admin.productos.home"))
 
 
@@ -65,7 +55,7 @@ def eliminar():
 def editar(id):
     producto = Producto.obtener_producto_por_id(id)
     categorias = CategoriaProducto.obtener_categorias()
-    return render_template("admin/productos/editar_producto.html", producto=producto, categorias=categorias, usuario=g.user)
+    return render_template("admin/productos/editar_producto.html", producto=producto, categorias=categorias)
 
 
 @productos.route("/actualizar_producto", methods=["POST"])
@@ -76,11 +66,6 @@ def actualizar():
     precio = request.form["precio"]
     existencias = request.form["existencias"]
     idCategoria = request.form.get("categorias")
-    imagen = guardar_imagen(request.files.get("imagen"), "productos")
-    if request.files.get("imagen") and request.files["imagen"].filename and not imagen:
-        flash("La imagen no es válida (usa JPG, PNG o WEBP, máx. 5 MB).", "error")
-        return redirect(url_for("admin.productos.editar", id=id))
     Producto.actualizar_producto(
-        nombre, descripcion, precio, existencias, id, idCategoria, imagen)
-    flash("Producto actualizado." + (" Imagen cambiada." if imagen else ""), "ok")
+        nombre, descripcion, precio, existencias, id, idCategoria)
     return redirect(url_for("admin.productos.home"))

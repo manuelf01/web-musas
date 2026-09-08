@@ -1,8 +1,22 @@
 # Bitácora del proyecto — web-musas (Las Musas)
 
 > Archivo de memoria de trabajo. Se actualiza cada vez que se cambia algo, se
-> rompe algo, o se detecta código redundante. **Última actualización: 2026-09-06.**
+> rompe algo, o se detecta código redundante. **Última actualización: 2026-09-07.**
 > Rama de trabajo: `Ramirez` (nunca tocar `main` directamente).
+
+---
+
+## 0. División del trabajo (IMPORTANTE para el merge)
+
+- **Ramirez (esta rama):** tienda completa (inicio, carta, detalle, carrito, checkout,
+  mis pedidos), login/registro unificado, **CRUD de pedidos** + dashboard, e infra
+  transversal (sistema de diseño CSS, seguridad/CSRF, migraciones 001–006, anti no-show,
+  animaciones).
+- **Betancurt (rama `Betancurt`):** todo el backoffice de **productos, categorías,
+  usuarios, ventas, reportes, detalle de venta y comprobantes**.
+
+**2026-09-07:** se REVIRTIÓ toda la zona de Betancurt a la versión de `main` para no
+pisar su trabajo. Ver `MERGE_NOTES.md` para la lista exacta y cómo integrar.
 
 ---
 

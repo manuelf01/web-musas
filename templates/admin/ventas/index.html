@@ -1,49 +1,49 @@
-{% extends "admin/base.html" %}
-{% block title %}Ventas · Backoffice Las Musas{% endblock %}
-{% block nav_ventas %}is-active{% endblock %}
+{% extends "admin/main.html" %} {% block titulo %} Discos {% endblock %} {%block
+contenido %}
 
-{% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Ventas</h1>
-    <p><i class="bi bi-graph-up"></i> Comprobantes generados por cada pedido</p>
-  </div>
-</div>
+<section>
+  <div class="columns">
+    <div class="column">
+      <h3 class="m-3 fs-5 fw-bold">Ventas</h3>
 
-<section class="adm-card">
-  {% if comprobantes %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
-        <thead>
+      <table class="table">
+        <thead class="text-center">
           <tr>
-            <th>#</th><th>Comprobante</th><th>DNI</th><th>Fecha</th><th>Hora</th>
-            <th class="num">Subtotal</th><th class="num">IGV</th><th class="num">Total</th><th></th>
+            <th>#</th>
+            <th>Dni</th>
+            <th>Fecha</th>
+            <th>Hora</th>
+            <th>SubTotal</th>
+            <th>Igv</th>
+            <th>Total</th>
+            <th>Ver Detalle</th>
           </tr>
         </thead>
-        <tbody>
-          {% for c in comprobantes %}
-            <tr>
-              <td class="num">{{ loop.index + pagination.skip }}</td>
-              <td><strong>{{ c[9] }}</strong></td>
-              <td>{{ c[3] }}</td>
-              <td>{{ c[4] }}</td>
-              <td>{{ c[5] }}</td>
-              <td class="num">S/ {{ '%.2f'|format(c[6] or 0) }}</td>
-              <td class="num">S/ {{ '%.2f'|format(c[8] or 0) }}</td>
-              <td class="num">S/ {{ '%.2f'|format(c[7] or 0) }}</td>
-              <td>
-                <a href="{{ url_for('admin.ventas.show_detalle', idComprobante=c[0]) }}" class="adm-btn-sm">
-                  <i class="bi bi-eye"></i> Detalle
-                </a>
-              </td>
-            </tr>
+        <tbody class="text-center">
+          {% for comprobante in comprobantes %}
+          <tr>
+            <td>{{loop.index + pagination.skip}}</td>
+            <td>{{comprobante[3]}}</td>
+            <td>{{comprobante[4]}}</td>
+            <td>{{comprobante[5]}}</td>
+            <td>{{comprobante[6]}}</td>
+            <td>{{comprobante[8]}}</td>
+            <td>{{comprobante[7]}}</td>
+            <td>
+              {# Pasar el id (lo que hay en producto[0]) #}
+              <a
+                href="{{url_for('admin.ventas.show_detalle', idComprobante = comprobante[0])}}"
+                class="btn btn-info"
+                >Ver detalle</a
+              >
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
+      {{ pagination.links }}
     </div>
-    <div class="adm-pag">{{ pagination.links }}</div>
-  {% else %}
-    <p class="adm-vacio"><i class="bi bi-receipt d-block mb-2" style="font-size: 32px;"></i> Todavía no hay ventas registradas.</p>
-  {% endif %}
+  </div>
 </section>
+
 {% endblock %}

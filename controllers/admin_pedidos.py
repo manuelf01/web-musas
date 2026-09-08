@@ -30,7 +30,7 @@ def confirmar():
 
     resultado = Pedido.marcar_recogido(id_pedido, key)
     if resultado == "ok":
-        flash(f"Pedido N° {id_pedido} entregado. Comprobante emitido.", "ok")
+        flash(f"Pedido N° {id_pedido} entregado.", "ok")
     elif resultado == "clave_mal":
         flash(f"La palabra clave no coincide con el pedido N° {id_pedido}.", "error")
     else:

@@ -1,34 +1,43 @@
-{% extends "admin/base.html" %}
-{% block title %}Nueva categoría · Backoffice Las Musas{% endblock %}
-{% block nav_categorias %}is-active{% endblock %}
-
-{% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Nueva categoría</h1>
-    <p><i class="bi bi-tags"></i> Aparece como sección en la carta de la tienda</p>
-  </div>
-  <a href="{{ url_for('admin.categoria.home') }}" class="adm-btn-sm"><i class="bi bi-arrow-left"></i> Volver</a>
-</div>
-
-<section class="adm-card">
-  <form action="{{ url_for('admin.categoria.guardar') }}" method="post" enctype="multipart/form-data" class="adm-form">
-    {{ campo_csrf() }}
-    <div class="musa-field">
-      <label class="musa-field-label" for="imagen">Imagen de la categoría <span class="musa-field-hint">se usa en el mosaico del inicio, opcional</span></label>
-      <input type="file" name="imagen" id="imagen" accept="image/*" class="musa-input" />
+{% extends "admin/main.html" %} {% block titulo %} Agregar categoria {% endblock
+%} {% block contenido %}
+<section class="w-50 m-auto">
+  <h3 class="m-3 fs-5 fw-bold">Agregar categoría</h3>
+  <form
+    action="{{url_for('admin.categoria.guardar')}}"
+    method="post"
+    class="d-flex flex-column justify-content-center"
+  >
+    <div class="mb-3">
+      <label class="" for="nombreCategoria">Nombre Categoría:</label>
+      <div class="">
+        <input
+          class="form-control"
+          required
+          type="text"
+          placeholder="Nombre Categoria"
+          name="nombreCategoria"
+          id="nombreCategoria"
+        />
+      </div>
     </div>
-    <div class="musa-field">
-      <label class="musa-field-label" for="nombreCategoria">Nombre de la categoría</label>
-      <input class="musa-input" required type="text" placeholder="Ej. Hamburguesas" name="nombreCategoria" id="nombreCategoria" />
+    <div class="mb-3">
+      <label class="" for="descripcion">Descripción:</label>
+      <div class="">
+        <input
+          required
+          type="text"
+          class="form-control"
+          placeholder="Descripción"
+          name="descripcion"
+          id="descripcion"
+        />
+      </div>
     </div>
-    <div class="musa-field">
-      <label class="musa-field-label" for="descripcion">Descripción</label>
-      <input required type="text" class="musa-input" placeholder="Texto corto que se muestra bajo el título" name="descripcion" id="descripcion" />
-    </div>
-    <div class="adm-form__acciones">
-      <a href="{{ url_for('admin.categoria.home') }}" class="adm-btn-sm">Cancelar</a>
-      <button type="submit" class="btn-brasa"><i class="bi bi-check-lg"></i> Guardar categoría</button>
+    <div class="d-flex gap-2 justify-content-end">
+      <button type="submit" class="btn btn-success mt-2">Guardar</button>
+      <a href="{{url_for('admin.categoria.home')}}" class="btn btn-primary mt-2"
+        >Volver</a
+      >
     </div>
   </form>
 </section>

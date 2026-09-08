@@ -1,7 +1,6 @@
-from flask import Blueprint, request, render_template, redirect, url_for, g, flash
+from flask import Blueprint, request, render_template, redirect, url_for, g
 from controllers.admin import admin
 from model.CategoriaProducto import CategoriaProducto
-from subidas import guardar_imagen
 
 categoria_producto = Blueprint("categoria", __name__, url_prefix='/categorias')
 
@@ -21,19 +20,15 @@ def agregar():
 def guardar():
     nombreCategoria = request.form["nombreCategoria"]
     descripcion = request.form["descripcion"]
-    imagen = guardar_imagen(request.files.get("imagen"), "categorias")
-    CategoriaProducto.insertar_categoria(nombreCategoria, descripcion, imagen)
-    flash("Categoría creada.", "ok")
+    CategoriaProducto.insertar_categoria(nombreCategoria, descripcion)
+    # De cualquier modo, y si todo fue bien, redireccionar
     return redirect(url_for('admin.categoria.home'))
 
 
 @categoria_producto.route("/eliminar", methods=["POST"])
 def eliminar():
-    try:
-        CategoriaProducto.eliminar_categoria(request.form["idCategoria"])
-        flash("Categoría eliminada.", "ok")
-    except Exception:
-        flash("No se puede eliminar: hay productos en esa categoría. Muévelos primero.", "error")
+    hecho = CategoriaProducto.eliminar_categoria(request.form["idCategoria"])
+
     return redirect(url_for("admin.categoria.home"))
 
 
@@ -49,7 +44,5 @@ def actualizar():
     id = request.form["idCategoria"]
     nombreCategoria = request.form["nombreCategoria"]
     descripcion = request.form["descripcion"]
-    imagen = guardar_imagen(request.files.get("imagen"), "categorias")
-    CategoriaProducto.actualizar_categoria(nombreCategoria, descripcion, id, imagen)
-    flash("Categoría actualizada." + (" Imagen cambiada." if imagen else ""), "ok")
+    CategoriaProducto.actualizar_categoria(nombreCategoria, descripcion, id)
     return redirect(url_for("admin.categoria.home"))

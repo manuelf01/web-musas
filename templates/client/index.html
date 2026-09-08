@@ -103,8 +103,7 @@
     </div>
     <div class="musa-tiles">
       {% for c in categorias %}
-        <a class="musa-tile" href="{{ url_for('cliente.productos_categoria', categoria=c[1]) }}" data-reveal data-reveal-delay="{{ loop.index0 % 4 }}"
-           {% if c[3] %}style="background-image: linear-gradient(180deg, rgba(26,21,18,.12), rgba(26,21,18,.82)), url('{{ url_for('static', filename='img/' ~ c[3]) }}');"{% endif %}>
+        <a class="musa-tile" href="{{ url_for('cliente.productos_categoria', categoria=c[1]) }}" data-reveal data-reveal-delay="{{ loop.index0 % 4 }}">
           <span class="musa-tile__emoji">{{ emojis.get(c[1], "🍴") }}</span>
           <span class="musa-tile__nombre">{{ c[1] }}</span>
           <span class="musa-tile__n">{{ totales.get(c[0], 0) }} opciones</span>

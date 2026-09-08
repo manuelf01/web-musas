@@ -1,52 +1,60 @@
-{% extends "admin/base.html" %}
-{% block title %}Usuarios · Backoffice Las Musas{% endblock %}
-{% block nav_usuarios %}is-active{% endblock %}
+{% extends "admin/main.html" %} {% block titulo %} Discos {% endblock %} {%
+block contenido %}
 
-{% block content %}
-<div class="adm-head">
-  <div>
-    <h1>Usuarios administradores</h1>
-    <p><i class="bi bi-people"></i> Personal con acceso al backoffice</p>
-  </div>
-  <a href="{{ url_for('admin.usuarios.form_agregar') }}" class="btn-brasa">
-    <i class="bi bi-plus-lg"></i> Nuevo administrador
-  </a>
-</div>
+<section class="section m-3">
+  <div class="columns">
+    <div class="column">
+      <h3 class="m-3 fs-5 fw-bold">Usuarios</h3>
 
-<section class="adm-card">
-  {% if usuarios %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
+      <table class="table">
         <thead>
-          <tr><th>DNI</th><th>Nombre</th><th>Correo</th><th>Teléfono</th><th>Acciones</th></tr>
+          <tr>
+            <th>Dni</th>
+            <th>Nombres</th>
+            <th>Apellidos</th>
+            <th>Correo</th>
+            <th>Teléfono</th>
+            <th>Editar</th>
+            <th>Eliminar</th>
+          </tr>
         </thead>
         <tbody>
-          {% for u in usuarios %}
-            <tr>
-              <td class="num">{{ u[1] }}</td>
-              <td><strong>{{ u[2] }} {{ u[3] }}</strong></td>
-              <td style="color: var(--musa-texto-suave);">{{ u[4] }}</td>
-              <td>{{ u[5] }}</td>
-              <td>
-                <div class="acciones">
-                  <a href="{{ url_for('admin.usuarios.form_editar', id=u[0]) }}" class="adm-btn-sm">
-                    <i class="bi bi-pencil"></i> Editar
-                  </a>
-                  <form action="{{ url_for('admin.usuarios.eliminar') }}" method="POST"
-                        onsubmit="return confirm('¿Quitar el acceso de {{ u[2] }} {{ u[3] }}?');">
-                    {{ campo_csrf() }}
-                    <input type="hidden" name="id" value="{{ u[0] }}" />
-                    <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-trash"></i> Eliminar</button>
-                  </form>
-                </div>
-              </td>
-            </tr>
+          {% for usuario in usuarios %}
+          <tr>
+            <td>{{usuario[1]}}</td>
+            <td>{{usuario[2]}}</td>
+            <td>{{usuario[3]}}</td>
+            <td>{{usuario[4]}}</td>
+            <td>{{usuario[5]}}</td>
+            <td>
+              {# Pasar el id (lo que hay en producto[0]) #}
+              <a
+                href="{{url_for('admin.usuarios.form_editar', id = usuario[0])}}"
+                class="btn btn-info"
+                >Editar</a
+              >
+            </td>
+            <td>
+              <form
+                action="{{url_for('admin.usuarios.eliminar')}}"
+                method="POST"
+              >
+                <input type="hidden" name="id" value="{{usuario[0]}}" />
+                <button class="btn btn-danger">Eliminar</button>
+              </form>
+            </td>
+          </tr>
           {% endfor %}
         </tbody>
       </table>
+      <div class="text-end">
+        <a
+          href="{{url_for('admin.usuarios.form_agregar')}}"
+          class="btn btn-success"
+          >Agregar</a
+        >
+      </div>
     </div>
-  {% else %}
-    <p class="adm-vacio">No hay administradores registrados.</p>
-  {% endif %}
+  </div>
 </section>
 {% endblock %}
