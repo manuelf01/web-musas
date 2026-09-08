@@ -42,9 +42,33 @@
     }, 0);
   }
 
+  function _firmaCremas(cremas) {
+    return (cremas || [])
+      .map(function (c) { return Number(c.idProducto || c); })
+      .sort(function (a, b) { return a - b; })
+      .join(",");
+  }
+
+  function _mismaLinea(a, b) {
+    return (
+      Number(a.idProducto) === Number(b.idProducto) &&
+      _firmaCremas(a.cremas) === _firmaCremas(b.cremas)
+    );
+  }
+
   function agregar(item) {
     var items = leer();
-    items.push(item);
+    var existente = null;
+    for (var i = 0; i < items.length; i++) {
+      if (_mismaLinea(items[i], item)) { existente = items[i]; break; }
+    }
+    if (existente) {
+      // Mismo producto y mismas cremas -> suma a la línea que ya está.
+      var suma = (Number(existente.cantidad) || 1) + (Number(item.cantidad) || 1);
+      existente.cantidad = Math.max(1, Math.min(suma, 99));
+    } else {
+      items.push(item);
+    }
     guardar(items);
   }
 

@@ -285,11 +285,3 @@ class Usuario:
         conexion.close()
         if resultado[0] > 0:
             return True
-        
-    def obtener_usuarios_jwt():
-        conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute("SELECT idUsuario, dni, contraseña FROM usuario")
-            usuarios = cursor.fetchall()
-        conexion.close()
-        return usuarios

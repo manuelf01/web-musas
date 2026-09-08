@@ -25,7 +25,7 @@ distinta, sin no-show en su rama). Lo integrado:
   **entregar** el pedido (`Pedido._emitir_comprobante` en `marcar_recogido`), porque el pago es al recojo.
 - Migraciones 007 (`categoriaProducto.imagen`) y 008 (`comprobante.dniNoRegistrado` CHAR(8)).
 - CSRF ya NO tiene módulos exentos: todos los formularios del panel llevan `{{ campo_csrf() }}`.
-Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
+El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archivo.
 
 ---
 
@@ -44,7 +44,7 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 
 ### Cómo levantar el proyecto
 1. XAMPP Control Panel → **Start** en MySQL.
-2. `cd "C:\Users\JUAN RAMIREZ\Desktop\web-musas"` → `.\.venv\Scripts\activate` → `python app.py`
+2. En la carpeta del proyecto → `.\.venv\Scripts\activate` → `python app.py`
 
 > Nota: en una sesión anterior se dejó un `mysqld.exe` corriendo en segundo plano
 > que ya fue detenido. Usar siempre el panel de XAMPP para arrancar MySQL.
@@ -67,9 +67,9 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-07 | **Cancelación de pedidos + anti no-show** (migración 006). Ver "No-show 2026-09-07" abajo. | `git revert` + revertir 006 |
 | 2026-09-07 | **Inicio rediseñado como landing** (distinto de la Carta) + **subida de imágenes desde el panel** (migración 007). Ver "Inicio + imágenes 2026-09-07". | `git revert` + revertir 007 |
 | 2026-09-07 | **Ancho + animaciones**: contenedores más anchos, banda "Explora" a todo el ancho, grillas fluidas, aparición al scroll. Ver "Ancho + animaciones 2026-09-07". | `git revert` |
-| 2026-09-07 | **Separación del trabajo de Betancurt**: toda su zona vuelve a `main`. Ver `MERGE_NOTES.md` + sección 0. | — |
+| 2026-09-07 | **Separación del trabajo de Betancurt**: toda su zona vuelve a `main`. Ver sección 0. | — |
 | 2026-09-07 | **Fixes: horario de recojo, admin en tienda, carrito compartido**. Ver "Fixes checkout/sesión 2026-09-07" abajo. | `git revert` |
-| 2026-09-07 | **Integración del panel del compañero** (`Manuelf`): CRUD productos/categorías/usuarios + ventas/comprobantes sobre el diseño de esta rama; comprobante al entregar; migraciones 007–008; CSRF sin exentos. Ver sección 0 + `MERGE_NOTES.md`. | `git revert` |
+| 2026-09-07 | **Integración del panel del compañero** (`Manuelf`): CRUD productos/categorías/usuarios + ventas/comprobantes sobre el diseño de esta rama; comprobante al entregar; migraciones 007–008; CSRF sin exentos. Ver sección 0. | `git revert` |
 | 2026-09-08 | **Estados de pedido + pedidos solo de registrados** (migración 009). Ver "Estados de pedido 2026-09-08" abajo. | `git revert` + revertir 009 |
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
@@ -81,6 +81,35 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Seguimiento del pedido para el cliente**: línea de tiempo en vivo en «Mis pedidos» (Recibido → En cocina → Listo → Recogido). Ver "Seguimiento cliente 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **Fix carrito + repaso de seguridad + limpieza de código muerto**. Ver "Limpieza 2026-09-08" abajo. | `git revert` |
+
+### Limpieza 2026-09-08
+- **Carrito — botón "Agregar":** dos arreglos.
+  1. `carrito.js` `agregar()` ahora **funde líneas iguales** (mismo producto +
+     mismas cremas → suma la cantidad, tope 99) en vez de apilar líneas.
+  2. `detalle-producto.js`: al agregar, el botón queda en verde **"Agregado al
+     carrito"** (deshabilitado) y aparece un enlace **"Ir al carrito"**; vuelve a
+     habilitarse si cambias la cantidad o una crema. Ya no se puede spamear.
+- **Seguridad (repaso):** `cfg.py` nunca estuvo en git (gitignored desde el
+  inicio). No hay credenciales ni llaves en el código (solo placeholders).
+  CSRF, hash pbkdf2, SSRF en subidas por URL, cookies HttpOnly/SameSite,
+  cabeceras de seguridad, `app.run` solo en localhost, SQL 100% parametrizado.
+  - **Quitado del repo:** `db/backup_db_musuas.sql` (traía hashes de contraseña
+    y era un footgun: `USE db_musuas` dentro). `sql.sql` es la única fuente.
+  - Rutas personales (`C:\Users\JUAN RAMIREZ\...`) sacadas de la bitácora.
+- **Código muerto eliminado** (nada de esto lo usaba la tienda ni el panel):
+  - `APIS/` completo + `Token/` + Swagger UI + Flask-JWT (librería sin
+    mantenimiento desde ~2016; se quitó el parche `collections.Mapping` de
+    `app.py`). `requirements.txt` sin `Flask-JWT`, `PyJWT`, `flask-swagger-ui`.
+  - Modelos: `Transaccion.py`, `DetalleOrden.py`, `DetalleComprobante.py`,
+    `DetalleCremas.py`. Métodos huérfanos en `Pedido.py` (bloque final
+    `get_pedidos*`, `diccionario_pedidos`, `validate_key_pedido`, …) y
+    `Comprobante.py` (`__init__`, `obtener_comprobante*`, `MAX(id)+1`).
+  - `static/documentacion.yaml` (spec de Swagger), `MERGE_NOTES.md` (notas de
+    integración de una sola vez; el resumen está en la sección 0).
+- `README.md` reescrito como punto de entrada real (setup + tests + a qué
+  archivo ir para el contexto).
+- App: de ~85 rutas a 58. Todos los tests (67) siguen en verde.
 
 ### Tests + CI 2026-09-08
 - **`tests/`** con pytest (67 casos, ~9 s). `tests/conftest.py` construye una base
@@ -146,9 +175,9 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 
 > ⚠️ **Incidente 2026-09-08**: durante estas pruebas se ejecutó `sql.sql` por
 > línea de comandos y, como el archivo lleva `USE db_musuas` dentro, **recreó la
-> base real** (se perdieron pedidos/comprobantes). Se restauró completa desde
-> `db/backup_db_musuas.sql` (backup de las 01:24). **`sql.sql` y el backup solo
-> deben correrse desde phpMyAdmin, nunca con `mysql < archivo` apuntando a otra BD.**
+> base real** (se perdieron pedidos/comprobantes). Se restauró desde un backup
+> local (que luego se quitó del repo por traer hashes de contraseña y ser un
+> footgun). **`sql.sql` solo se corre desde phpMyAdmin, nunca con `mysql < archivo`.**
 
 ### Cocina en vivo 2026-09-08
 - **Endpoint** `GET /admin/pedidos/pulso` (`admin_pedidos.pulso`) → JSON
@@ -282,9 +311,7 @@ todo correcto). Se arreglaron 14 hallazgos:
 - **`sql.sql` reescrito**: crea `db_musuas` desde cero con TODO el esquema
   (migraciones 001–010 ya incluidas) + datos de ejemplo (6 categorías, 20
   productos, 3 cuentas: superusuario 12345678 / admin 87654321 / cliente
-  12345679, **contraseña `musas2026`**). Copiar y pegar en phpMyAdmin.
-- **`db/backup_db_musuas.sql`**: `mysqldump` del estado real de trabajo
-  (referencia; los hashes de contraseña de esas cuentas no se conocen).
+  12345679, **contraseña `Musas2026`**). Copiar y pegar en phpMyAdmin.
 - **`AGENTS.md`** (NUEVO): contexto para Codex — qué es el proyecto, reglas de
   negocio, arquitectura, cómo levantarlo, esquema de BD, convenciones y estado
   actual. Es la "bitácora para Codex".
@@ -343,7 +370,7 @@ sincronizado (0 = panel, 1 = cliente) por compatibilidad.
 
 ### Panel Stitch 2026-09-08
 Las 4 pantallas del panel + el detalle de comprobante se rehicieron para calzar
-con `C:\Users\JUAN RAMIREZ\Downloads\Musas`:
+con las pantallas de Stitch (carpeta local de diseños del usuario):
 - **Productos**: cabecera con pill de conteo, buscador, chips (En carta / Sin stock
   / Categorías), tabla con miniatura + badge de categoría + stock, "Mostrando X–Y",
   paginación. Alta y edición en **panel deslizante** (`.adm-panel`) con zona de

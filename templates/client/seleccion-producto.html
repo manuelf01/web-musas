@@ -148,6 +148,12 @@
           {% endif %}
         </div>
 
+        {% if logueado and not agotado %}
+        <a href="{{ url_for('cliente.pag_carrito') }}" id="dp-ver-carrito" class="dp-ver-carrito" hidden>
+          Ir al carrito <i class="bi bi-arrow-right"></i>
+        </a>
+        {% endif %}
+
         <div class="dp-reassure">
           <i class="bi bi-shop"></i> Listo para recoger en ~20 min · retiro en tienda
         </div>

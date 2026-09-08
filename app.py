@@ -1,14 +1,8 @@
-
-import collections
-import collections.abc
-collections.Mapping = collections.abc.Mapping
-
 import os
 from datetime import timedelta
-from flask import Flask, request, session, jsonify
-from flask_jwt import JWT
-from flask_swagger_ui import get_swaggerui_blueprint
-from Token.usuario import authenticate, identity
+
+from flask import Flask, request, session
+
 from controllers.admin import *
 from controllers.cliente import *
 from controllers.autenticacion import *
@@ -18,16 +12,6 @@ from controllers.admin_usuarios import *
 from controllers.admin_pedidos import *
 from controllers.admin_ventas import *
 from controllers.admin_perfil import perfil as admin_perfil
-# Importando apis
-from APIS.productos import *
-from APIS.usuarios import api_usuarios
-from APIS.registro_pedidos import api_registro_pedidos
-from APIS.detalleOrden import api_detalleOrden
-from APIS.categoriaProducto import api_categoriaProducto
-from APIS.detalleComprobante import api_detalleComprobante
-from APIS.detalleCremas import api_detalleCremas
-from APIS.comprobante import api_comprobante
-from APIS.transacciones import transaccion
 from seguridad import (
     campo_csrf, token_csrf, csrf_valido, CAMPO_CSRF,
     REGLA_PASSWORD, PASSWORD_PATTERN,
@@ -49,7 +33,6 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=not DEBUG,   # solo por HTTPS en producción
 )
-jwt = JWT(app, authenticate, identity)
 
 # --- CSRF: token propio de sesión, validado en cada POST del navegador -------
 app.jinja_env.globals["campo_csrf"] = campo_csrf
@@ -57,13 +40,11 @@ app.jinja_env.globals["csrf_token"] = token_csrf
 app.jinja_env.globals["REGLA_PASSWORD"] = REGLA_PASSWORD
 app.jinja_env.globals["PASSWORD_PATTERN"] = PASSWORD_PATTERN
 
+
 @app.before_request
 def _proteger_csrf():
     if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
         return
-    ep = request.endpoint or ""
-    # Las APIs JSON (JWT, /api/*) no se pueden falsificar desde otra web sin CORS;
-    # el CSRF solo aplica a los tipos que un <form> del navegador puede enviar.
     ctype = (request.content_type or "").split(";")[0].strip()
     formularios = ("application/x-www-form-urlencoded", "multipart/form-data", "text/plain", "")
     if ctype not in formularios:
@@ -93,28 +74,6 @@ def _cabeceras_seguridad(resp):
     resp.headers.setdefault("Referrer-Policy", "same-origin")
     return resp
 
-# swagger
-SWAGGER_URL = '/api/docs'  # URL for exposing Swagger UI (without trailing '/')
-# Our API url (can of course be a local resource)
-API_URL = '/static/documentacion.yaml'
-
-# Call factory function to create our blueprint
-swaggerui_blueprint = get_swaggerui_blueprint(
-    # Swagger UI static files will be mapped to '{SWAGGER_URL}/dist/'
-    SWAGGER_URL,
-    API_URL,
-    config={  # Swagger UI config overrides
-        'app_name': "Test application"
-    },
-    # oauth_config={  # OAuth config. See https://github.com/swagger-api/swagger-ui#oauth2-configuration .
-    #    'clientId': "your-client-id",
-    #    'clientSecret': "your-client-secret-if-required",
-    #    'realm': "your-realms",
-    #    'appName': "your-app-name",
-    #    'scopeSeparator': " ",
-    #    'additionalQueryStringParams': {'test': "hello"}
-    # }
-)
 
 admin.register_blueprint(productos)
 admin.register_blueprint(categoria_producto)
@@ -127,24 +86,9 @@ cliente.register_blueprint(auth)
 
 app.register_blueprint(admin)
 app.register_blueprint(cliente)
-# Registro de swagger
-app.register_blueprint(swaggerui_blueprint)
-# Registrando apis
-app.register_blueprint(api_productos)
-app.register_blueprint(api_usuarios)
-app.register_blueprint(api_registro_pedidos)
-app.register_blueprint(api_detalleOrden)
-app.register_blueprint(api_categoriaProducto)
-app.register_blueprint(api_detalleComprobante)
-app.register_blueprint(api_detalleCremas)
-app.register_blueprint(api_comprobante)
-app.register_blueprint(transaccion)
 
 # "Recordar sesión en este equipo": duración de la sesión permanente
 app.permanent_session_lifetime = timedelta(days=30)
-# Iniciar el servidor
 
 if __name__ == "__main__":
     app.run(debug=DEBUG)
-
-# print(app.url_map)

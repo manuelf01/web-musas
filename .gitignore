@@ -2,9 +2,11 @@
 __pycache__
 .pytest_cache
 cfg.py
-DigiCertGlobalRootCA.crt.pem
-static/js/config.js
-static/_rev/
+
+# credenciales / certificados locales
+*.pem
+*.crt
+*.key
 
 # Imágenes subidas desde el panel (no son código; cada entorno tiene las suyas)
 static/img/productos/

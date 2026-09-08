@@ -64,9 +64,9 @@ pytest -q
   `csrf` (token para los POST).
 - CI: `.github/workflows/tests.yml` corre `pytest` contra un servicio
   `mariadb:10.4` en cada push a `Ramirez`/`main` y en cada PR.
-- **Nunca** ejecutar `sql.sql` ni `db/backup_db_musuas.sql` con `mysql < archivo`:
-  llevan `USE db_musuas` dentro y recrean la base real. Solo phpMyAdmin, o el
-  flujo de `conftest.py` (que los limpia antes).
+- **Nunca** ejecutar `sql.sql` con `mysql < archivo`: lleva `USE db_musuas`
+  dentro y recrea la base real. Solo phpMyAdmin, o el flujo de `conftest.py`
+  (que le quita esa línea antes).
 
 **Cuentas de ejemplo** (creadas por `sql.sql`, contraseña de todas: `Musas2026`):
 
@@ -76,10 +76,8 @@ pytest -q
 | `87654321` | administrador | Panel sin la sección Usuarios |
 | `12345679` | usuario | Tienda (cliente) |
 
-**Backup del entorno de Ramirez:** `db/backup_db_musuas.sql` es un `mysqldump`
-del estado real con el que se trabajó (incluye datos de prueba y hashes de
-contraseña desconocidos — sirve de referencia, no para loguearse). Para empezar
-limpio usa **`sql.sql`**.
+`sql.sql` es la **única** forma de crear la BD (datos de ejemplo incluidos). No
+hay backups versionados: cada quien maneja su base local.
 
 ### Quirks del equipo (heredados de la bitácora)
 - Python del proyecto es **3.10** (en el `.venv`). Puede haber un 3.13 en el sistema.
@@ -98,7 +96,7 @@ limpio usa **`sql.sql`**.
 ## 3. Arquitectura
 
 ```
-app.py                 # registra blueprints, CSRF, headers, JWT (heredado), swagger
+app.py                 # registra blueprints, CSRF de sesión, cabeceras de seguridad
 bd.py                  # obtener_conexion() -> pymysql (lee cfg.py)
 cfg.py                 # local, gitignored (host/port/db/user/pass/secret_key)
 seguridad.py           # captcha (login admin) + CSRF de sesión (token propio)
@@ -138,7 +136,7 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
 
 - **CSRF**: todo `<form method="post">` del navegador lleva `{{ campo_csrf() }}`.
   `app.py` valida el token en `before_request` para POST/PUT/PATCH/DELETE con
-  content-type de formulario. Las APIs JSON (`/api/*`, JWT) están exentas.
+  content-type de formulario (los `fetch` JSON quedan fuera por content-type).
 - **Jinja**: nunca uses la clave `items` en un dict que va a una plantilla
   (choca con `dict.items`). Usa `lineas`, `detalle`, etc.
 - **Contraseña — UNA regla en todo el proyecto**: mínimo **8 caracteres, con al
@@ -240,7 +238,7 @@ ya están en `sql.sql`):
 
 ---
 
-## 6. División del trabajo (para el merge — ver `MERGE_NOTES.md`)
+## 6. División del trabajo (para el merge)
 
 - **Ramirez (rama `Ramirez`, la más completa):** tienda completa, login/registro,
   CRUD de pedidos + dashboard, infra (diseño, seguridad/CSRF, migraciones,
@@ -281,13 +279,11 @@ Todo esto está hecho y probado E2E en `Ramirez`:
 
 ### Cosas conocidas / pendientes
 - `usuario.dni` no tiene constraint `UNIQUE` (el código lo valida en la app).
-- `flask-jwt 0.3.2` es viejo; hay APIs `/api/*` heredadas con JWT que la tienda
-  y el panel **no usan** (el checkout es server-rendered). No las borres sin
-  revisar `app.py`.
-- `model/Transaccion.py` existe (era el checkout-por-API del compañero) pero
-  la tienda de esta rama **no lo usa**.
 - El detalle de comprobante lee `registroPedido` por nombre de columna (no por
   índice) — está bien tras las migraciones 004/006/009.
+- **La capa REST vieja (`APIS/`, `Token/`, Swagger, Flask-JWT) se eliminó**
+  (no la usaba nada, dependía de una librería sin mantenimiento). El único
+  flujo de compra es `Pedido.crear_pedido_completo` (server-rendered).
 
 ---
 
@@ -309,9 +305,3 @@ falta**: `sql.sql` ya las incluye.
 | 009 | `registroPedido.estadoPrep` (0/1/2) |
 | 010 | `usuario.rol`/`activo`, `producto.activo`, `categoriaProducto.activo` |
 | 011 | `registroPedido.idPedido` y `detalleOrden.idDetalleOrden` a **AUTO_INCREMENT** (antes `MAX(id)+1` en la app → colisión con dos pedidos a la vez) |
-
-> **Legacy no migrado**: `APIS/transacciones.py` + `model/Transaccion.py` (ruta
-> `/transaccion_compra`) son el checkout viejo, **no** los usa la tienda web
-> (que usa `Pedido.crear_pedido_completo`). Siguen calculando `MAX(id)+1` y ya no
-> cuadran con el esquema actual (no tocan stock, `keyPedido="2023N"`, etc.).
-> Conviene borrarlos o realinearlos.

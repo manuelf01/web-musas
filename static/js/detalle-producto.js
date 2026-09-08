@@ -4,14 +4,13 @@
   if (!root) return;
 
   var base = Number(root.dataset.precio) || 0;
+  var carritoUrl = root.dataset.carritoUrl || "/carrito";
   var qtyEl = document.getElementById("dp-qty");
   var mobPrecio = document.getElementById("dp-mob-precio");
   var mobQty = document.getElementById("dp-mob-qty");
+  var verCarrito = document.getElementById("dp-ver-carrito");
   var qty = 1;
-
-  function btnTextos() {
-    return document.querySelectorAll("[data-dp-btn-texto]");
-  }
+  var enCarrito = false; // ya se agregó esta combinación
 
   function cremasSeleccionadas() {
     return Array.prototype.map.call(
@@ -34,32 +33,45 @@
   }
 
   function render() {
-    var t = total().toFixed(2);
     if (qtyEl) qtyEl.textContent = qty;
-    btnTextos().forEach(function (el) {
-      el.textContent = "Agregar al carrito — S/ " + t;
-    });
-    if (mobPrecio) mobPrecio.textContent = "S/ " + t;
     if (mobQty) mobQty.textContent = qty;
+    var t = total().toFixed(2);
+    if (mobPrecio) mobPrecio.textContent = "S/ " + t;
+    document.querySelectorAll("[data-agregar]").forEach(function (b) {
+      var span = b.querySelector("[data-dp-btn-texto]");
+      var icono = b.querySelector("i");
+      b.classList.toggle("is-ok", enCarrito);
+      b.disabled = enCarrito;
+      if (icono) icono.className = enCarrito ? "bi bi-check-lg" : "bi bi-bag-plus";
+      if (span) {
+        span.textContent = enCarrito
+          ? "Agregado al carrito"
+          : "Agregar al carrito — S/ " + t;
+      }
+    });
+    if (verCarrito) verCarrito.hidden = !enCarrito;
+  }
+
+  // Cambiar cantidad o cremas = otra combinación -> se puede volver a agregar.
+  function reactivar() {
+    if (enCarrito) enCarrito = false;
+    render();
   }
 
   document.querySelectorAll("[data-step]").forEach(function (b) {
     b.addEventListener("click", function () {
       qty = Math.max(1, qty + Number(b.dataset.step));
-      render();
+      reactivar();
     });
   });
 
   document.querySelectorAll(".crema-check").forEach(function (c) {
-    c.addEventListener("change", render);
+    c.addEventListener("change", reactivar);
   });
 
-  var agregando = false;
   document.querySelectorAll("[data-agregar]").forEach(function (b) {
     b.addEventListener("click", function () {
-      if (agregando) return;
-      agregando = true;
-
+      if (enCarrito) return;
       var unidades = qty;
       window.MusasCarrito.agregarConAnim(
         {
@@ -72,25 +84,12 @@
         },
         b,
         {
-          href: root.dataset.carritoUrl,
+          href: carritoUrl,
           mensaje: unidades + "× " + root.dataset.nombre + " en el carrito",
         }
       );
-
-      // Estado de confirmación del botón (sin sacar al cliente de la página).
-      var span = b.querySelector("[data-dp-btn-texto]");
-      var icono = b.querySelector("i");
-      var icoPrev = icono ? icono.className : null;
-      b.classList.add("is-ok");
-      if (icono) icono.className = "bi bi-check-lg";
-      if (span) span.textContent = "¡Agregado!";
-      setTimeout(function () {
-        b.classList.remove("is-ok");
-        if (icono && icoPrev) icono.className = icoPrev;
-        qty = 1;
-        render();
-        agregando = false;
-      }, 1400);
+      enCarrito = true;
+      render();
     });
   });
 
