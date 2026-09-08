@@ -22,6 +22,12 @@ def _cliente_nombre():
     user = session.get("cliente.auth", None)
     return user["nombres"] if user else None
 
+
+def _identidad():
+    """Cualquier sesión autenticada (cliente o admin). Un admin que navega la
+    tienda no es un bot: se le puede saltar el captcha del checkout."""
+    return session.get("cliente.auth") or session.get("admin.auth")
+
 @cliente.route("/")
 def home():
     user = session.get("cliente.auth", None)
@@ -177,7 +183,7 @@ def pag_compra():
         "client/compra.html",
         cliente=_cliente_nombre(),
         sesion=user,
-        invitado=user is None,
+        invitado=_identidad() is None,
         franjas=Pedido.franjas_recojo(),
     )
 
@@ -199,7 +205,7 @@ def _recotizar(user, mensaje):
         "client/compra.html",
         cliente=_cliente_nombre(),
         sesion=user,
-        invitado=user is None,
+        invitado=_identidad() is None,
         form=request.form.to_dict(),
         franjas=Pedido.franjas_recojo(),
     )
@@ -265,8 +271,9 @@ def _procesar_compra(user):
         error = "Elige una hora de recojo."
     elif not Pedido.franja_disponible(hora):
         error = "Esa franja se llenó o ya pasó. Elige otra."
-    elif user is None:
-        # Invitado: se exige el captcha para frenar pedidos automatizados.
+    elif _identidad() is None:
+        # Invitado sin cuenta: se exige el captcha para frenar pedidos automatizados.
+        # Un cliente o admin logueado ya está identificado y se lo salta.
         esperado = session.pop("captcha_compra", None)
         ingresado = (request.form.get("captcha") or "").strip().upper()
         if not esperado or ingresado != esperado:

@@ -58,6 +58,37 @@ pisar su trabajo. Ver `MERGE_NOTES.md` para la lista exacta y cómo integrar.
 | 2026-09-07 | **Cancelación de pedidos + anti no-show** (migración 006). Ver "No-show 2026-09-07" abajo. | `git revert` + revertir 006 |
 | 2026-09-07 | **Inicio rediseñado como landing** (distinto de la Carta) + **subida de imágenes desde el panel** (migración 007). Ver "Inicio + imágenes 2026-09-07". | `git revert` + revertir 007 |
 | 2026-09-07 | **Ancho + animaciones**: contenedores más anchos, banda "Explora" a todo el ancho, grillas fluidas, aparición al scroll. Ver "Ancho + animaciones 2026-09-07". | `git revert` |
+| 2026-09-07 | **Separación del trabajo de Betancurt**: toda su zona vuelve a `main`. Ver `MERGE_NOTES.md` + sección 0. | — |
+| 2026-09-07 | **Fixes: horario de recojo, admin en tienda, carrito compartido**. Ver "Fixes checkout/sesión 2026-09-07" abajo. | `git revert` |
+
+### Fixes checkout/sesión 2026-09-07
+Reportes del usuario tras probar el flujo:
+
+1. **"A qué hora recoger no funciona"** — NO era bug: probaba a las 11 p.m. y la
+   tienda atiende 6–10 p.m., así que todas las franjas salían `pasada`.
+   - `model/Pedido.py`: `HORA_APERTURA`/`HORA_CIERRE` ahora se pueden fijar con
+     `MUSAS_HORA_APERTURA` / `MUSAS_HORA_CIERRE` (defecto 18 / 22).
+   - Nuevo `MUSAS_DEMO=1`: ignora el corte por "hora ya pasada" para poder probar
+     el checkout a cualquier hora. **Nunca activar en producción.**
+   - Correr en local: `MUSAS_DEMO=1 python app.py`.
+
+2. **Admin en la tienda parecía deslogueado y el checkout le pedía captcha.**
+   La tienda solo miraba `session["cliente.auth"]`; el admin vive en
+   `session["admin.auth"]`.
+   - `app.py`: context processor `admin_sesion` (disponible en todas las plantillas).
+   - `templates/client/base.html`: el header muestra "Modo administrador · Ir al
+     panel" en vez de "Iniciar sesión".
+   - `controllers/cliente.py`: nuevo `_identidad()` (cliente **o** admin). El
+     captcha del checkout solo se exige a visitantes sin ninguna cuenta.
+   - Que un cliente logueado no vea captcha y un invitado sí **es intencional**
+     (anti-bot / anti no-show), no un bug.
+
+3. **El carrito (localStorage) se quedaba para el siguiente que usara el equipo.**
+   - `controllers/autenticacion.py`: `logout` marca `session["limpiar_carrito"]`.
+   - `templates/client/base.html`: consume la marca una vez y hace
+     `localStorage.removeItem("musas_carrito")`.
+   - Al **iniciar** sesión el carrito se conserva a propósito (invitado que arma
+     el carrito y luego entra a su cuenta para pagar).
 
 ### Ancho + animaciones 2026-09-07
 **Problema**: en pantallas grandes sobraba mucho aire a los lados.

@@ -1,7 +1,18 @@
+import os
 import random
 
 from bd import obtener_conexion
 from datetime import datetime, timedelta, date
+
+
+def _hora_env(nombre, defecto):
+    """Lee una hora (0-24) de variable de entorno; si no es válida usa el defecto.
+    Sirve para abrir el horario en local/demo sin tocar el código."""
+    try:
+        valor = int(os.environ.get(nombre, defecto))
+        return valor if 0 <= valor <= 24 else defecto
+    except (TypeError, ValueError):
+        return defecto
 
 
 class StockInsuficiente(Exception):
@@ -29,8 +40,13 @@ class Pedido:
     cont = 0
 
     # --- Franjas de recojo ---------------------------------------------
-    HORA_APERTURA = 18      # 6:00 p.m
-    HORA_CIERRE = 22        # 10:00 p.m
+    # Producción: 18–22 (6–10 p.m). En local se puede abrir con
+    #   MUSAS_HORA_APERTURA / MUSAS_HORA_CIERRE  (p. ej. 0 y 24 para probar de noche).
+    HORA_APERTURA = _hora_env("MUSAS_HORA_APERTURA", 18)   # 6:00 p.m
+    HORA_CIERRE = _hora_env("MUSAS_HORA_CIERRE", 22)       # 10:00 p.m
+    # MUSAS_DEMO=1 -> ignora el corte por hora ya pasada (solo para probar el
+    # checkout fuera del horario). NUNCA activar en producción.
+    DEMO = os.environ.get("MUSAS_DEMO", "0") == "1"
     FRANJA_MINUTOS = 30     # duración de cada franja
     CUPO_POR_FRANJA = 8     # pedidos máximos por franja
     ANTICIPACION_MIN = 20   # la cocina necesita este tiempo mínimo
@@ -128,7 +144,7 @@ class Pedido:
             clave = f"{hh:02d}:{mm:02d}"
             inicio = ahora.replace(hour=hh, minute=mm, second=0, microsecond=0)
             usados = conteo.get(clave, 0)
-            pasada = inicio < limite
+            pasada = (inicio < limite) and not Pedido.DEMO
             llena = usados >= Pedido.CUPO_POR_FRANJA
             franjas.append({
                 "hora": clave,

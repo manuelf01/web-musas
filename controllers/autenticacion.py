@@ -193,6 +193,10 @@ def registro():
 # ----------------------------------------------------------------------
 @auth.route("/logout")
 def logout():
+    # El carrito vive en localStorage del navegador (no en la sesión): al cerrar
+    # sesión se pide limpiarlo para que no quede a la vista del siguiente que use
+    # el equipo. La plantilla base consume esta marca una sola vez.
+    session["limpiar_carrito"] = True
     if request.blueprint == "admin.auth":
         session.pop("admin.auth", None)
         return redirect(url_for("cliente.auth.login"))

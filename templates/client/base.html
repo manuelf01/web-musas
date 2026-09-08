@@ -53,6 +53,13 @@
             <a href="{{ url_for('cliente.auth.logout') }}" class="text-decoration-none small" style="color: var(--musa-texto-suave);">
               Salir
             </a>
+          {% elif admin_sesion %}
+            <span class="d-none d-sm-inline" style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: var(--musa-brasa);">
+              Modo administrador
+            </span>
+            <a href="{{ url_for('admin.home') }}" class="d-none d-sm-inline text-decoration-none" style="color: var(--musa-carbon); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;">
+              Ir al panel
+            </a>
           {% else %}
             <a href="{{ url_for('cliente.auth.login') }}" class="d-none d-sm-inline text-decoration-none" style="color: var(--musa-carbon); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;">
               Iniciar sesión
@@ -154,6 +161,14 @@
       crossorigin="anonymous"
     ></script>
     <script src="{{ url_for('static', filename='js/carrito.js') }}"></script>
+    {% if session.pop('limpiar_carrito', False) %}
+    <script>
+      try {
+        localStorage.removeItem("musas_carrito");
+        if (window.MusasCarrito) window.MusasCarrito.actualizarNav();
+      } catch (e) {}
+    </script>
+    {% endif %}
     <script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>

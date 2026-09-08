@@ -80,6 +80,13 @@ def _proteger_csrf():
         return cuerpo, 400
 
 
+@app.context_processor
+def _inyectar_sesion():
+    # Disponible en todas las plantillas: saber si hay un admin logueado
+    # mientras navega la tienda (para el header y saltarse el captcha).
+    return {"admin_sesion": session.get("admin.auth")}
+
+
 @app.after_request
 def _cabeceras_seguridad(resp):
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
