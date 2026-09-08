@@ -88,8 +88,8 @@ CREATE TABLE `producto` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ---------------------------------------------------------------------
---  registroPedido  — cabecera del pedido. idPedido lo asigna la app
---  (MAX(idPedido)+1), no es AUTO_INCREMENT.
+--  registroPedido  — cabecera del pedido. idPedido = AUTO_INCREMENT
+--  (lo asigna la base; ver migración 011).
 --    estadoRecojo 0/1  = pendiente / entregado
 --    cancelado    0/1  = lo canceló el cliente o el admin
 --    noShow       0/1  = el cliente no vino a recogerlo
@@ -100,7 +100,7 @@ CREATE TABLE `producto` (
 --      (pueden diferir de la cuenta: puede recoger otra persona)
 -- ---------------------------------------------------------------------
 CREATE TABLE `registroPedido` (
-  `idPedido`         int(11)     NOT NULL,
+  `idPedido`         int(11)     NOT NULL AUTO_INCREMENT,
   `idUsuario`        int(11)     DEFAULT NULL,
   `dniNoRegistrado`  char(8)     NOT NULL,
   `nombres`          varchar(120) DEFAULT NULL,
@@ -124,7 +124,7 @@ CREATE TABLE `registroPedido` (
 --  detalleOrden  — líneas del pedido (snapshot de nombre y precio).
 -- ---------------------------------------------------------------------
 CREATE TABLE `detalleOrden` (
-  `idDetalleOrden` int(11)      NOT NULL,
+  `idDetalleOrden` int(11)      NOT NULL AUTO_INCREMENT,
   `idPedido`       int(11)      NOT NULL,
   `idProducto`     int(11)      NOT NULL,
   `nombreProducto` varchar(100) NOT NULL,

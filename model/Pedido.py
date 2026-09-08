@@ -233,9 +233,6 @@ class Pedido:
                         if pedidas > disp:
                             raise StockInsuficiente(nombre_p, disp)
 
-                cursor.execute("SELECT COALESCE(MAX(idPedido), 0) + 1 FROM registroPedido")
-                id_pedido = cursor.fetchone()[0]
-
                 # keyPedido: 4 dígitos, único entre los pedidos aún no recogidos
                 key = random.randint(1000, 9999)
                 for _ in range(40):
@@ -247,35 +244,35 @@ class Pedido:
                         break
                     key = random.randint(1000, 9999)
 
+                # idPedido / idDetalleOrden los asigna la base (AUTO_INCREMENT):
+                # así no colisionan cuando entran dos pedidos a la vez.
                 cursor.execute(
                     """INSERT INTO registroPedido
-                       (idPedido, idUsuario, dniNoRegistrado, nombres, numeroTelefono,
+                       (idUsuario, dniNoRegistrado, nombres, numeroTelefono,
                         estadoRecojo, horaRecojo, estadoBoleta, billeteraDigital,
                         keyPedido, notas)
-                       VALUES (%s, %s, %s, %s, %s, 0, %s, %s, %s, %s, %s)""",
-                    (id_pedido, idUsuario, dni, nombres, telefono, hora_recojo,
+                       VALUES (%s, %s, %s, %s, 0, %s, %s, %s, %s, %s)""",
+                    (idUsuario, dni, nombres, telefono, hora_recojo,
                      1 if estado_boleta else 0, 1 if billetera_digital else 0,
                      key, notas or None),
                 )
-
-                cursor.execute("SELECT COALESCE(MAX(idDetalleOrden), 0) FROM detalleOrden")
-                siguiente_detalle = cursor.fetchone()[0]
+                id_pedido = cursor.lastrowid
 
                 for it in items:
-                    siguiente_detalle += 1
                     cursor.execute(
                         """INSERT INTO detalleOrden
-                           (idDetalleOrden, idPedido, idProducto, nombreProducto,
+                           (idPedido, idProducto, nombreProducto,
                             precioUnidad, cantidad, precioTotal)
-                           VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                        (siguiente_detalle, id_pedido, it["idProducto"], it["nombre"],
+                           VALUES (%s, %s, %s, %s, %s, %s)""",
+                        (id_pedido, it["idProducto"], it["nombre"],
                          it["precioUnidad"], it["cantidad"], it["precioTotal"]),
                     )
+                    id_detalle = cursor.lastrowid
                     for id_crema in dict.fromkeys(it.get("cremas", [])):  # sin duplicados
                         cursor.execute(
                             """INSERT INTO detalleCremas (idPedido, idCrema, idDetalleOrden)
                                VALUES (%s, %s, %s)""",
-                            (id_pedido, id_crema, siguiente_detalle),
+                            (id_pedido, id_crema, id_detalle),
                         )
 
                 # --- 2. Descuento de existencias (se reserva el stock) --------

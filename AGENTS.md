@@ -196,7 +196,7 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
 
 ## 5. Base de datos (resumen)
 
-`db_musuas`, InnoDB, utf8mb4. 8 tablas (todos los cambios de `migrations/001..010`
+`db_musuas`, InnoDB, utf8mb4. 8 tablas (todos los cambios de `migrations/001..011`
 ya están en `sql.sql`):
 
 | Tabla | Rol |
@@ -286,3 +286,10 @@ falta**: `sql.sql` ya las incluye.
 | 008 | `comprobante.dniNoRegistrado` a `CHAR(8)` |
 | 009 | `registroPedido.estadoPrep` (0/1/2) |
 | 010 | `usuario.rol`/`activo`, `producto.activo`, `categoriaProducto.activo` |
+| 011 | `registroPedido.idPedido` y `detalleOrden.idDetalleOrden` a **AUTO_INCREMENT** (antes `MAX(id)+1` en la app → colisión con dos pedidos a la vez) |
+
+> **Legacy no migrado**: `APIS/transacciones.py` + `model/Transaccion.py` (ruta
+> `/transaccion_compra`) son el checkout viejo, **no** los usa la tienda web
+> (que usa `Pedido.crear_pedido_completo`). Siguen calculando `MAX(id)+1` y ya no
+> cuadran con el esquema actual (no tocan stock, `keyPedido="2023N"`, etc.).
+> Conviene borrarlos o realinearlos.

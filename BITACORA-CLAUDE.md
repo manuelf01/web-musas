@@ -77,6 +77,30 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Inicio: sección "Anatomía de Las Musas"** — hamburguesa SVG que se despieza al pasar el cursor / tocar. Ver "Anatomía 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Agregar al carrito con micro-interacción + preview al compartir + placeholders por categoría.** Ver "Carrito + previews 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Pantalla de cocina en vivo**: el panel de Pedidos se refresca solo y avisa (pitido + banner) cuando entra un pedido nuevo. Ver "Cocina en vivo 2026-09-08" abajo. | `git revert` |
+| 2026-09-08 | **`idPedido` / `idDetalleOrden` → AUTO_INCREMENT** (migración 011). Ver "AUTO_INCREMENT 2026-09-08" abajo. | `git revert` + revertir 011 |
+
+### AUTO_INCREMENT 2026-09-08
+- **Bug:** `Pedido.crear_pedido_completo` asignaba `idPedido` e `idDetalleOrden`
+  con `SELECT COALESCE(MAX(id),0)+1`. Con **dos pedidos entrando a la vez** ambos
+  calculaban el mismo id → uno de los INSERT fallaba o dejaba líneas sueltas.
+- **Fix:** `migrations/011_autoincrement_pedidos.sql` — `ALTER TABLE` para poner
+  `AUTO_INCREMENT` en `registroPedido.idPedido` y `detalleOrden.idDetalleOrden`
+  (los ids viejos NO cambian). Aplicada a `db_musuas` y plegada en `sql.sql`.
+- `model/Pedido.py`: el INSERT de `registroPedido` ya no manda `idPedido`; el id
+  sale de `cursor.lastrowid`. Igual para cada línea de `detalleOrden` → su
+  `lastrowid` alimenta el FK de `detalleCremas`. `comprobante` ya usaba
+  `lastrowid` (no se tocó).
+- Probado en `db_musuas` con pedido real (2 líneas + cremas duplicadas): ids
+  asignados por la base, 0 cremas huérfanas, stock correcto, todo limpiado.
+- **Legacy sin tocar:** `model/Transaccion.py` + `APIS/transacciones.py`
+  (`/transaccion_compra`) siguen con `MAX(id)+1`, pero es el checkout viejo que
+  **la tienda no usa** (y ya estaba desalineado del esquema). Anotado en AGENTS.md.
+
+> ⚠️ **Incidente 2026-09-08**: durante estas pruebas se ejecutó `sql.sql` por
+> línea de comandos y, como el archivo lleva `USE db_musuas` dentro, **recreó la
+> base real** (se perdieron pedidos/comprobantes). Se restauró completa desde
+> `db/backup_db_musuas.sql` (backup de las 01:24). **`sql.sql` y el backup solo
+> deben correrse desde phpMyAdmin, nunca con `mysql < archivo` apuntando a otra BD.**
 
 ### Cocina en vivo 2026-09-08
 - **Endpoint** `GET /admin/pedidos/pulso` (`admin_pedidos.pulso`) → JSON
