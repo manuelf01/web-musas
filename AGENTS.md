@@ -166,6 +166,14 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   oculta los `[data-filtro-item]` dentro de `#scope` conforme se teclea
   (sin Enter). Opcional `[data-filtro-seccion]` y `[data-filtro-vacio]`.
   El `<form method=get>` con `?q=` queda de respaldo para páginas paginadas.
+- **Modal de confirmación** (`static/js/ui-comun.js` + CSS `.musa-confirm*`):
+  toda acción destructiva o con consecuencias en los CRUD debe pedir confirmación
+  con este modal, **no** con `window.confirm()`. Se marca poniendo
+  `data-confirm="texto"` en el `<form>`, en su `<button type=submit>` o en un `<a>`
+  (opcionales: `data-confirm-titulo`, `data-confirm-ok`, `data-confirm-cancelar`,
+  `data-confirm-tono="peligro"`, `data-confirm-icono`). Ya aplicado en Productos,
+  Categorías, Usuarios, Pedidos (admin) y Mis pedidos (cliente). API JS:
+  `window.MusaConfirm(opts)` → `Promise<boolean>`.
 - **Imágenes**: `subidas.guardar_imagen(archivo, subcarpeta)` (archivo subido) o
   `subidas.guardar_desde_url(url, subcarpeta)` (enlace de internet — valida
   esquema, bloquea IPs privadas/SSRF, 5 MB, `Image.verify()` de Pillow). Se

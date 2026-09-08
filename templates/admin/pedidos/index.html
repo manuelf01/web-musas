@@ -101,9 +101,15 @@
             <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
             <input type="hidden" name="estado" value="{{ estado }}" />
             {% if p.prep == 0 %}
-              <button type="submit" class="btn-contorno w-100"><i class="bi bi-fire"></i> Empezar preparación</button>
+              <button type="submit" class="btn-contorno w-100"
+                data-confirm="La cocina empieza a preparar el pedido #{{ p.idPedido }}. A partir de ahora el cliente ya NO podrá cancelarlo."
+                data-confirm-titulo="Empezar preparación" data-confirm-ok="Sí, a cocina">
+                <i class="bi bi-fire"></i> Empezar preparación</button>
             {% else %}
-              <button type="submit" class="btn-contorno w-100"><i class="bi bi-bag-check"></i> Marcar listo para recojo</button>
+              <button type="submit" class="btn-contorno w-100"
+                data-confirm="Se marcará el pedido #{{ p.idPedido }} como listo y a la espera de que el cliente lo recoja."
+                data-confirm-titulo="Marcar listo para recojo" data-confirm-ok="Marcar listo">
+                <i class="bi bi-bag-check"></i> Marcar listo para recojo</button>
             {% endif %}
           </form>
           {% endif %}
@@ -117,20 +123,27 @@
             <div class="ped-confirmar__row">
               <input type="text" name="key" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"
                      placeholder="0000" required autocomplete="off" aria-label="Palabra clave" />
-              <button type="submit" class="btn-brasa"><i class="bi bi-check2-all"></i> Entregar pedido</button>
+              <button type="submit" class="btn-brasa"
+                data-confirm="Se entregará el pedido #{{ p.idPedido }} y se emitirá el comprobante (queda registrado en Ventas). Verifica antes la palabra clave del cliente."
+                data-confirm-titulo="Entregar pedido" data-confirm-ok="Entregar y facturar">
+                <i class="bi bi-check2-all"></i> Entregar pedido</button>
             </div>
           </form>
 
           <div class="ped-secundarias">
             <form method="post" action="{{ url_for('admin.pedidos.no_show') }}"
-                  onsubmit="return confirm('¿Marcar el pedido #{{ p.idPedido }} como NO recogido? Devuelve el stock.');">
+                  data-confirm="El pedido #{{ p.idPedido }} se marcará como NO recogido: se devuelve el stock y suma un aviso de no-show al cliente."
+                  data-confirm-titulo="Marcar como no recogido"
+                  data-confirm-ok="Sí, no recogió" data-confirm-tono="peligro">
               {{ campo_csrf() }}
               <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
               <input type="hidden" name="estado" value="{{ estado }}" />
               <button type="submit" class="ped-link-btn"><i class="bi bi-person-x"></i> No recogió</button>
             </form>
             <form method="post" action="{{ url_for('admin.pedidos.cancelar') }}"
-                  onsubmit="return confirm('¿Cancelar el pedido #{{ p.idPedido }}? Devuelve el stock y libera el cupo.');">
+                  data-confirm="Se cancelará el pedido #{{ p.idPedido }}: se devuelve el stock y se libera el cupo de la franja."
+                  data-confirm-titulo="Cancelar pedido"
+                  data-confirm-ok="Sí, cancelar" data-confirm-cancelar="No" data-confirm-tono="peligro">
               {{ campo_csrf() }}
               <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
               <input type="hidden" name="estado" value="{{ estado }}" />

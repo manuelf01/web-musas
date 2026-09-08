@@ -73,6 +73,26 @@ Ver `MERGE_NOTES.md` para el detalle y qué NO se tomó de `Manuelf`.
 | 2026-09-08 | **Estados de pedido + pedidos solo de registrados** (migración 009). Ver "Estados de pedido 2026-09-08" abajo. | `git revert` + revertir 009 |
 | 2026-09-08 | **Rediseño del panel (Stitch)**: productos/categorías/usuarios/ventas + detalle de comprobante con el look de las pantallas de Stitch. Ver "Panel Stitch 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Roles (super/admin/usuario) + estado "dar de baja" + perfil + filtros/autocompletado** (migración 010). Ver "Roles y estado 2026-09-08" abajo. | `git revert` + revertir 010 |
+| 2026-09-08 | **Modal de confirmación en todos los CRUD** (dar de baja / reactivar / guardar / entregar / cancelar pedido). Ver "Modal de confirmación 2026-09-08" abajo. | `git revert` |
+
+### Modal de confirmación 2026-09-08
+- Componente reutilizable en `static/js/ui-comun.js` (+ CSS `.musa-confirm*` en
+  `musas-theme.css`): un modal **bonito y animado** (icono con "pop", tarjeta con
+  entrada tipo resorte, backdrop con desenfoque) que pide confirmación antes de
+  ejecutar una acción. Reemplaza los `window.confirm()` / `onsubmit="return confirm()"`.
+- **Cómo se marca una acción** (en el `<form>`, en su `<button type=submit>` o en un `<a>`):
+  `data-confirm="texto"` + opcionales `data-confirm-titulo`, `data-confirm-ok`,
+  `data-confirm-cancelar`, `data-confirm-tono="peligro"` (rojo), `data-confirm-icono`.
+  El JS intercepta el `submit`/`click` en captura, muestra el modal y solo reenvía
+  el formulario si el usuario acepta (bandera `dataset.confirmHecho`). Teclado:
+  Esc = cancelar, Enter = aceptar, Tab atrapado entre los 2 botones. `Promise`
+  expuesta como `window.MusaConfirm(opts)`.
+- **Dónde se aplica**: Productos (dar de baja / reactivar / guardar), Categorías
+  (íd.), Usuarios (dar de baja / reactivar / cambiar rol / crear), Pedidos admin
+  (empezar preparación / marcar listo / entregar+facturar / no recogió / cancelar),
+  y Mis pedidos del cliente (cancelar). Los paneles deslizantes fijan el texto del
+  modal según crear/editar en su propio JS.
+- Sin cambios de backend ni de BD.
 
 ### Política de contraseña + admin solo cambia rol 2026-09-08
 - **Contraseña (una sola regla en todo el proyecto)**: mínimo 8 caracteres, con

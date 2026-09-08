@@ -2629,3 +2629,76 @@ body.adm { background: var(--musa-crema); }
 .musa-pw-check li { display: flex; align-items: center; gap: 6px; }
 .musa-pw-check li i { font-size: 13px; }
 .musa-pw-check li.is-ok { color: var(--musa-exito); }
+
+/* ============ Modal de confirmación (todos los CRUD) ============ */
+.musa-confirm {
+  position: fixed; inset: 0; z-index: 20000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.musa-confirm__backdrop {
+  position: absolute; inset: 0;
+  background: rgba(26, 21, 18, 0.55);
+  -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  opacity: 0; transition: opacity 0.22s ease;
+}
+.musa-confirm.is-abierto .musa-confirm__backdrop { opacity: 1; }
+.musa-confirm__card {
+  position: relative; z-index: 1;
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: var(--musa-radio-card);
+  padding: 28px 26px 22px;
+  text-align: center;
+  box-shadow: 0 24px 60px -12px rgba(26, 21, 18, 0.45);
+  opacity: 0; transform: translateY(14px) scale(0.94);
+  transition: opacity 0.24s ease, transform 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.musa-confirm.is-abierto .musa-confirm__card { opacity: 1; transform: none; }
+.musa-confirm__icono {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 56px; height: 56px; margin-bottom: 14px;
+  border-radius: 50%;
+  background: rgba(219, 66, 0, 0.12); color: var(--musa-brasa);
+  font-size: 26px;
+}
+.musa-confirm__card.es-peligro .musa-confirm__icono {
+  background: rgba(196, 51, 29, 0.12); color: var(--musa-peligro);
+}
+.musa-confirm.is-abierto .musa-confirm__icono {
+  animation: musaConfirmPop 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+@keyframes musaConfirmPop {
+  0% { transform: scale(0.4); }
+  60% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+.musa-confirm__titulo {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700;
+  font-size: 19px; color: var(--musa-carbon); margin: 0 0 6px;
+}
+.musa-confirm__texto {
+  font-size: 14px; color: var(--musa-texto-suave);
+  margin: 0 0 20px; line-height: 1.5;
+}
+.musa-confirm__botones { display: flex; gap: 10px; }
+.musa-confirm__botones button {
+  flex: 1; padding: 11px 16px;
+  border-radius: var(--musa-radio-control);
+  font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 14px;
+  cursor: pointer; border: 1px solid transparent;
+  transition: filter 0.15s ease, background 0.15s ease;
+}
+.musa-confirm__no {
+  background: var(--musa-crema); border-color: var(--musa-borde); color: var(--musa-carbon);
+}
+.musa-confirm__no:hover { background: #efe7db; }
+.musa-confirm__si { background: var(--musa-brasa); color: #fff; }
+.musa-confirm__si.es-peligro { background: var(--musa-peligro); }
+.musa-confirm__si:hover { filter: brightness(1.06); }
+.musa-confirm__si:focus-visible,
+.musa-confirm__no:focus-visible { outline: 2px solid var(--musa-carbon); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .musa-confirm__backdrop, .musa-confirm__card { transition-duration: 0.01s; }
+  .musa-confirm.is-abierto .musa-confirm__icono { animation: none; }
+}

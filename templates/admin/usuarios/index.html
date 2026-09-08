@@ -78,9 +78,16 @@
                       <input type="hidden" name="id" value="{{ u.idUsuario }}" />
                       <input type="hidden" name="activar" value="{{ '0' if u.activo else '1' }}" />
                       {% if u.activo %}
-                        <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-slash-circle"></i> Dar de baja</button>
+                        <button class="adm-btn-sm adm-btn-sm--danger"
+                          data-confirm="«{{ u.nombreCompleto }}» no podrá iniciar sesión hasta que la reactives."
+                          data-confirm-titulo="Dar de baja la cuenta"
+                          data-confirm-ok="Sí, dar de baja" data-confirm-tono="peligro">
+                          <i class="bi bi-slash-circle"></i> Dar de baja</button>
                       {% else %}
-                        <button class="adm-btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
+                        <button class="adm-btn-sm"
+                          data-confirm="«{{ u.nombreCompleto }}» volverá a poder iniciar sesión."
+                          data-confirm-titulo="Reactivar cuenta" data-confirm-ok="Sí, reactivar">
+                          <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
                       {% endif %}
                     </form>
                     {% endif %}
@@ -159,7 +166,10 @@
       </div>
     </div>
     <div class="adm-panel__foot">
-      <button type="submit" class="btn-brasa"><span data-user-btn>Guardar usuario</span></button>
+      <button type="submit" class="btn-brasa" id="pu-submit"
+        data-confirm="Se creará la cuenta con el rol seleccionado."
+        data-confirm-titulo="Crear usuario" data-confirm-ok="Crear cuenta">
+        <span data-user-btn>Guardar usuario</span></button>
       <button type="button" class="adm-cancelar" data-user-cerrar>Cancelar</button>
     </div>
   </form>
@@ -192,6 +202,17 @@
       panel.querySelector("[data-user-sub]").textContent = editar
         ? "El administrador solo cambia el rol o da de baja la cuenta." : "Elige el rol y completa los datos.";
       panel.querySelector("[data-user-btn]").textContent = editar ? "Guardar rol" : "Guardar usuario";
+      var submit = document.getElementById("pu-submit");
+      if (editar) {
+        submit.dataset.confirm = "Se cambiará el rol de «" + b.dataset.nombre +
+          "». Esto ajusta a qué partes del sistema puede entrar.";
+        submit.dataset.confirmTitulo = "Cambiar rol";
+        submit.dataset.confirmOk = "Guardar rol";
+      } else {
+        submit.dataset.confirm = "Se creará la cuenta con el rol seleccionado.";
+        submit.dataset.confirmTitulo = "Crear usuario";
+        submit.dataset.confirmOk = "Crear cuenta";
+      }
       toggle(soloCrear, !editar);
       toggle(soloEditar, editar);
       document.getElementById("pu-contra").required = !editar;

@@ -91,7 +91,9 @@
               {% endif %}
               {% if p.cancelable %}
                 <form method="post" action="{{ url_for('cliente.cancelar_pedido', id_pedido=p.idPedido) }}"
-                      onsubmit="return confirm('¿Cancelar el pedido N° {{ p.idPedido }}? Se liberará tu cupo.');">
+                      data-confirm="Se cancelará tu pedido N° {{ p.idPedido }} y se liberará tu cupo de recojo. Esta acción no se puede deshacer."
+                      data-confirm-titulo="Cancelar pedido"
+                      data-confirm-ok="Sí, cancelar" data-confirm-cancelar="No, volver" data-confirm-tono="peligro">
                   {{ campo_csrf() }}
                   <button class="btn-contorno" type="submit" style="color: var(--musa-peligro); border-color: var(--musa-peligro);">
                     <i class="bi bi-x-lg"></i> Cancelar

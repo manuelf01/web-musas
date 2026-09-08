@@ -64,9 +64,16 @@
           <input type="hidden" name="activar" value="{{ '0' if activa else '1' }}" />
           <input type="hidden" name="volver" value="{{ estado }}" />
           {% if activa %}
-            <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-slash-circle"></i> Dar de baja</button>
+            <button class="adm-btn-sm adm-btn-sm--danger"
+              data-confirm="La categoría «{{ c[1] }}» y sus {{ totales.get(c[0], 0) }} producto(s) dejarán de mostrarse en la carta y el inicio."
+              data-confirm-titulo="Dar de baja la categoría"
+              data-confirm-ok="Sí, dar de baja" data-confirm-tono="peligro">
+              <i class="bi bi-slash-circle"></i> Dar de baja</button>
           {% else %}
-            <button class="adm-btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
+            <button class="adm-btn-sm"
+              data-confirm="«{{ c[1] }}» y sus productos activos volverán a la carta."
+              data-confirm-titulo="Reactivar categoría" data-confirm-ok="Sí, reactivar">
+              <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
           {% endif %}
         </form>
       </div>
@@ -117,7 +124,10 @@
       </div>
       <div class="adm-modal__foot">
         <button type="button" class="btn-contorno" data-cat-cerrar>Cancelar</button>
-        <button type="submit" class="btn-brasa"><span data-cat-btn>Guardar categoría</span></button>
+        <button type="submit" class="btn-brasa" id="mc-submit"
+          data-confirm="Se creará esta sección en la carta."
+          data-confirm-titulo="Nueva categoría" data-confirm-ok="Guardar">
+          <span data-cat-btn>Guardar categoría</span></button>
       </div>
     </form>
   </div>
@@ -134,6 +144,7 @@
   var preview = document.getElementById("mc-preview");
   var drop = document.getElementById("mc-drop");
   var url = document.getElementById("mc-url");
+  var submit = document.getElementById("mc-submit");
   var URL_CREAR = "{{ url_for('admin.categoria.guardar') }}";
   var URL_EDITAR = "{{ url_for('admin.categoria.actualizar') }}";
 
@@ -149,6 +160,9 @@
         titulo.textContent = "Editar categoría";
         btnTxt.textContent = "Guardar cambios";
         form.action = URL_EDITAR;
+        submit.dataset.confirm = "Se actualizará «" + b.dataset.nombre + "» en la carta.";
+        submit.dataset.confirmTitulo = "Guardar cambios";
+        submit.dataset.confirmOk = "Guardar cambios";
         document.getElementById("mc-id").value = b.dataset.id;
         document.getElementById("mc-nombre").value = b.dataset.nombre;
         document.getElementById("mc-descripcion").value = b.dataset.descripcion;
@@ -157,6 +171,9 @@
         titulo.textContent = "Nueva categoría";
         btnTxt.textContent = "Guardar categoría";
         form.action = URL_CREAR;
+        submit.dataset.confirm = "Se creará esta sección en la carta.";
+        submit.dataset.confirmTitulo = "Nueva categoría";
+        submit.dataset.confirmOk = "Guardar";
         document.getElementById("mc-id").value = "";
       }
       abrir();

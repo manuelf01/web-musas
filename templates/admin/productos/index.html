@@ -72,9 +72,16 @@
                     <input type="hidden" name="activar" value="{{ '0' if p.activo else '1' }}" />
                     <input type="hidden" name="volver" value="{{ estado }}" />
                     {% if p.activo %}
-                      <button class="adm-btn-sm adm-btn-sm--danger"><i class="bi bi-slash-circle"></i> Dar de baja</button>
+                      <button class="adm-btn-sm adm-btn-sm--danger"
+                        data-confirm="«{{ p.nombre }}» dejará de aparecer en la carta y en el inicio. Podrás reactivarlo cuando quieras."
+                        data-confirm-titulo="Dar de baja el producto"
+                        data-confirm-ok="Sí, dar de baja" data-confirm-tono="peligro">
+                        <i class="bi bi-slash-circle"></i> Dar de baja</button>
                     {% else %}
-                      <button class="adm-btn-sm"><i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
+                      <button class="adm-btn-sm"
+                        data-confirm="«{{ p.nombre }}» volverá a la carta (si tiene stock disponible)."
+                        data-confirm-titulo="Reactivar producto" data-confirm-ok="Sí, reactivar">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
                     {% endif %}
                   </form>
                 </div>
@@ -146,7 +153,10 @@
       </div>
     </div>
     <div class="adm-panel__foot">
-      <button type="submit" class="btn-brasa"><span data-panel-btn>Guardar producto</span></button>
+      <button type="submit" class="btn-brasa" id="pp-submit"
+        data-confirm="Se agregará este producto a la carta nocturna."
+        data-confirm-titulo="Agregar producto" data-confirm-ok="Guardar">
+        <span data-panel-btn>Guardar producto</span></button>
       <button type="button" class="adm-cancelar" data-panel-cerrar>Cancelar</button>
     </div>
   </form>
@@ -164,6 +174,7 @@
   var preview = document.getElementById("pp-preview");
   var drop = document.getElementById("pp-drop");
   var url = document.getElementById("pp-url");
+  var submit = document.getElementById("pp-submit");
   var URL_CREAR = "{{ url_for('admin.productos.guardar') }}";
   var URL_EDITAR = "{{ url_for('admin.productos.actualizar') }}";
 
@@ -179,6 +190,9 @@
         titulo.textContent = "Editar producto";
         btnTxt.textContent = "Guardar cambios";
         form.action = URL_EDITAR;
+        submit.dataset.confirm = "Se actualizarán los datos de «" + b.dataset.nombre + "» en la carta y el inicio.";
+        submit.dataset.confirmTitulo = "Guardar cambios";
+        submit.dataset.confirmOk = "Guardar cambios";
         document.getElementById("pp-id").value = b.dataset.id;
         document.getElementById("pp-nombre").value = b.dataset.nombre;
         document.getElementById("pp-descripcion").value = b.dataset.descripcion;
@@ -190,6 +204,9 @@
         titulo.textContent = "Agregar producto";
         btnTxt.textContent = "Guardar producto";
         form.action = URL_CREAR;
+        submit.dataset.confirm = "Se agregará este producto a la carta nocturna.";
+        submit.dataset.confirmTitulo = "Agregar producto";
+        submit.dataset.confirmOk = "Guardar";
         document.getElementById("pp-id").value = "";
       }
       abrir();
