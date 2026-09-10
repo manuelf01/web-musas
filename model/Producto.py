@@ -328,9 +328,10 @@ class Producto:
 
     @staticmethod
     def precios_por_ids(ids, solo_cremas=False):
-        """{ idProducto: {'nombre':..., 'precio':...} } para los ids dados, solo de
-        productos activos de categorías activas. `solo_cremas=True` restringe a la
-        categoría 'Cremas' (para que una hamburguesa no cuele como crema)."""
+        """{ idProducto: {'nombre':..., 'precio':..., 'categoria':...} } para los ids
+        dados, solo de productos activos de categorías activas. `solo_cremas=True`
+        restringe a la categoría 'Cremas' (para que una hamburguesa no cuele como
+        crema)."""
         ids = [int(i) for i in ids if str(i).strip().lstrip("-").isdigit() and int(i) > 0]
         if not ids:
             return {}
@@ -339,14 +340,14 @@ class Producto:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                f"SELECT p.idProducto, p.nombre, p.precio FROM producto p "
+                f"SELECT p.idProducto, p.nombre, p.precio, cp.nombreCategoria FROM producto p "
                 f"INNER JOIN categoriaProducto cp ON cp.idCategoria = p.idCategoria "
                 f"WHERE p.idProducto IN ({marcadores}) AND p.activo = 1 AND cp.activo = 1{extra}",
                 ids,
             )
             filas = cursor.fetchall()
         conexion.close()
-        return {f[0]: {"nombre": f[1], "precio": float(f[2])} for f in filas}
+        return {f[0]: {"nombre": f[1], "precio": float(f[2]), "categoria": f[3]} for f in filas}
 
     @staticmethod
     def destacados(limite=8):

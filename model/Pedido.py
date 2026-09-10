@@ -3,9 +3,9 @@ import os
 import random
 
 from bd import obtener_conexion
-from datetime import datetime, timedelta, date
+from datetime import timedelta
 from dinero import dinero
-from negocio import HORA_PERU, SEDE, horario_dia
+from negocio import SEDE, ahora_peru, horario_dia
 
 
 MEDIOS_PAGO = {
@@ -37,6 +37,14 @@ class StockInsuficiente(Exception):
 
 class LimitePedidos(Exception):
     """Se lanza cuando quien pide ya tiene demasiados pedidos sin recoger."""
+
+
+class FranjaLlena(Exception):
+    """La franja de recojo se llenó entre que el cliente la eligió y confirmó."""
+
+    def __init__(self, hora):
+        self.hora = hora
+        super().__init__(f"Franja {hora} sin cupo")
 
 
 # Pedido "activo" = hecho, aún no recogido, ni cancelado, ni marcado como no-show.
@@ -93,7 +101,7 @@ class Pedido:
         # (si no, los pedidos de prueba desaparecen apenas pasa su hora).
         if Pedido.DEMO:
             return
-        ahora = datetime.now()
+        ahora = ahora_peru()
         corte = (ahora - timedelta(minutes=Pedido.GRACIA_NOSHOW_MIN)).strftime("%H:%M:%S")
         conexion = obtener_conexion()
         try:
@@ -165,7 +173,7 @@ class Pedido:
         """
         Pedido._auto_no_show()
 
-        ahora = datetime.now(HORA_PERU)
+        ahora = ahora_peru()
         limite = ahora + timedelta(minutes=Pedido.ANTICIPACION_MIN)
         # Se usa la fecha del servidor de aplicacion (no CURDATE() de MySQL) para
         # que el conteo de cupos y el corte por hora esten siempre alineados.
@@ -236,10 +244,22 @@ class Pedido:
                     cursor.execute(
                         f"SELECT COUNT(*) FROM registroPedido "
                         f"WHERE dniNoRegistrado = %s AND fechaPedido = %s AND {_ACTIVO}",
-                        (dni, datetime.now().date()),
+                        (dni, ahora_peru().date()),
                     )
                 if cursor.fetchone()[0] >= Pedido.MAX_PEDIDOS_ACTIVOS:
                     raise LimitePedidos()
+
+                # --- 0b. Cupo de la franja: se re-cuenta DENTRO de la transacción.
+                # `_procesar_compra` ya validó la franja antes, pero entre ese
+                # chequeo y este INSERT pueden entrar otros pedidos. El FOR UPDATE
+                # serializa la creación de pedidos de la misma franja/día.
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM registroPedido "
+                    f"WHERE fechaPedido = %s AND horaRecojo = %s AND {_OCUPA_CUPO} FOR UPDATE",
+                    (ahora_peru().date(), hora_recojo),
+                )
+                if cursor.fetchone()[0] >= Pedido.CUPO_POR_FRANJA:
+                    raise FranjaLlena(hora_recojo)
 
                 # --- 1. Control de stock (bloquea las filas de producto) --------
                 unidades = {}
@@ -274,10 +294,11 @@ class Pedido:
                 cursor.execute(
                     """INSERT INTO registroPedido
                        (idUsuario, dniNoRegistrado, nombres, numeroTelefono,
-                        estadoRecojo, horaRecojo, estadoBoleta, billeteraDigital,
-                        keyPedido, notas)
-                       VALUES (%s, %s, %s, %s, 0, %s, %s, %s, %s, %s)""",
+                        estadoRecojo, horaRecojo, fechaPedido, estadoBoleta,
+                        billeteraDigital, keyPedido, notas)
+                       VALUES (%s, %s, %s, %s, 0, %s, %s, %s, %s, %s, %s)""",
                     (idUsuario, dni, nombres, telefono, hora_recojo,
+                     ahora_peru().date(),
                      1 if estado_boleta else 0, 1 if billetera_digital else 0,
                      key, notas or None),
                 )
@@ -352,7 +373,7 @@ class Pedido:
         total = dinero(sum(dinero(l[5]) for l in lineas))
         sub_total = dinero(total / dinero("1.18"))
         igv = dinero(total - sub_total)
-        ahora = datetime.now(HORA_PERU)
+        ahora = ahora_peru()
         serie = "B001" if boleta else "NV01"
         medio = MEDIOS_PAGO[medio_pago]
 
@@ -538,7 +559,7 @@ class Pedido:
                 "FROM registroPedido rp LEFT JOIN usuario u ON u.idUsuario = rp.idUsuario "
                 f"WHERE rp.fechaPedido = %s{cond} "
                 "ORDER BY rp.estadoRecojo, rp.estadoPrep DESC, rp.horaRecojo, rp.idPedido",
-                (date.today(),),
+                (ahora_peru().date(),),
             )
             cab = cursor.fetchall()
             if not cab:
@@ -654,7 +675,7 @@ class Pedido:
             cursor.execute(
                 "SELECT COUNT(*), COALESCE(SUM(estadoRecojo = 0), 0), COALESCE(SUM(estadoRecojo = 1), 0) "
                 "FROM registroPedido WHERE fechaPedido = %s AND cancelado = 0 AND noShow = 0",
-                (date.today(),),
+                (ahora_peru().date(),),
             )
             t, p, r = cursor.fetchone()
         conexion.close()
@@ -669,7 +690,7 @@ class Pedido:
             cursor.execute(
                 "SELECT COUNT(*), COALESCE(SUM(estadoRecojo = 0), 0), COALESCE(SUM(noShow = 1), 0) "
                 "FROM registroPedido WHERE fechaPedido = %s AND cancelado = 0",
-                (date.today(),),
+                (ahora_peru().date(),),
             )
             n_hoy, pendientes, no_shows_hoy = cursor.fetchone()
             n_hoy = int(n_hoy or 0)
@@ -680,7 +701,7 @@ class Pedido:
                 "SELECT COALESCE(SUM(dor.precioTotal), 0) FROM detalleOrden dor "
                 "INNER JOIN registroPedido r ON r.idPedido = dor.idPedido "
                 "WHERE r.fechaPedido = %s AND r.cancelado = 0 AND r.noShow = 0",
-                (date.today(),),
+                (ahora_peru().date(),),
             )
             ventas_hoy = float(cursor.fetchone()[0] or 0)
             ticket = ventas_hoy / n_hoy if n_hoy else 0.0
@@ -744,7 +765,7 @@ class Pedido:
             por_dia = {str(row[0]): float(row[1] or 0) for row in cursor.fetchall()}
         conexion.close()
 
-        hoy = date.today()
+        hoy = ahora_peru().date()
         semanas_dias = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
         dias = []
         for i in range(6, -1, -1):

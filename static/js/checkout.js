@@ -63,7 +63,10 @@
       resumenLista.appendChild(row);
     });
 
-    var total = window.MusasCarrito.total();
+    pintarTotales(window.MusasCarrito.total());
+  }
+
+  function pintarTotales(total) {
     var neto = total / 1.18;
     var n = window.MusasCarrito.cantidadTotal();
     if (elConteo) elConteo.textContent = n + (n === 1 ? " ítem" : " ítems");
@@ -71,6 +74,36 @@
     if (elIgv) elIgv.textContent = money(total - neto);
     if (elTotal) elTotal.textContent = money(total);
     if (btnTexto) btnTexto.textContent = "Confirmar pedido — " + money(total);
+  }
+
+  // El total de arriba se calcula con los precios guardados en localStorage.
+  // El servidor manda; si un precio cambió, se re-cotiza y se avisa al cliente.
+  function reconciliarConServidor() {
+    var csrf = form.querySelector('[name="_csrf"]');
+    var cuerpo = new URLSearchParams();
+    cuerpo.set("carrito_json", inputCarrito.value || "[]");
+    if (csrf) cuerpo.set("_csrf", csrf.value);
+    fetch("/compra/cotizar", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: cuerpo.toString(),
+    })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || !data.total) return;
+        var servidor = Number(data.total);
+        var local = window.MusasCarrito.total();
+        if (!isFinite(servidor) || Math.abs(servidor - local) < 0.005) return;
+        pintarTotales(servidor);
+        var aviso = document.getElementById("ck-aviso-precio");
+        if (aviso) {
+          aviso.textContent =
+            "Actualizamos el precio de algún producto. El total a pagar es " +
+            money(servidor) + ".";
+          aviso.hidden = false;
+        }
+      })
+      .catch(function () { /* sin conexión: se queda el total local */ });
   }
 
   // Selector de franja de recojo
@@ -110,4 +143,5 @@
   });
 
   pintarResumen();
+  if (window.MusasCarrito.leer().length) reconciliarConServidor();
 })();

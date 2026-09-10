@@ -55,6 +55,7 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
+| 2026-09-09 | **Plan de mejoras** (`PLAN-MEJORAS.md`) + **Bloque A: arreglos de lógica de compra/venta** (reloj de Perú unificado, cupo de franja dentro de la transacción, total del checkout fiable, vaciar carrito por sesión, `Decimal` al cotizar, cremas solo en categorías válidas). Ver "Bloque A · lógica compra/venta 2026-09-09" abajo. | `git revert` |
 | 2026-09-09 | **`docs/arquitectura.html`**: diagrama de arquitectura del proyecto (HTML autónomo, 4 vistas guiadas) generado con la skill `tt-a1i/archify`. Fuente: `docs/arquitectura.archify.json`. Ver "Diagrama de arquitectura 2026-09-09" abajo. | Borrar `docs/` |
 | 2026-09-09 | **Fixes responsive / cross-browser sobre el commit del compañero** (`4031a88`). Ver "Fixes UI 2026-09-09" abajo. | `git revert` |
 | 2026-09-05 | Clonado el repo `manuelf01/web-musas` en `Desktop/web-musas`. | — |
@@ -84,6 +85,44 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Fix carrito + repaso de seguridad + limpieza de código muerto**. Ver "Limpieza 2026-09-08" abajo. | `git revert` |
+
+### Bloque A · lógica compra/venta 2026-09-09
+Primer bloque del `PLAN-MEJORAS.md`. Sin cambios visuales; 134 tests en verde
+(se sumaron `tests/test_compra_cotiza.py`).
+
+- **A1 · Reloj de Perú unificado.** Nueva `negocio.ahora_peru()`. `model/Pedido.py`
+  ya no usa `datetime.now()` / `date.today()` (hora local del servidor) en ningún
+  lado: `_auto_no_show`, `franjas_recojo`, `_emitir_comprobante`, los KPIs y el
+  `INSERT` de `registroPedido` (ahora manda `fechaPedido` explícito en vez de
+  depender del `DEFAULT (CURRENT_DATE)` de MariaDB). En local no cambia nada; en un
+  servidor en otra zona horaria deja de descuadrarse el conteo de cupos y el
+  no-show. `test_local.py` ahora parchea `model.Pedido.ahora_peru`.
+- **A2 · Cupo de franja dentro de la transacción.** `crear_pedido_completo` re-cuenta
+  los pedidos de la franja con `... FOR UPDATE` antes de insertar y lanza
+  `FranjaLlena` si ya no hay cupo. Cierra el hueco TOCTOU entre el chequeo de
+  `_procesar_compra` y el `INSERT`.
+- **A3 · El total del checkout ya no miente.** Nuevo `POST /compra/cotizar` que
+  devuelve el total con los precios ACTUALES de la BD. `checkout.js` lo llama al
+  cargar; si difiere del total de `localStorage` actualiza el importe y muestra el
+  aviso `#ck-aviso-precio`. La cotización se centralizó en
+  `controllers/cliente.py::_cotizar_carrito`, usada también por `_procesar_compra`.
+- **A5 · Vaciar carrito por sesión.** `_procesar_compra` marca
+  `session["limpiar_carrito"] = True` al crear el pedido (mismo mecanismo del
+  logout en `base.html`), así el carrito se vacía aunque el cliente no llegue a
+  `/pedido-confirmado`.
+- **A10 · `Decimal` al cotizar.** `_cotizar_carrito` arma `precioUnidad` /
+  `precioTotal` con `dinero()` (antes `round()` de float). Cuadra al céntimo con lo
+  que luego calcula `_emitir_comprobante`.
+- **A12 · Cremas solo donde corresponde.** `_cotizar_carrito` adjunta cremas solo si
+  el producto padre es de `CATEGORIAS_CON_CREMAS`. `Producto.precios_por_ids` ahora
+  también devuelve `categoria`. Un POST manual ya no puede pegar "Ají de la casa" a
+  una gaseosa.
+- **Pendiente del plan:** A4/A9/A15 (copys de pago/IGV/cerrado) van con el sprint de
+  UI; A6/A7/A8 después. **A9 (IGV en nota de venta) se coordina con el compañero**
+  porque toca su módulo de comprobantes.
+- **Nota A11:** `registroPedido.keyPedido` NO tiene índice único. El riesgo real es
+  bajo porque `marcar_recogido` valida `(idPedido, keyPedido)` exactos, pero por eso
+  en caja SIEMPRE se teclea también el N° de pedido.
 
 ### Diagrama de arquitectura 2026-09-09
 Generado con la skill open-source **`tt-a1i/archify`** (MIT, ~56k ★). Se revisó

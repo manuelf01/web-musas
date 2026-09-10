@@ -9,7 +9,8 @@ from flask import (
 from model.Comprobante import Comprobante
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
-from model.Pedido import Pedido, StockInsuficiente, LimitePedidos
+from model.Pedido import Pedido, StockInsuficiente, LimitePedidos, FranjaLlena
+from dinero import dinero
 from model.Usuario import Usuario
 from seguridad import password_valida
 from formato import soles_en_letras
@@ -365,16 +366,10 @@ def _recotizar(user, mensaje):
     )
 
 
-def _procesar_compra(user):
-    if user is None:
-        flash("Inicia sesión para finalizar el pedido.", "error")
-        return redirect(url_for("cliente.auth.login", next=url_for("cliente.pag_compra")))
-
-    # --- items del carrito (vienen del localStorage, se re-cotizan contra la BD) ---
-    carrito = _leer_carrito()
-    if not carrito:
-        return _recotizar(user, "Tu carrito está vacío. Agrega algo de la carta.")
-
+def _cotizar_carrito(carrito):
+    """Re-cotiza el carrito del navegador contra la BD (precio y disponibilidad
+    ACTUALES). Devuelve (items, total) donde total es un Decimal. Las cremas solo
+    se cuentan si el producto padre es de una categoría que las admite."""
     ids_prod = [it["idProducto"] for it in carrito]
     ids_crema = [c for it in carrito for c in it["cremas"]]
     precios = Producto.precios_por_ids(ids_prod)
@@ -385,21 +380,57 @@ def _procesar_compra(user):
         p = precios.get(it["idProducto"])
         if not p:
             continue
-        cremas_ids, cremas_extra = [], 0.0
-        for cid in it["cremas"]:
-            c = precios_crema.get(cid)
-            if c:
-                cremas_ids.append(cid)
-                cremas_extra += c["precio"]
-        precio_unidad = round(p["precio"] + cremas_extra, 2)
+        admite_cremas = p.get("categoria") in CATEGORIAS_CON_CREMAS
+        cremas_ids, cremas_extra = [], dinero(0)
+        if admite_cremas:
+            for cid in it["cremas"]:
+                c = precios_crema.get(cid)
+                if c:
+                    cremas_ids.append(cid)
+                    cremas_extra += dinero(c["precio"])
+        precio_unidad = dinero(dinero(p["precio"]) + cremas_extra)
         items.append({
             "idProducto": it["idProducto"],
             "nombre": p["nombre"],
             "precioUnidad": precio_unidad,
             "cantidad": it["cantidad"],
-            "precioTotal": round(precio_unidad * it["cantidad"], 2),
+            "precioTotal": dinero(precio_unidad * it["cantidad"]),
             "cremas": cremas_ids,
         })
+
+    total = dinero(sum((it["precioTotal"] for it in items), dinero(0)))
+    return items, total
+
+
+@cliente.route("/compra/cotizar", methods=["POST"])
+def cotizar_compra():
+    """Total autoritativo del carrito (precios ACTUALES de la BD). El checkout lo
+    llama al cargar para no mostrarle al cliente un total desactualizado del
+    localStorage."""
+    items, total = _cotizar_carrito(_leer_carrito())
+    return jsonify({
+        "total": f"{total:.2f}",
+        "lineas": [
+            {"idProducto": it["idProducto"], "nombre": it["nombre"],
+             "precioUnidad": f"{it['precioUnidad']:.2f}",
+             "cantidad": it["cantidad"],
+             "precioTotal": f"{it['precioTotal']:.2f}"}
+            for it in items
+        ],
+    })
+
+
+def _procesar_compra(user):
+    if user is None:
+        flash("Inicia sesión para finalizar el pedido.", "error")
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.pag_compra")))
+
+    # --- items del carrito (vienen del localStorage, se re-cotizan contra la BD) ---
+    carrito = _leer_carrito()
+    if not carrito:
+        return _recotizar(user, "Tu carrito está vacío. Agrega algo de la carta.")
+
+    items, total = _cotizar_carrito(carrito)
 
     if not items:
         return _recotizar(user, "Los productos de tu carrito ya no están disponibles. Vuelve a la carta.")
@@ -444,7 +475,12 @@ def _procesar_compra(user):
             f"Ya tienes {Pedido.MAX_PEDIDOS_ACTIVOS} pedidos sin recoger. "
             "Recoge o cancela alguno antes de hacer otro.",
         )
+    except FranjaLlena:
+        return _recotizar(user, "Esa franja se llenó justo ahora. Elige otra hora de recojo.")
 
+    # El pedido ya está en la BD: se marca el carrito para vaciarlo en el próximo
+    # render pase lo que pase (aunque el cliente no llegue a /pedido-confirmado).
+    session["limpiar_carrito"] = True
     return redirect(url_for("cliente.pedido_confirmado", id_pedido=id_pedido))
 
 

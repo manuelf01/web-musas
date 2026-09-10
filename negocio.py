@@ -5,6 +5,14 @@ from urllib.parse import quote
 
 # Perú usa UTC-5; no depende de la zona configurada en Windows ni de tzdata.
 HORA_PERU = timezone(timedelta(hours=-5), name="America/Lima")
+
+
+def ahora_peru():
+    """Fecha/hora actual en Perú. Úsala SIEMPRE en el modelo en vez de
+    `datetime.now()` (hora local del servidor) o `date.today()`: así el conteo
+    de cupos, el corte por hora y el auto-no-show quedan alineados aunque la app
+    corra en un servidor en otra zona horaria."""
+    return datetime.now(HORA_PERU)
 SEDE = {
     "nombre": "Sede Chiclayo",
     "direccion": "Av. José Balta Sur 006, Chiclayo 14008, Perú",

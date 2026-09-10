@@ -84,12 +84,8 @@ def test_franjas_respetan_horario_semanal(monkeypatch, bd_limpia, dia, primera, 
     modulo = importlib.import_module('model.Pedido')
     pedido = modulo.Pedido
 
-    class Reloj(datetime):
-        @classmethod
-        def now(cls, tz=None):
-            return datetime(2026, 9, dia, 8, tzinfo=HORA_PERU)
-
-    monkeypatch.setattr(modulo, 'datetime', Reloj)
+    fijo = datetime(2026, 9, dia, 8, tzinfo=HORA_PERU)
+    monkeypatch.setattr(modulo, 'ahora_peru', lambda: fijo)
     monkeypatch.setattr(pedido, 'HORA_APERTURA', None)
     monkeypatch.setattr(pedido, 'HORA_CIERRE', None)
     monkeypatch.setattr(pedido, 'DEMO', True)
