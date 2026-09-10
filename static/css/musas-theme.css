@@ -3022,154 +3022,178 @@ body.adm { background: var(--musa-crema); }
 }
 
 /* ============================================================
-   INICIO · "Anatomía de Las Musas" — hamburguesa que se disecciona
+   INICIO · "Anatomía de Las Musas" — escena oscura, la hamburguesa se despieza
+   con el scroll (o el cursor). La lista numerada es la referencia de capas.
    ============================================================ */
-.musa-anatomia {
-  padding: 76px 0;
-  background: linear-gradient(180deg, var(--musa-crema) 0%, var(--musa-crema-baja) 100%);
+.anatomia {
+  position: relative;
+  padding-block: var(--esp-seccion);
+  background: var(--musa-carbon);
+  color: #fff;
   overflow: hidden;
 }
-.musa-anatomia__inner {
+.anatomia__glow {
+  position: absolute;
+  top: 50%;
+  left: 26%;
+  width: min(680px, 70vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(219, 66, 0, 0.5) 0%, rgba(219, 66, 0, 0.12) 42%, transparent 70%);
+  filter: blur(20px);
+  pointer-events: none;
+  animation: anat-glow 8s ease-in-out infinite;
+}
+@keyframes anat-glow {
+  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.08); }
+}
+.anatomia__inner {
+  position: relative;
+  z-index: 1;
   display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
-  gap: 48px;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(28px, 5vw, 64px);
   align-items: center;
 }
-.musa-anatomia__texto h2 { font-size: 32px; font-weight: 700; margin: 0 0 12px; }
-.musa-anatomia__texto p {
-  color: var(--musa-texto-suave);
-  max-width: 40ch;
-  margin: 0 0 22px;
-  line-height: 1.55;
+
+.anatomia__texto .eyebrow { color: var(--musa-mostaza); }
+.anatomia__texto h2 { font-size: clamp(28px, 4vw, 36px); font-weight: 700; margin: 8px 0 14px; color: #fff; }
+.anatomia__texto p {
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 42ch;
+  margin: 0 0 24px;
+  line-height: 1.6;
 }
 
-.musa-anatomia__pieza { position: relative; }
+/* --- La escena: hamburguesa + plato + pista --- */
+.anatomia__escena {
+  position: relative;
+  perspective: 1200px;
+  --sep: 0;
+}
 .anat-burger {
   display: block;
   width: 100%;
-  max-width: 560px;
+  max-width: 440px;
   margin: 0 auto;
   padding: 0;
   border: 0;
   background: none;
   cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.34, 1.2, 0.4, 1);
   -webkit-tap-highlight-color: transparent;
+}
+.anat-burger.abierto { transform: rotateX(8deg) scale(1.03); }
+.anat-burger:focus-visible {
+  outline: 2px solid var(--musa-mostaza);
+  outline-offset: 10px;
+  border-radius: 20px;
 }
 .anat-burger svg {
   width: 100%;
   height: auto;
   overflow: visible;
-  filter: drop-shadow(0 22px 26px rgba(26, 21, 18, 0.16));
-  transition: transform 0.5s cubic-bezier(0.34, 1.3, 0.4, 1);
+  animation: anat-bob 7s ease-in-out infinite;
 }
-.anat-burger:hover svg,
-.anat-burger:focus-visible svg,
-.anat-burger.abierto svg { transform: scale(1.03); }
-.anat-burger:focus-visible {
-  outline: 2px solid var(--musa-brasa);
-  outline-offset: 8px;
-  border-radius: 18px;
+@keyframes anat-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
 }
 
 .anat-capa {
-  transform: translateY(0);
-  transition: transform 0.6s cubic-bezier(0.34, 1.3, 0.4, 1);
+  transform: translateY(calc(var(--step, 0) * var(--sep, 0) * 24px));
+  transition: transform 0.55s cubic-bezier(0.34, 1.25, 0.4, 1), filter 0.3s ease;
   transition-delay: var(--d, 0s);
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.32));
 }
-.anat-burger:hover .anat-capa,
-.anat-burger:focus-visible .anat-capa,
-.anat-burger.abierto .anat-capa {
-  transform: translateY(calc(var(--step, 0) * 20px));
-}
+.anat-capa.realce { filter: drop-shadow(0 0 14px rgba(245, 200, 66, 0.9)) brightness(1.12); }
 
-.anat-tag {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.anat-burger:hover .anat-tag,
-.anat-burger:focus-visible .anat-tag,
-.anat-burger.abierto .anat-tag {
-  opacity: 1;
-  transition-delay: calc(var(--d, 0s) + 0.18s);
-}
-.anat-tag line { stroke: var(--musa-carbon); stroke-width: 1.4; stroke-dasharray: 2 3; }
-.anat-tag circle { fill: var(--musa-brasa); }
-.anat-tag text {
-  font-family: "Space Grotesk", sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  fill: var(--musa-carbon);
+/* Plato / sombra de contacto bajo la hamburguesa */
+.anat-plato {
+  position: absolute;
+  left: 50%;
+  bottom: 4%;
+  width: 62%;
+  height: 30px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.55) 0%, transparent 72%);
+  filter: blur(4px);
+  pointer-events: none;
 }
 
 .anat-hint {
   position: absolute;
   left: 50%;
-  bottom: -8px;
+  bottom: -6px;
   transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 13px;
+  padding: 6px 14px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--musa-texto-suave);
-  background: #fff;
-  border: 1px solid var(--musa-borde);
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  box-shadow: var(--musa-sombra);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   pointer-events: none;
-  opacity: 1;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition: opacity 0.3s ease;
 }
-.musa-anatomia__pieza:hover .anat-hint,
-.anat-burger:focus-visible ~ .anat-hint,
-.anat-burger.abierto ~ .anat-hint {
-  opacity: 0;
-  transform: translateX(-50%) translateY(6px);
-}
+.anatomia__escena:hover .anat-hint,
+.anat-burger.abierto ~ .anat-hint { opacity: 0; }
 
-/* Lista de ingredientes: se ve cuando NO hay disección (pantallas chicas o
-   "reducir movimiento"). El layout está siempre definido; solo cambia display. */
+/* Lista numerada de capas: referencia siempre visible. */
 .anat-lista {
-  display: none;
+  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 18px;
-  max-width: 460px;
-  margin: 22px auto 0;
+  gap: 12px 22px;
+  margin: 0 0 26px;
   padding: 0;
   list-style: none;
-  text-align: left;
+  counter-reset: none;
 }
 .anat-lista li {
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 9px;
   align-items: center;
-  font-size: 13px;
+  gap: 10px;
+  padding: 2px 0;
+  cursor: default;
 }
-.anat-lista__punto {
-  grid-row: 1 / 3;
-  width: 9px;
-  height: 9px;
+.anat-lista__n {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--musa-brasa);
+  display: grid;
+  place-items: center;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--musa-mostaza);
+  background: rgba(245, 200, 66, 0.14);
+  border: 1px solid rgba(245, 200, 66, 0.4);
 }
-.anat-lista strong { font-family: "Space Grotesk", sans-serif; font-size: 13px; }
-.anat-lista span:last-child { color: var(--musa-texto-suave); font-size: 11.5px; }
+.anat-lista li:hover .anat-lista__n { background: var(--musa-mostaza); color: var(--musa-carbon); }
+.anat-lista strong { display: block; font-family: "Space Grotesk", sans-serif; font-size: 13.5px; color: #fff; }
+.anat-lista li > div span { color: rgba(255, 255, 255, 0.55); font-size: 11.5px; }
 
 @media (max-width: 900px) {
-  .musa-anatomia { padding: 56px 0; }
-  .musa-anatomia__inner { grid-template-columns: 1fr; gap: 26px; text-align: center; }
-  .musa-anatomia__texto p { margin-left: auto; margin-right: auto; }
+  .anatomia__inner { grid-template-columns: 1fr; gap: 30px; text-align: center; }
+  .anatomia__texto { order: 2; }
+  .anatomia__escena { order: 1; }
+  .anatomia__texto p, .anat-lista { margin-left: auto; margin-right: auto; }
+  .anat-lista { max-width: 460px; }
   .anat-burger { max-width: 300px; pointer-events: none; }
+  .anatomia__glow { left: 50%; }
   .anat-hint { display: none; }
-  .anat-tag { display: none; }
-  .anat-lista { display: grid; }
 }
 
 @media (max-width: 440px) {
-  .anat-lista { grid-template-columns: 1fr; }
+  .anat-lista { grid-template-columns: 1fr; text-align: left; }
 }
 
 /* ============================================================
@@ -3286,15 +3310,10 @@ body.adm { background: var(--musa-crema); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Sin animación: la hamburguesa se queda armada y se muestra la lista. */
-  .anat-capa { transition: none; transform: none; }
-  .anat-burger:hover .anat-capa,
-  .anat-burger:focus-visible .anat-capa,
-  .anat-burger.abierto .anat-capa { transform: none; }
-  .anat-burger:hover svg,
-  .anat-burger:focus-visible svg,
-  .anat-burger.abierto svg { transform: none; }
-  .anat-tag, .anat-hint { display: none; }
-  .anat-burger { cursor: default; }
-  .anat-lista { display: grid; }
+  /* Sin animación: la hamburguesa se queda armada y manda la lista numerada. */
+  .anat-capa { transition: none; transform: none !important; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.32)); }
+  .anat-burger { cursor: default; transform: none !important; }
+  .anat-burger svg { animation: none; }
+  .anatomia__glow { animation: none; }
+  .anat-hint { display: none; }
 }

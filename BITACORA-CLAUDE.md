@@ -55,6 +55,7 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
+| 2026-09-09 | **Bloque C: hamburguesa "Anatomía"** — escena oscura a todo el ancho, la hamburguesa se despieza siguiendo el scroll (o el cursor), glow de brasa, plato, lista numerada de capas. Nuevo `templates/client/_anatomia.html`. Ver "Bloque C · Anatomía 2026-09-09" abajo. | `git revert` + restaurar sección en `index.html` |
 | 2026-09-09 | **Bloque B: UI/UX** — un solo ancho de contenido (`--musa-ancho` / `--musa-ancho-lectura` / `--musa-gutter`), promo falsa "2x1 cervezas" fuera, pilares duplicados fuera de la carta, copys de pago/horario cerrado (A4/A15). Ver "Bloque B · UI/UX 2026-09-09" abajo. | `git revert` |
 | 2026-09-09 | **Plan de mejoras** (`PLAN-MEJORAS.md`) + **Bloque A: arreglos de lógica de compra/venta** (reloj de Perú unificado, cupo de franja dentro de la transacción, total del checkout fiable, vaciar carrito por sesión, `Decimal` al cotizar, cremas solo en categorías válidas). Ver "Bloque A · lógica compra/venta 2026-09-09" abajo. | `git revert` |
 | 2026-09-09 | **`docs/arquitectura.html`**: diagrama de arquitectura del proyecto (HTML autónomo, 4 vistas guiadas) generado con la skill `tt-a1i/archify`. Fuente: `docs/arquitectura.archify.json`. Ver "Diagrama de arquitectura 2026-09-09" abajo. | Borrar `docs/` |
@@ -86,6 +87,31 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Fix carrito + repaso de seguridad + limpieza de código muerto**. Ver "Limpieza 2026-09-08" abajo. | `git revert` |
+
+### Bloque C · Anatomía 2026-09-09
+Tercer bloque del `PLAN-MEJORAS.md`: la sección "Anatomía de Las Musas" pasó de
+curiosidad plana a pieza central. 134 tests en verde.
+
+- **Markup en su propio include:** `templates/client/_anatomia.html` (antes ~90
+  líneas de SVG dentro de `index.html`). `index.html` solo hace `{% include %}`.
+- **Escena oscura a todo el ancho** (`.anatomia`, fondo `--musa-carbon`), sale del
+  hero oscuro sin corte. `.anatomia__glow` = halo de brasa radial con pulso lento.
+  `.anat-plato` = sombra de contacto bajo la hamburguesa.
+- **SVG:** mismas 6 capas (se reusaron los `path`), pero `viewBox` con margen
+  (`60 -70 340 400`) y `overflow: visible` → ya no recorta nada al separarse.
+  Cada `.anat-capa` con su `drop-shadow` para que "flote".
+- **Animación:** el despiece **sigue el scroll** de la sección (scroll-scrub):
+  `animaciones.js` calcula el avance y lo mete en la CSS var `--sep` (0 armada →
+  1 despiezada); el CSS interpola `translateY(step * --sep * 24px)`. En desktop,
+  hover/foco fija abierto; un clic deja fijo (táctil). Flotación sutil en reposo
+  (`anat-bob`) + `rotateX(8deg)` al abrir (sobre el `<button>`, no sobre `<g>`
+  SVG, por WebKit). `prefers-reduced-motion`: se queda armada, sin bob ni glow.
+- **Referencia de capas:** lista **numerada 1–6** siempre visible (antes solo
+  aparecía en móvil). Pasar el cursor por un ítem resalta su capa (`.realce`).
+- **Compat.:** el movimiento va por JS + CSS var, no depende de que el navegador
+  propague `:hover` a los `<g>` (el bug de Brave del arreglo anterior). Falta
+  probar en Brave con escudos / iOS Safari en dispositivo real.
+- El CSS viejo `.musa-anatomia*`, `.anat-tag`, `.anat-lista__punto` se eliminó.
 
 ### Bloque B · UI/UX 2026-09-09
 Segundo bloque del `PLAN-MEJORAS.md`. 134 tests en verde.

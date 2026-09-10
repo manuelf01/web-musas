@@ -1,0 +1,91 @@
+{# "Anatomía de Las Musas": la hamburguesa que se despieza.
+   Escena oscura a todo el ancho. El despiece sigue el scroll (o el cursor) y
+   la lista numerada de la derecha es la referencia de capas. En móvil y con
+   "reducir movimiento" la hamburguesa se queda armada y manda la lista. #}
+<section class="anatomia" aria-labelledby="anatomia-titulo">
+  <span class="anatomia__glow" aria-hidden="true"></span>
+
+  <div class="musa-shell anatomia__inner">
+    <div class="anatomia__escena" data-anat-scene>
+      <button type="button" class="anat-burger" aria-pressed="false"
+              aria-label="Separar las capas de la hamburguesa Las Musas">
+        <svg viewBox="60 -70 340 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <!-- 6 · Base brioche + salsa de la casa -->
+          <g class="anat-capa" data-capa="salsa" style="--step: 3; --d: 0s">
+            <path d="M124 214 q -2 20 20 26 h172 q 22 -6 20 -26 z" fill="#E3A24E"/>
+            <rect x="120" y="202" width="220" height="14" rx="7" fill="#EEBE7E"/>
+            <path d="M134 206 q 12 7 24 1 q 14 7 28 1 q 14 7 28 1 q 14 6 26 0" stroke="#F0B93F" stroke-width="5" fill="none" stroke-linecap="round"/>
+          </g>
+          <!-- 5 · Carne Angus -->
+          <g class="anat-capa" data-capa="carne" style="--step: 1.7; --d: .03s">
+            <rect x="120" y="170" width="220" height="32" rx="16" fill="#5A3A28"/>
+            <rect x="130" y="173" width="200" height="10" rx="5" fill="#6F4835"/>
+            <rect x="158" y="174" width="5" height="24" rx="2.5" fill="#3C261B" opacity=".38"/>
+            <rect x="210" y="174" width="5" height="24" rx="2.5" fill="#3C261B" opacity=".38"/>
+            <rect x="262" y="174" width="5" height="24" rx="2.5" fill="#3C261B" opacity=".38"/>
+          </g>
+          <!-- 4 · Cheddar -->
+          <g class="anat-capa" data-capa="cheddar" style="--step: .4; --d: .06s">
+            <path d="M134 152 H326 V160 L312 174 L300 160 L286 176 L272 160 L258 172 L244 160 L230 176 L216 160 L202 172 L188 160 L174 174 L160 160 L146 172 L134 160 Z" fill="#F2A833"/>
+            <rect x="142" y="153" width="176" height="4" rx="2" fill="#F8C86C"/>
+          </g>
+          <!-- 3 · Tomate -->
+          <g class="anat-capa" data-capa="tomate" style="--step: -.7; --d: .09s">
+            <rect x="150" y="137" width="160" height="16" rx="8" fill="#DE4A31"/>
+            <rect x="164" y="140" width="132" height="10" rx="5" fill="#EC6E53"/>
+            <circle cx="200" cy="145" r="1.6" fill="#F7C468"/>
+            <circle cx="238" cy="144" r="1.6" fill="#F7C468"/>
+            <circle cx="272" cy="146" r="1.6" fill="#F7C468"/>
+          </g>
+          <!-- 2 · Lechuga -->
+          <g class="anat-capa" data-capa="lechuga" style="--step: -1.8; --d: .12s">
+            <path d="M118 132 C 138 110 158 150 180 128 C 200 108 220 150 242 128 C 264 108 284 150 306 128 C 322 112 336 142 352 130 L 352 140 C 240 156 118 144 118 138 Z" fill="#7FB84A"/>
+            <path d="M128 132 C 200 144 280 142 344 132" stroke="#6BA23B" stroke-width="2" fill="none"/>
+          </g>
+          <!-- 1 · Pan superior brioche -->
+          <g class="anat-capa" data-capa="pan" style="--step: -3.2; --d: .15s">
+            <path d="M116 120 C 118 44 168 30 230 30 C 292 30 342 44 344 120 Z" fill="#E3A24E"/>
+            <rect x="116" y="112" width="228" height="14" rx="7" fill="#DE9A44"/>
+            <ellipse cx="196" cy="64" rx="54" ry="20" fill="#EFC07E" opacity=".5"/>
+            <ellipse cx="172" cy="76" rx="4.5" ry="2.6" fill="#FBEFD6" transform="rotate(-16 172 76)"/>
+            <ellipse cx="210" cy="60" rx="4.5" ry="2.6" fill="#FBEFD6" transform="rotate(12 210 60)"/>
+            <ellipse cx="248" cy="78" rx="4.5" ry="2.6" fill="#FBEFD6" transform="rotate(-8 248 78)"/>
+            <ellipse cx="226" cy="48" rx="4.5" ry="2.6" fill="#FBEFD6" transform="rotate(20 226 48)"/>
+            <ellipse cx="280" cy="66" rx="4.5" ry="2.6" fill="#FBEFD6" transform="rotate(-14 280 66)"/>
+            <ellipse cx="150" cy="94" rx="4.5" ry="2.6" fill="#FBEFD6" transform="rotate(6 150 94)"/>
+          </g>
+        </svg>
+      </button>
+      <span class="anat-plato" aria-hidden="true"></span>
+      <span class="anat-hint" data-anat-hint>
+        <i class="bi bi-arrows-expand"></i> Desplázate o pasa el cursor
+      </span>
+    </div>
+
+    <div class="anatomia__texto" data-reveal>
+      <span class="eyebrow">Cada capa cuenta</span>
+      <h2 id="anatomia-titulo">Anatomía de Las Musas</h2>
+      <p>Seis capas montadas a mano cada tarde. Míralas separarse y descubre
+        de qué está hecha la original.</p>
+
+      <ol class="anat-lista" aria-label="Capas de la hamburguesa, de arriba abajo">
+        <li data-capa="pan"><span class="anat-lista__n">1</span>
+          <div><strong>Brioche artesanal</strong><span>horneado a diario</span></div></li>
+        <li data-capa="lechuga"><span class="anat-lista__n">2</span>
+          <div><strong>Lechuga fresca</strong><span>crocante, del día</span></div></li>
+        <li data-capa="tomate"><span class="anat-lista__n">3</span>
+          <div><strong>Tomate fresco</strong><span>en rodaja gruesa</span></div></li>
+        <li data-capa="cheddar"><span class="anat-lista__n">4</span>
+          <div><strong>Cheddar añejo</strong><span>fundido sobre la carne</span></div></li>
+        <li data-capa="carne"><span class="anat-lista__n">5</span>
+          <div><strong>Angus a la brasa</strong><span>carbón &amp; leña</span></div></li>
+        <li data-capa="salsa"><span class="anat-lista__n">6</span>
+          <div><strong>Salsa de la casa</strong><span>receta reservada</span></div></li>
+      </ol>
+
+      <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">
+        Probar la original <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+</section>

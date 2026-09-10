@@ -33,43 +33,58 @@
   }, 2500);
 })();
 
-/* "Anatomía de Las Musas": el despiece funciona con :hover en CSS, pero algunos
-   navegadores (Brave con escudos, Firefox en ciertos casos) no propagan bien
-   el :hover a los <g> del SVG — así que también lo movemos con JS. Click fija /
-   suelta; en pantallas táctiles se abre solo al entrar en el viewport. */
+/* "Anatomía de Las Musas": el despiece de la hamburguesa sigue el scroll de la
+   sección (efecto "scroll-scrub"). En desktop, pasar el cursor / enfocar la fija
+   abierta; un clic la deja fija (útil en táctil). El separado real lo hace el CSS
+   con la variable --sep (0 = armada, 1 = despiezada); aquí solo la calculamos.
+   Con "reducir movimiento" no se monta nada: el CSS la deja armada. */
 (function () {
-  var burger = document.querySelector(".anat-burger");
-  if (!burger) return;
+  var scene = document.querySelector("[data-anat-scene]");
+  var burger = scene && scene.querySelector(".anat-burger");
+  var seccion = burger && burger.closest(".anatomia");
+  if (!scene || !burger || !seccion) return;
 
   var mm = window.matchMedia;
-  // Con "reducir movimiento" el CSS ya muestra la lista de ingredientes armada:
-  // no montamos ninguna interacción de despiece.
   if (mm && mm("(prefers-reduced-motion: reduce)").matches) return;
 
-  var fijado = false;
+  var fijado = false;      // el cursor/foco/clic manda por encima del scroll
+  var pendiente = false;
 
-  function marcar(abierto) {
+  function aplicar(v) {
+    v = v < 0 ? 0 : v > 1 ? 1 : v;
+    scene.style.setProperty("--sep", v.toFixed(3));
+    var abierto = v > 0.04;
     burger.classList.toggle("abierto", abierto);
-    burger.setAttribute("aria-pressed", abierto ? "true" : "false");
+    burger.setAttribute("aria-pressed", v > 0.5 ? "true" : "false");
+  }
+
+  function porScroll() {
+    if (fijado) return;
+    if (pendiente) return;
+    pendiente = true;
+    requestAnimationFrame(function () {
+      pendiente = false;
+      var r = seccion.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      // 0 cuando la sección asoma por abajo; 1 cuando su centro cruza el del viewport.
+      var avance = (vh - r.top) / (vh * 0.5 + r.height * 0.5);
+      aplicar((avance - 0.12) * 1.35);
+    });
+  }
+
+  window.addEventListener("scroll", porScroll, { passive: true });
+  window.addEventListener("resize", porScroll);
+  porScroll();
+
+  if (mm && mm("(hover: hover)").matches) {
+    burger.addEventListener("mouseenter", function () { fijado = true; aplicar(1); });
+    burger.addEventListener("mouseleave", function () { fijado = false; porScroll(); });
+    burger.addEventListener("focus", function () { fijado = true; aplicar(1); });
+    burger.addEventListener("blur", function () { fijado = false; porScroll(); });
   }
 
   burger.addEventListener("click", function () {
     fijado = !burger.classList.contains("abierto");
-    marcar(fijado);
+    aplicar(fijado ? 1 : 0);
   });
-  burger.addEventListener("mouseenter", function () { marcar(true); });
-  burger.addEventListener("mouseleave", function () { if (!fijado) marcar(false); });
-
-  var tactil = mm && mm("(hover: none)").matches;
-  if (tactil && "IntersectionObserver" in window) {
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) {
-        if (!e.isIntersecting) return;
-        marcar(true);
-        fijado = true;
-        io.disconnect();
-      });
-    }, { threshold: 0.55 });
-    io.observe(burger);
-  }
 })();
