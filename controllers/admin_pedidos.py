@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, g, request, redirect, url_for, flash, jsonify
+from model.Comprobante import Comprobante
 from model.Pedido import Pedido
 
 pedidos = Blueprint("pedidos", __name__, url_prefix="/pedidos")
@@ -77,13 +78,20 @@ def preparar():
 def confirmar():
     id_pedido = request.form.get("idPedido")
     key = (request.form.get("key") or "").strip()
+    medio_pago = (request.form.get("medio_pago") or "").strip().lower()
     estado = request.form.get("estado", "todos")
 
-    resultado = Pedido.marcar_recogido(id_pedido, key)
+    resultado = Pedido.marcar_recogido(id_pedido, key, medio_pago, g.user["idUsuario"])
     if resultado == "ok":
         flash(f"Pedido N° {id_pedido} entregado. Comprobante emitido.", "ok")
+        id_comprobante = Comprobante.id_por_pedido(id_pedido)
+        return redirect(url_for("admin.ventas.show_detalle", idComprobante=id_comprobante))
     elif resultado == "clave_mal":
         flash(f"La palabra clave no coincide con el pedido N° {id_pedido}.", "error")
+    elif resultado == "no_listo":
+        flash(f"El pedido N° {id_pedido} debe marcarse como listo antes de entregarlo.", "error")
+    elif resultado == "pago_invalido":
+        flash("Selecciona el medio de pago recibido en caja.", "error")
     else:
         flash(f"El pedido N° {id_pedido} ya fue recogido, cancelado o no existe.", "error")
 

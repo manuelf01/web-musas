@@ -1,2 +1,4 @@
 -r requirements.txt
 pytest>=7.4
+pypdf==6.18.0
+pymupdf==1.28.2

@@ -130,21 +130,30 @@
           </form>
           {% endif %}
 
+          {% if p.estado == 'listo' %}
           <form method="post" action="{{ url_for('admin.pedidos.confirmar') }}" class="ped-confirmar">
             {{ campo_csrf() }}
             <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
             <input type="hidden" name="estado" value="{{ estado }}" />
             <label>Palabra clave del cliente</label>
-            <p class="ped-confirmar__hint">Pídele su número de 4 dígitos y escríbelo para entregar el pedido.</p>
+            <p class="ped-confirmar__hint">Verifica la clave y registra cómo pagó antes de entregar.</p>
+            <select name="medio_pago" required aria-label="Medio de pago recibido">
+              <option value="">Medio de pago</option>
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="yape">Yape</option>
+              <option value="plin">Plin</option>
+            </select>
             <div class="ped-confirmar__row">
               <input type="text" name="key" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"
                      placeholder="0000" required autocomplete="off" aria-label="Palabra clave" />
               <button type="submit" class="btn-brasa"
-                data-confirm="Se entregará el pedido #{{ p.idPedido }} y se emitirá el comprobante (queda registrado en Ventas). Verifica antes la palabra clave del cliente."
-                data-confirm-titulo="Entregar pedido" data-confirm-ok="Entregar y facturar">
-                <i class="bi bi-check2-all"></i> Entregar pedido</button>
+                data-confirm="Se registrará el pago, se entregará el pedido #{{ p.idPedido }} y se emitirá un comprobante para el cliente y caja."
+                data-confirm-titulo="Confirmar cobro y entrega" data-confirm-ok="Cobrar y entregar">
+                <i class="bi bi-check2-all"></i> Cobrar y entregar</button>
             </div>
           </form>
+          {% endif %}
 
           <div class="ped-secundarias">
             <form method="post" action="{{ url_for('admin.pedidos.no_show') }}"

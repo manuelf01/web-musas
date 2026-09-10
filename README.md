@@ -1,6 +1,6 @@
 # Las Musas — Burger Joint
 
-Tienda web + panel de administración para una hamburguesería nocturna de Lima
+Tienda web + panel de administración para una hamburguesería nocturna de Chiclayo
 (pedidos para **recojo en tienda**, sin pasarela de pago). Flask (MVC) + MariaDB.
 
 ## Puesta en marcha (local)
@@ -24,7 +24,7 @@ copy cfg.example.py cfg.py       # ajusta host/usuario/clave si hace falta
 python app.py                    # http://127.0.0.1:5000
 ```
 
-Fuera del horario 6–10 p.m. usa `set MUSAS_DEMO=1 && python app.py` para probar
+Fuera del horario de atención usa `set MUSAS_DEMO=1 && python app.py` para probar
 el checkout.
 
 ### Cuentas de ejemplo (contraseña de todas: `Musas2026`)
@@ -52,6 +52,9 @@ CI en GitHub Actions corre `pytest` en cada push y PR.
 - **`BITACORA-CLAUDE.md`** — bitácora detallada de todos los cambios, decisiones
   y problemas conocidos.
 - **`migrations/`** — cambios de esquema numerados (ya incluidos en `sql.sql`).
+
+Si actualizas una base existente hasta esta versión, respáldala y aplica
+`migrations/012_comprobantes_pdf.sql` desde phpMyAdmin antes de iniciar Flask.
 
 ## Contraseñas
 

@@ -5,10 +5,10 @@
 <section class="pagina-hero">
   <div class="pagina-hero__inner">
     <span class="eyebrow">Conócenos</span>
-    <h1>Brasas nocturnas hechas en Lima</h1>
+    <h1>Brasas nocturnas hechas en Chiclayo</h1>
     <p>
-      Nacimos en Miraflores en 2021 con una idea simple: la mejor hamburguesa
-      de la ciudad, servida cuando el resto ya cerró.
+      Disfruta Las Musas en Chiclayo. Elige tu hamburguesa favorita
+      y recoge tu pedido en nuestra sede de Av. José Balta.
     </p>
   </div>
 </section>
@@ -17,15 +17,12 @@
   <section id="historia">
     <h2>Historia</h2>
     <p>
-      Las Musas empezó como un carrito de brasas en una esquina de Barranco.
-      La receta era de la abuela: carne madurada, pan brioche horneado el
-      mismo día y salsas emulsionadas a mano. En pocos meses la cola daba la
-      vuelta a la manzana.
+      Las Musas reúne hamburguesas, salchipapas y bebidas para acompañar
+      tus noches en Chiclayo. Consulta la carta y elige tu hora de recojo.
     </p>
     <p>
-      Hoy tenemos local propio en Calle Schell 385, Miraflores, con cocina
-      abierta hasta pasada la medianoche. Seguimos moliendo la carne cada
-      tarde y horneando el pan a diario.
+      Te esperamos en {{ sede.direccion }}.
+      {{ sede.horario }} Recojo en tienda.
     </p>
   </section>
 
@@ -33,16 +30,12 @@
     <h2>Locales y horarios</h2>
     <div class="info-grid">
       <div class="info-card">
-        <h3><i class="bi bi-shop" style="color: var(--musa-brasa);"></i> Miraflores (Central)</h3>
-        <p class="muted">Calle Schell 385, a espaldas del Parque Kennedy.</p>
-        <p><strong>Martes a domingo · 6:00 p.m – 10:00 p.m</strong></p>
-        <p class="muted">Solo retiro en tienda. Estacionamiento para recojo rápido.</p>
-      </div>
-      <div class="info-card">
-        <h3><i class="bi bi-geo-alt" style="color: var(--musa-brasa);"></i> Barranco (Origen)</h3>
-        <p class="muted">Av. Grau 280, cerca al puente de los suspiros.</p>
-        <p><strong>Viernes y sábado · 7:00 p.m – 12:00 a.m</strong></p>
-        <p class="muted">Punto de brasas y cervezas artesanales.</p>
+        <h3><i class="bi bi-shop" style="color: var(--musa-brasa);"></i> {{ sede.nombre }}</h3>
+        <p class="muted">{{ sede.direccion }}</p>
+        <p class="muted">{{ sede.referencia }}</p>
+        <p><strong>{{ sede.horario }}</strong></p>
+        <p class="muted">Solo retiro en tienda.</p>
+        <a href="{{ sede.mapa_url }}" target="_blank" rel="noopener">Cómo llegar</a>
       </div>
     </div>
   </section>

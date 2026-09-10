@@ -1,7 +1,8 @@
 import os
 from datetime import timedelta
 
-from flask import Flask, request, session
+from flask import Flask, request, session, jsonify
+from negocio import SEDE, estado_local
 
 from controllers.admin import *
 from controllers.cliente import *
@@ -64,7 +65,18 @@ def _proteger_csrf():
 def _inyectar_sesion():
     # Disponible en todas las plantillas: saber si hay un admin logueado
     # mientras navega la tienda (para el header y saltarse el captcha).
-    return {"admin_sesion": session.get("admin.auth")}
+    return {
+        "admin_sesion": session.get("admin.auth"),
+        "sede": SEDE,
+        "local_estado": estado_local(),
+    }
+
+
+@app.get("/estado-local")
+def consultar_estado_local():
+    respuesta = jsonify(estado_local())
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
 
 
 @app.after_request

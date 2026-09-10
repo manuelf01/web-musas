@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>{% block title %}Backoffice · Las Musas{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -28,10 +29,8 @@
     <aside class="adm-side">
       <div>
         <div class="adm-side__brand">
-          <span class="musa-wordmark" style="color: #fff; font-size: 18px;">
-            <span class="adm-marca-full">Las Musas <small>Burger Joint · Backoffice</small></span>
-            <span class="adm-marca-mini">LM</span>
-          </span>
+          <img class="adm-marca-full musa-logo musa-logo--admin" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas" />
+          <img class="adm-marca-mini musa-logo--simbolo" src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" alt="Las Musas" />
         </div>
         <nav class="adm-nav">
           <a href="{{ url_for('admin.home') }}" class="{% block nav_resumen %}{% endblock %}" title="Resumen">
@@ -61,7 +60,9 @@
       </div>
 
       <div class="adm-side__foot">
-        <span class="adm-side__estado"><span class="musa-dot-live" style="background: var(--musa-mostaza);"></span> Abierto · 6–10 p.m</span>
+        {% with estado_clase='adm-side__estado', estado_sufijo=' · Chiclayo' %}
+          {% include '_estado_local.html' %}
+        {% endwith %}
         <div class="adm-side__user">
           <span class="adm-avatar">
             {{ (usuario.nombres[0] ~ (usuario.apellidos[0] if usuario.apellidos else '')) | upper if usuario else 'A' }}
@@ -70,7 +71,11 @@
             <strong>{{ usuario.nombres if usuario else 'Admin' }}</strong>
             <span>{{ {'superusuario': 'Superusuario', 'administrador': 'Administrador'}.get(usuario.rol, 'Administrador') if usuario else 'Administrador' }}</span>
           </div>
-          <a href="{{ url_for('admin.auth.logout') }}" title="Cerrar sesión" class="adm-side__logout">
+          <a href="{{ url_for('admin.auth.logout') }}" title="Cerrar sesión" class="adm-side__logout"
+             data-confirm="¿Estás seguro de que quieres cerrar sesión?"
+             data-confirm-titulo="Cerrar sesión"
+             data-confirm-ok="Sí, cerrar sesión" data-confirm-cancelar="Cancelar"
+             data-confirm-icono="bi-box-arrow-right">
             <i class="bi bi-box-arrow-right"></i>
           </a>
         </div>
@@ -79,7 +84,7 @@
 
     <div class="adm-main">
       <header class="adm-topbar">
-        <span class="adm-topbar__local">Local Nocturno · Miraflores</span>
+        <span class="adm-topbar__local">Las Musas - Chiclayo</span>
         <a href="{{ url_for('cliente.home') }}" class="adm-topbar__link" target="_blank">
           <i class="bi bi-shop"></i> Ver tienda
         </a>
@@ -104,6 +109,7 @@
       crossorigin="anonymous"
     ></script>
     <script src="{{ url_for('static', filename='js/ui-comun.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/estado-local.js') }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

@@ -5,7 +5,10 @@
 {% block content %}
 <div class="adm-recibo__acc" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
   <a href="{{ url_for('admin.ventas.home') }}" class="adm-topbar__link"><i class="bi bi-arrow-left"></i> Volver a ventas</a>
-  <button type="button" class="btn-contorno" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+  <div class="d-flex gap-2">
+    <a class="btn-brasa" href="{{ url_for('admin.ventas.descargar_pdf', idComprobante=c.idComprobante) }}"><i class="bi bi-file-earmark-pdf"></i> Descargar PDF</a>
+    <button type="button" class="btn-contorno" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
+  </div>
 </div>
 
 <div class="adm-head" style="margin-bottom: 20px;">
@@ -22,7 +25,7 @@
       <div class="adm-recibo__cab">
         <div>
           <h3>LAS MUSAS <span style="color: var(--musa-brasa);">●</span></h3>
-          <small>Nocturnal Burger Joint · Miraflores, Lima</small>
+          <small>Las Musas - Chiclayo</small>
         </div>
         <div class="adm-recibo__tipo">
           <b>{{ c.tipoDoc }}</b>
@@ -51,7 +54,7 @@
                 <div class="adm-recibo__prod">
                   {% if l.imagen %}<img class="adm-thumb" style="width:40px;height:40px;" src="{{ url_for('static', filename='img/' ~ l.imagen) }}" alt="" />
                   {% else %}<span class="adm-thumb" style="width:40px;height:40px;"><i class="bi bi-fire"></i></span>{% endif %}
-                  <span>{{ l.nombre }}</span>
+                  <span>{{ l.nombre }}{% if l.adicionales %}<small class="d-block" style="color:var(--musa-texto-suave);">Cremas: {{ l.adicionales | join(', ') }}</small>{% endif %}</span>
                 </div>
               </td>
               <td class="num">{{ l.cantidad }}</td>
@@ -92,7 +95,7 @@
       <li><i class="bi bi-hash"></i> {{ c.numero }}</li>
       <li><i class="bi bi-calendar3"></i> {{ c.fecha }} · {{ c.hora }}</li>
       <li><i class="bi bi-{{ 'qr-code' if c.formaPago != 'Efectivo' else 'cash-coin' }}"></i> {{ c.formaPago }}</li>
-      <li><i class="bi bi-receipt"></i> {{ 'Boleta electrónica' if c.boleta else 'Nota de venta' }}</li>
+      <li><i class="bi bi-receipt"></i> {{ c.tipoDoc | title }}</li>
     </ul>
 
     {% if c.notas %}
@@ -101,6 +104,7 @@
         {{ c.notas }}
       </div>
     {% endif %}
+    <p class="small mt-3 mb-0" style="color:var(--musa-texto-suave);">Comprobante interno de la operación. No es un comprobante electrónico enviado a SUNAT.</p>
   </aside>
 </div>
 {% endblock %}

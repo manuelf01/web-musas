@@ -815,3 +815,50 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - `detalleOrden` → líneas del pedido (guarda snapshot de nombre/precio).
 - `detalleCremas` → cremas elegidas por línea (`idDetalleOrden` + `idPedido` + `idCrema`).
 - `comprobante` / `detalleComprobante` → boleta interna generada del pedido. `subTotal` + `igv` = `montoTotal` (IGV 18%).
+
+## 2026-09-08 - Preparacion local con Codex
+- Clonada la rama Ramirez y preparado .venv con Python 3.10 y requirements.txt.
+- Creado cfg.py local e inicializada db_musuas desde sql.sql en XAMPP (20 productos, 3 usuarios).
+- Agregados iniciar.bat, LEVANTAR-LOCAL.md y exclusion de .local-runtime/.
+- Verificados inicio, carta, login y producto (HTTP 200), acceso cliente/superusuario y pip check.
+
+## 2026-09-08 - Actualizacion local de Ramirez con Codex
+- Actualizado de 8736d76 a 43198ae mediante fast-forward (12 commits), conservando los ajustes locales, cfg.py, .venv e iniciar.bat.
+- Respaldo previo: .local-runtime/db_musuas-antes-43198ae-20260908-173927.sql.
+- Aplicada solamente la migracion 011 a db_musuas; datos y contrasenas locales conservados.
+- Instaladas las dependencias de requirements-dev.txt. Suite completa: 67 pruebas aprobadas en una base temporal independiente; pip check correcto.
+- Verificados login cliente/superusuario, inicio, carta, detalle y archivos JS nuevos. Servidor actualizado en http://127.0.0.1:5000.
+
+## 2026-09-08 - Sede Chiclayo, horario publico y mapa
+- Actualizadas las referencias de ubicacion en todas las vistas del cliente y panel a Las Musas - Chiclayo. Direccion: AV. José Balta, Chiclayo 14008, Perú, confirmada en https://las-musas-burger.ola.click/products.
+- Datos compartidos en negocio.py. Mapa de Google Maps incrustado junto al bloque de recojo y enlace Como llegar a la misma direccion, con altura adaptable a movil.
+- Estado publico abierto desde las 18:00 hasta antes de las 22:00, todos los dias en hora de Peru (UTC-5), independiente del modo demo. Inicio y panel comparten aviso; se actualiza sin recargar mediante /estado-local y estado-local.js.
+- Retiradas las referencias a sedes anteriores y horarios incompatibles de la pagina Nosotros.
+- Validacion: 78 pruebas aprobadas, incluidos limites 17:59:59/18:00/21:59:59/22:00, conversion UTC y renderizado abierto/cerrado. HTTP local 200 y URL del mapa verificada contra la direccion. No hubo navegador disponible para inspeccion visual del mapa externo.
+
+## 2026-09-08 - Horario confirmado en OlaClick y direccion numerada
+- El usuario confirma que La Paperia y Las de Siempre Burger (enlace OlaClick) son el mismo negocio. Se conserva la marca Las Musas del proyecto.
+- Fuente de horarios: https://las-musas-burger.ola.click/info. Lunes a sabado 18:00-23:30; domingo 09:00-23:00, en hora de Peru. Reemplaza el horario provisional 18:00-22:00.
+- Direccion indicada por el usuario: Av. José Balta Sur 006, Chiclayo 14008, Perú. Referencia Hotel Colibri; mapa y Como llegar buscan La Paperia junto con esa direccion. La ficha externa solo publica la avenida sin numero; no se afirma haber verificado un pin exacto de Google Maps.
+- Estado publico, textos de las vistas y franjas de recojo comparten el horario semanal de negocio.py. Se conservan intervalos de 30 minutos, anticipacion de 20 minutos y ajustes de horario para pruebas.
+- Validacion: 125 pruebas aprobadas en base temporal, incluidos los limites de lunes a sabado, domingo, cambio de dia y franjas de recojo.
+
+## 2026-09-08 - Confirmacion de cierre de sesion
+- Cliente y panel ahora usan MusaConfirm al pulsar Salir/Cerrar sesion, con opciones Si, cerrar sesion y Cancelar.
+- Corregido Enter en el modal compartido para respetar el boton enfocado; Cancelar y Escape no cierran la sesion.
+- Verificadas ambas plantillas con HTTP 200 y sesion conservada, y el JavaScript con DOM simulado: cancelar/Escape/Enter sobre Cancelar no navegan; confirmar redirige a logout.
+
+## 2026-09-08 - Plan de comprobantes PDF para cliente y caja
+- Revisado el flujo carrito-checkout-preparacion-entrega-ventas. Ya existe emision al entregar; faltan PDF y acceso cliente.
+- Creado PLAN-COMPROBANTES-PDF.md con flujo propuesto, diseño A4 con logo, cobro explicito, datos historicos, permisos, generacion compartida, migracion y pruebas.
+- Hallazgos: pago real no distingue tarjeta/efectivo y Yape/Plin; no se exige estado listo en marcar_recogido; logo oficial no encontrado en los recursos actuales.
+- Validacion de base: 27 pruebas aprobadas (test_pedido_flujo y test_rutas) en base temporal. Solo plan documentado, sin implementar la nueva funcionalidad.
+
+## 2026-09-09 - Comprobante interno PDF implementado
+- Caja solo puede cobrar y entregar pedidos listos; registra Efectivo, Tarjeta, Yape o Plin y queda asociado el administrador que atendió.
+- La emisión sigue dentro de la misma transacción de entrega. La base impide más de un comprobante por pedido y números repetidos.
+- El comprobante conserva un snapshot JSON de sede, cliente, importes, líneas y cremas. Los importes migran de FLOAT a DECIMAL(12,2) y el cálculo usa Decimal con redondeo a céntimos.
+- Cliente y caja ven el mismo comprobante y descargan el mismo PDF A4. El acceso del cliente valida la propiedad del pedido. El documento se identifica como interno, sin afirmar envío a SUNAT.
+- Creado logo vectorial propio en `static/img/marca/v1/` y aplicado en navegación, panel, registro, favicon y PDF. Se incluyen fuentes Inter/Space Grotesk con licencia OFL para conservar tildes y ñ en el documento.
+- Esquema nuevo integrado en `sql.sql`; bases existentes usan `migrations/012_comprobantes_pdf.sql`, validada sobre una copia temporal de la base local. La base real no se modificó.
+- Validación: 129 pruebas aprobadas, incluidas reglas de cobro, snapshot, permisos de cliente, PDF de cliente/caja y extracción de texto. PDF renderizado e inspeccionado en una página A4.

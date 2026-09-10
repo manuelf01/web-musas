@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>{% block title %}Las Musas — Burger Joint{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" />
 
     {# --- Vista previa al compartir el enlace (WhatsApp, redes) --- #}
-    <meta name="description" content="{% block meta_desc %}Brasas nocturnas en Lima: carne Angus, pan brioche artesanal y salsas de la casa. Pide, elige tu hora y recoge en tienda.{% endblock %}" />
+    <meta name="description" content="{% block meta_desc %}Brasas nocturnas en Chiclayo: carne Angus, pan brioche artesanal y salsas de la casa. Pide, elige tu hora y recoge en tienda.{% endblock %}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Las Musas Burger Joint" />
     <meta property="og:locale" content="es_PE" />
@@ -41,8 +42,8 @@
   <body>
     <header class="musa-navbar">
       <div class="inner">
-        <a href="{{ url_for('cliente.home') }}" class="musa-wordmark" style="color: var(--musa-carbon);">
-          Las Musas <small>Burger Joint</small>
+        <a href="{{ url_for('cliente.home') }}" class="musa-logo-link" aria-label="Las Musas - inicio">
+          <img class="musa-logo musa-logo--nav" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas, hamburguesas a la brasa" />
         </a>
 
         <nav class="musa-nav-links">
@@ -62,7 +63,11 @@
             <a href="{{ url_for('cliente.mi_cuenta') }}" class="d-none d-sm-inline text-decoration-none" style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: var(--musa-carbon);">
               {{ cliente }}
             </a>
-            <a href="{{ url_for('cliente.auth.logout') }}" class="text-decoration-none small" style="color: var(--musa-texto-suave);">
+            <a href="{{ url_for('cliente.auth.logout') }}" class="text-decoration-none small" style="color: var(--musa-texto-suave);"
+               data-confirm="¿Estás seguro de que quieres cerrar sesión?"
+               data-confirm-titulo="Cerrar sesión"
+               data-confirm-ok="Sí, cerrar sesión" data-confirm-cancelar="Cancelar"
+               data-confirm-icono="bi-box-arrow-right">
               Salir
             </a>
           {% elif admin_sesion %}
@@ -108,11 +113,9 @@
       <div class="inner">
         <div class="row g-4">
           <div class="col-lg-4">
-            <div class="musa-wordmark mb-3" style="color: var(--musa-crema);">
-              Las Musas <small>Burger Joint</small>
-            </div>
+            <img class="musa-logo musa-logo--footer mb-3" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas" />
             <p style="color: rgba(251, 247, 240, 0.8); max-width: 34ch; font-size: 14px;">
-              Sabor nocturno y brasas artesanales en Lima. Carne madurada, pan
+              Sabor nocturno y brasas artesanales en Chiclayo. Carne madurada, pan
               brioche horneado a diario y salsas de la casa.
             </p>
             <div class="d-flex gap-2">
@@ -156,7 +159,7 @@
         </div>
 
         <div class="footer-bottom d-flex flex-column flex-md-row justify-content-between gap-2">
-          <span>© 2026 Las Musas Burger Joint SAC · Hecho en Lima, Perú</span>
+          <span>© 2026 Las Musas Burger Joint SAC · Hecho en Chiclayo, Perú</span>
           <span class="d-flex gap-3">
             <a href="#" data-bs-toggle="modal" data-bs-target="#modalTerminos">Términos y condiciones</a>
             <a href="#" data-bs-toggle="modal" data-bs-target="#modalPrivacidad">Política de privacidad</a>
@@ -183,6 +186,7 @@
     {% endif %}
     <script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/ui-comun.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/estado-local.js') }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

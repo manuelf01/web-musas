@@ -1,0 +1,6 @@
+<span class="{{ estado_clase }}{{ ' local-cerrado' if not local_estado.abierto }}"
+      data-estado-local data-estado-url="{{ url_for('consultar_estado_local') }}"
+      role="status" aria-live="polite">
+  <span class="musa-hero__pulse" aria-hidden="true"></span>
+  <span><span data-estado-texto>{{ local_estado.texto }}</span>{{ estado_sufijo }}</span>
+</span>

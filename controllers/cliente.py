@@ -1,14 +1,19 @@
 import json
 import re
+from io import BytesIO
 
 from flask import (
     Blueprint, render_template, session, redirect, url_for, request, flash, jsonify,
+    abort, send_file,
 )
+from model.Comprobante import Comprobante
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
 from model.Pedido import Pedido, StockInsuficiente, LimitePedidos
 from model.Usuario import Usuario
 from seguridad import password_valida
+from formato import soles_en_letras
+from services.comprobante_pdf import generar_comprobante_pdf
 cliente = Blueprint('cliente', __name__)
 
 # Categorías cuyo producto admite cremas adicionales.
@@ -170,6 +175,39 @@ def mis_pedidos_estado():
     pedidos = Pedido.historial_cliente(user["idUsuario"])
     estados = {str(p["idPedido"]): p["estado"] for p in pedidos}
     return jsonify({"estados": estados, "firma": _firma_estados(pedidos)})
+
+
+def _comprobante_del_cliente(id_pedido):
+    user = session.get("cliente.auth")
+    if not user:
+        return None, redirect(url_for("cliente.auth.login", next=request.path))
+    comprobante = Comprobante.detalle_por_pedido(id_pedido, user["idUsuario"])
+    if comprobante is None:
+        abort(404)
+    return comprobante, None
+
+
+@cliente.route("/mis-pedidos/<int:id_pedido>/comprobante")
+def ver_comprobante(id_pedido):
+    comprobante, respuesta = _comprobante_del_cliente(id_pedido)
+    if respuesta:
+        return respuesta
+    return render_template(
+        "client/comprobante.html", cliente=_cliente_nombre(), c=comprobante,
+        importe_letras=soles_en_letras(comprobante["montoTotal"]),
+    )
+
+
+@cliente.route("/mis-pedidos/<int:id_pedido>/comprobante/pdf")
+def descargar_comprobante(id_pedido):
+    comprobante, respuesta = _comprobante_del_cliente(id_pedido)
+    if respuesta:
+        return respuesta
+    pdf = generar_comprobante_pdf(comprobante)
+    return send_file(
+        BytesIO(pdf), mimetype="application/pdf", as_attachment=True,
+        download_name=f"comprobante-{comprobante['numero']}.pdf",
+    )
 
 
 @cliente.route("/mis-pedidos/<int:id_pedido>/cancelar", methods=["POST"])

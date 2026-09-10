@@ -10,13 +10,13 @@
     style="background-image: url('{{ url_for('static', filename='img/hamburguesas/h-2.jpg') }}');"
   >
     <div class="d-flex justify-content-between align-items-center">
-      <div class="musa-wordmark text-white">Las Musas <small>Burger Joint</small></div>
+      <img class="musa-logo musa-logo--auth" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas" />
       <div
         class="d-flex align-items-center gap-2 px-3 py-2 rounded-pill"
         style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(6px);"
       >
         <span class="musa-dot-live" style="background: var(--musa-mostaza);"></span>
-        <span class="small fw-semibold text-uppercase" style="letter-spacing: 0.1em;">Lima · Est. 2021</span>
+        <span class="small fw-semibold text-uppercase" style="letter-spacing: 0.1em;">Las Musas - Chiclayo</span>
       </div>
     </div>
 
@@ -42,7 +42,7 @@
           <i class="bi bi-clock-history" style="color: var(--musa-mostaza);"></i> Historial de tus pedidos
         </div>
         <div class="col-6 d-flex align-items-center gap-2">
-          <i class="bi bi-fire" style="color: var(--musa-mostaza);"></i> Atención 6–10 p.m.
+          <i class="bi bi-fire" style="color: var(--musa-mostaza);"></i> {{ sede.horario }}
         </div>
       </div>
     </div>
@@ -53,7 +53,7 @@
     >
       <span class="musa-avatar" style="border-radius: 12px;"><i class="bi bi-shop"></i></span>
       <div>
-        <div class="fw-semibold">Miraflores Joint · Calle Schell 385</div>
+        <div class="fw-semibold">{{ sede.nombre }} · {{ sede.direccion }}</div>
         <div class="small text-white-50">Retiro en tienda · Brasas encendidas</div>
       </div>
     </div>

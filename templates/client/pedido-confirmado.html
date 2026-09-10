@@ -17,7 +17,7 @@
     <div class="conf-datos">
       <div>Pedido <b>N° {{ pedido.idPedido }}</b></div>
       <div>Recojo hoy a las <b>{{ pedido.horaRecojo }}</b></div>
-      <div>Local <b>Calle Schell 385, Miraflores</b></div>
+      <div>Local <b>{{ sede.direccion }}</b></div>
     </div>
 
     <div class="conf-pago">
@@ -40,7 +40,7 @@
 
     {% if pedido.estadoBoleta %}
       <p class="small" style="color: var(--musa-texto-suave);">
-        <i class="bi bi-receipt"></i> Te entregaremos tu boleta electrónica al recoger.
+        <i class="bi bi-receipt"></i> Tu boleta de venta interna se generará cuando pagues y recojas el pedido.
       </p>
     {% endif %}
 

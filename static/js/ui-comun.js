@@ -95,7 +95,7 @@
     document.addEventListener("keydown", function (e) {
       if (overlay.hidden) return;
       if (e.key === "Escape") { e.preventDefault(); cerrar(false); }
-      else if (e.key === "Enter") { e.preventDefault(); cerrar(true); }
+      // Enter activa el botón enfocado: también debe respetar "Cancelar".
       else if (e.key === "Tab") {
         e.preventDefault();
         (document.activeElement === btnSi ? btnNo : btnSi).focus();

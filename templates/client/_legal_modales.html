@@ -17,8 +17,7 @@
         Términos y Condiciones. Si no estás de acuerdo, no uses la plataforma.</p>
 
         <h6 class="fw-bold mt-3">2. Pedidos y retiro en tienda</h6>
-        <p>Todos los pedidos son para <strong>retiro en el local</strong> (Calle Schell 385,
-        Miraflores), en el horario de atención de 6:00 p.m. a 10:00 p.m. Al confirmar un pedido
+        <p>Todos los pedidos son para <strong>retiro en el local</strong> ({{ sede.direccion }}). Horario de atención: {{ sede.horario }} Al confirmar un pedido
         recibirás una <strong>palabra clave</strong> que deberás indicar al personal para que se
         te entregue tu pedido. La preparación empieza al confirmar.</p>
 
@@ -82,7 +81,7 @@
         (hash) y nunca en texto plano.</p>
 
         <h6 class="fw-bold mt-3">6. Contacto</h6>
-        <p>Para cualquier consulta sobre tus datos: Calle Schell 385, Miraflores, Lima.</p>
+        <p>Para cualquier consulta sobre tus datos: {{ sede.direccion }}.</p>
       </div>
       <div class="modal-footer" style="border-top: 1px solid var(--musa-borde);">
         <button type="button" class="btn-brasa" data-bs-dismiss="modal">Entendido</button>

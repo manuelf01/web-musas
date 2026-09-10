@@ -102,6 +102,14 @@
                   <i class="bi bi-key"></i> Ver palabra clave
                 </button>
               {% endif %}
+              {% if p.estado == 'recogido' %}
+                <a class="btn-contorno" href="{{ url_for('cliente.ver_comprobante', id_pedido=p.idPedido) }}">
+                  <i class="bi bi-receipt"></i> Ver comprobante
+                </a>
+                <a class="btn-contorno" href="{{ url_for('cliente.descargar_comprobante', id_pedido=p.idPedido) }}">
+                  <i class="bi bi-file-earmark-pdf"></i> PDF
+                </a>
+              {% endif %}
               {% if p.cancelable %}
                 <form method="post" action="{{ url_for('cliente.cancelar_pedido', id_pedido=p.idPedido) }}"
                       data-confirm="Se cancelará tu pedido N° {{ p.idPedido }} y se liberará tu cupo de recojo. Esta acción no se puede deshacer."

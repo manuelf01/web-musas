@@ -1,5 +1,5 @@
 {% extends "client/base.html" %}
-{% block title %}Las Musas — Burger Joint nocturno en Lima{% endblock %}
+{% block title %}Las Musas — Burger Joint nocturno en Chiclayo{% endblock %}
 {% block nav_inicio %}active{% endblock %}{% block tab_inicio %}active{% endblock %}
 
 {% set emojis = {
@@ -12,10 +12,10 @@
 <section class="musa-hero">
   <div class="musa-hero__bg" style="background-image: url('{{ url_for('static', filename='img/hamburguesas/h-2.jpg') }}');"></div>
   <div class="musa-hero__inner">
-    <span class="musa-hero__pill">
-      <span class="musa-hero__pulse"></span> Abierto ahora · Miraflores &amp; Barranco
-    </span>
-    <h1>Brasas nocturnas<br />en Lima</h1>
+    {% with estado_clase='musa-hero__pill', estado_sufijo=' ahora - Chiclayo' %}
+      {% include '_estado_local.html' %}
+    {% endwith %}
+    <h1>Brasas nocturnas<br />en Chiclayo</h1>
     <p>
       Carne Angus certificada, pan brioche artesanal y salsas de la casa.
       Pide, elige tu hora y recoge en tienda. Listo en ~20 min.
@@ -149,7 +149,7 @@
     <span class="musa-paso__n">2</span>
     <div>
       <strong>Escoge tu hora de recojo</strong>
-      <p>Franjas de 30 min entre 6 y 10 p.m. Sin colas.</p>
+      <p>Franjas de 30 min dentro del horario de atención. Sin colas.</p>
     </div>
   </div>
   <div class="musa-paso" data-reveal data-reveal-delay="3">
@@ -253,18 +253,22 @@
   <div class="musa-shell musa-local__inner">
     <div>
       <span class="eyebrow">Recojo en tienda</span>
-      <h2>Sede Miraflores</h2>
-      <p class="musa-local__dato"><i class="bi bi-geo-alt-fill"></i> Calle Schell 385, Miraflores, Lima</p>
-      <p class="musa-local__dato"><i class="bi bi-clock"></i> Todos los días · 6:00 p.m – 10:00 p.m</p>
+      <h2>{{ sede.nombre }}</h2>
+      <p class="musa-local__dato"><i class="bi bi-geo-alt-fill"></i> {{ sede.direccion }}</p>
+      <p class="musa-local__dato"><i class="bi bi-signpost"></i> {{ sede.referencia }}</p>
+      <p class="musa-local__dato"><i class="bi bi-clock"></i> {{ sede.horario }}</p>
       <div class="d-flex flex-wrap gap-2 pt-2">
         <a class="btn-contorno" target="_blank" rel="noopener"
-           href="https://maps.google.com/?q=Calle+Schell+385+Miraflores+Lima">
+           href="{{ sede.mapa_url }}">
           <i class="bi bi-map"></i> Cómo llegar
         </a>
         <a class="btn-brasa" href="{{ url_for('cliente.carta') }}">Empezar mi pedido</a>
       </div>
     </div>
-    <div class="musa-local__map" aria-hidden="true"><i class="bi bi-shop-window"></i></div>
+    <div class="musa-local__map">
+      <iframe src="{{ sede.mapa_embed }}" title="Mapa de {{ sede.nombre }}: {{ sede.direccion }}"
+              loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+    </div>
   </div>
 </section>
 {% endblock %}

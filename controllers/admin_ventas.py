@@ -1,8 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, g
+from io import BytesIO
+
+from flask import Blueprint, render_template, request, redirect, url_for, g, send_file
 from flask_paginate import Pagination, get_page_parameter
 from model.Comprobante import Comprobante
 from model.Pedido import estado_pedido
 from formato import soles_en_letras
+from services.comprobante_pdf import generar_comprobante_pdf
 
 ventas = Blueprint("ventas", __name__, url_prefix="/ventas")
 
@@ -57,4 +60,16 @@ def show_detalle(idComprobante):
         c=comprobante,
         estado_texto=etiquetas.get(comprobante["estado"], comprobante["estado"]),
         importe_letras=soles_en_letras(comprobante["montoTotal"]),
+    )
+
+
+@ventas.route("/detalle_comprobante/<int:idComprobante>/pdf")
+def descargar_pdf(idComprobante):
+    comprobante = Comprobante.detalle(idComprobante)
+    if comprobante is None:
+        return redirect(url_for("admin.ventas.home"))
+    pdf = generar_comprobante_pdf(comprobante)
+    return send_file(
+        BytesIO(pdf), mimetype="application/pdf", as_attachment=True,
+        download_name=f"comprobante-{comprobante['numero']}.pdf",
     )

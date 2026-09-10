@@ -94,6 +94,9 @@
                 <a class="adm-btn-sm" href="{{ url_for('admin.ventas.show_detalle', idComprobante=c.idComprobante) }}">
                   <i class="bi bi-eye"></i> Ver detalle
                 </a>
+                <a class="adm-btn-sm mt-1" href="{{ url_for('admin.ventas.descargar_pdf', idComprobante=c.idComprobante) }}">
+                  <i class="bi bi-file-earmark-pdf"></i> PDF
+                </a>
               </td>
             </tr>
           {% endfor %}

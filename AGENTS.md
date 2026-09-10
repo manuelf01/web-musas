@@ -10,8 +10,21 @@
 
 ## 1. Qué es
 
-**Las Musas** — e-commerce de una hamburguesería nocturna en Lima (Miraflores).
+**Las Musas** — e-commerce de una hamburguesería nocturna en Chiclayo.
 Web MVC en **Flask** + **MariaDB** (XAMPP). Proyecto de tesis, 2 integrantes.
+
+**Sede actual:** Av. José Balta Sur 006, Chiclayo 14008, Perú (numeración
+indicada por el usuario). Referencia: La Paperia / Las de Siempre Burger,
+cerca del Hotel Colibrí; el usuario confirmó que es el mismo negocio.
+Los datos compartidos
+de la sede y los enlaces del mapa se definen en `negocio.py` (`SEDE`).
+El aviso público de abierto/cerrado usa la hora de Perú (UTC-5): abierto
+lunes a sábado de 18:00 a 23:30 y domingo de 09:00 a 23:00 (cierre exclusivo),
+según https://las-musas-burger.ola.click/info. Es independiente
+de `MUSAS_DEMO` y de las variables de prueba del checkout. Se renderiza en
+servidor y `static/js/estado-local.js` lo actualiza mediante `/estado-local`.
+Las franjas de recojo comparten `negocio.horario_dia`, en intervalos de 30
+minutos antes del cierre y con 20 minutos de anticipación para preparación.
 
 **Regla de oro del negocio:**
 - El negocio es **solo retiro en tienda** (no hay delivery).
@@ -22,6 +35,9 @@ Web MVC en **Flask** + **MariaDB** (XAMPP). Proyecto de tesis, 2 integrantes.
   entrega el pedido.
 - El comprobante (boleta / nota de venta) se emite **al entregar** el pedido,
   no al hacerlo (porque el pago es al recojo).
+- Para entregar, el pedido debe estar **listo** y caja registra el medio recibido:
+  efectivo, tarjeta, Yape o Plin. Cliente y caja consultan el mismo comprobante y
+  descargan el mismo PDF; es un documento interno, sin integración SUNAT.
 
 **NO implementar** (aparecen en los diseños de Stitch pero no van): delivery,
 cupones, programa de puntos / "Club Nocturno", factura con RUC / SUNAT / QR,
@@ -47,7 +63,7 @@ copy cfg.example.py cfg.py      # ajusta si tu MySQL no es root sin password
 # 4. Correr
 python app.py                   # http://127.0.0.1:5000
 
-# Para probar el checkout fuera del horario 6-10 p.m.:
+# Para probar el checkout fuera del horario de atención:
 set MUSAS_DEMO=1 && python app.py
 
 # 5. Tests
@@ -89,7 +105,7 @@ hay backups versionados: cada quien maneja su base local.
 - `MUSAS_DEMO=1` ignora el corte por "hora ya pasada" y desactiva el auto-no-show
   (para probar a cualquier hora). **Nunca en producción.**
 - `MUSAS_HORA_APERTURA` / `MUSAS_HORA_CIERRE` (enteros 0-24) cambian el horario de
-  recojo sin tocar código (por defecto 18 y 22).
+  recojo sin tocar código (si no se definen, se usa el horario semanal).
 
 ---
 
@@ -102,6 +118,9 @@ cfg.py                 # local, gitignored (host/port/db/user/pass/secret_key)
 seguridad.py           # captcha (login admin) + CSRF de sesión (token propio)
 subidas.py             # guardar imágenes: archivo subido o descarga desde URL
 formato.py             # soles_en_letras() para el comprobante
+dinero.py              # Decimal + redondeo comercial a céntimos
+negocio.py             # sede, mapa, horario semanal y zona horaria de Perú
+services/comprobante_pdf.py  # PDF A4 compartido por cliente y caja
 
 controllers/
   cliente.py           # TIENDA: home, carta, /productos/<cat>, detalle,
@@ -176,7 +195,9 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   estaba **listo** (`estadoPrep = 2`) y pasaron 45 min de la hora de recojo.
   Se salta con `MUSAS_DEMO=1`.
 - **Comprobante**: se emite en `Pedido.marcar_recogido` (al entregar). Número
-  `B001-000000NN` si pidió boleta, `NV01-...` si no.
+  `B001-000000NN` si pidió boleta, `NV01-...` si no. Exige estado listo y
+  conserva medio de pago, cajero, líneas/adicionales y snapshot JSON. Las rutas
+  del cliente comprueban `comprobante.idUsuario` antes de mostrar o descargar.
 - **Pantalla de cocina en vivo**: `GET /admin/pedidos/pulso` devuelve
   `{firma, pendientes}`. `static/js/pedidos-cocina.js` lo sondea cada 15 s y, si
   la `firma` cambió, reemplaza solo `#ped-lista` + `#ped-chips` de la página;
@@ -271,7 +292,9 @@ Todo esto está hecho y probado E2E en `Ramirez`:
   cancelar; CRUD de productos y categorías (panel/modal, imagen archivo o URL,
   previsualización, dar de baja); CRUD de usuarios con 3 roles (solo
   superusuario); Ventas (KPIs, gráfico de barras, lista de comprobantes,
-  detalle tipo boleta con importe en letras); Mi perfil.
+  detalle tipo boleta con importe en letras y descarga PDF); Mi perfil.
+- **Comprobante de cliente**: después del recojo aparece en Mis pedidos con vista
+  y descarga PDF. El mismo archivo está disponible para caja desde Ventas.
 - **Seguridad**: CSRF propio en todos los formularios, cabeceras
   (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`), cookies
   `HttpOnly` + `SameSite=Lax` + `Secure` en producción, `FLASK_DEBUG` desde env.
@@ -305,3 +328,4 @@ falta**: `sql.sql` ya las incluye.
 | 009 | `registroPedido.estadoPrep` (0/1/2) |
 | 010 | `usuario.rol`/`activo`, `producto.activo`, `categoriaProducto.activo` |
 | 011 | `registroPedido.idPedido` y `detalleOrden.idDetalleOrden` a **AUTO_INCREMENT** (antes `MAX(id)+1` en la app → colisión con dos pedidos a la vez) |
+| 012 | Importes a `DECIMAL`, comprobante único por pedido, medio de pago/cajero/snapshot, líneas configuradas y soporte PDF. |

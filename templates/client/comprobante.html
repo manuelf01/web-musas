@@ -1,0 +1,67 @@
+{% extends "client/base.html" %}
+{% block title %}Comprobante {{ c.numero }} · Las Musas{% endblock %}
+{% block nav_pedidos %}is-active{% endblock %}
+{% block tab_pedidos %}is-active{% endblock %}
+
+{% block content %}
+<section class="musa-section" style="padding-top:40px;">
+  <div class="inner" style="max-width:980px;">
+    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
+      <a href="{{ url_for('cliente.mis_pedidos') }}" class="btn-contorno"><i class="bi bi-arrow-left"></i> Mis pedidos</a>
+      <a href="{{ url_for('cliente.descargar_comprobante', id_pedido=c.idPedido) }}" class="btn-brasa">
+        <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
+      </a>
+    </div>
+
+    <div class="adm-recibo">
+      <div class="adm-recibo__cinta"></div>
+      <div class="adm-recibo__in">
+        <div class="adm-recibo__cab">
+          <img class="musa-logo" style="height:64px;" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas" />
+          <div class="adm-recibo__tipo">
+            <b>{{ c.tipoDoc }}</b>
+            <strong>{{ c.numero }}</strong>
+            <small>{{ c.fecha }} · {{ c.hora }}</small>
+          </div>
+        </div>
+
+        <p class="small mb-3" style="color:var(--musa-texto-suave);">
+          {{ c.negocio.direccion }} · Retiro en tienda
+        </p>
+        <dl class="adm-recibo__datos">
+          <div><dt>Cliente</dt><dd>{{ c.cliente }}</dd></div>
+          <div><dt>Documento</dt><dd>DNI {{ c.dni or '—' }}</dd></div>
+          <div><dt>Pedido</dt><dd>N.° {{ c.idPedido }}</dd></div>
+          <div><dt>Método de pago</dt><dd>{{ c.formaPago }}</dd></div>
+          <div><dt>Teléfono</dt><dd>{{ c.telefono or '—' }}</dd></div>
+          <div><dt>Hora de recojo</dt><dd>{{ c.horaRecojo }}</dd></div>
+        </dl>
+
+        <div class="table-responsive">
+          <table class="adm-recibo__lineas">
+            <thead><tr><th>Producto</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Total</th></tr></thead>
+            <tbody>
+              {% for l in c.lineas %}
+              <tr>
+                <td><strong>{{ l.nombre }}</strong>{% if l.adicionales %}<small class="d-block" style="color:var(--musa-texto-suave);">Cremas: {{ l.adicionales | join(', ') }}</small>{% endif %}</td>
+                <td class="num">{{ l.cantidad }}</td>
+                <td class="num">S/ {{ '%.2f'|format(l.precioUnidad) }}</td>
+                <td class="num">S/ {{ '%.2f'|format(l.precioTotal) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="adm-recibo__tot"><dl>
+          <div class="fila"><span>Op. gravada</span><span>S/ {{ '%.2f'|format(c.subTotal) }}</span></div>
+          <div class="fila"><span>IGV (18%) incluido</span><span>S/ {{ '%.2f'|format(c.igv) }}</span></div>
+          <div class="fila grande"><span>Total pagado</span><strong>S/ {{ '%.2f'|format(c.montoTotal) }}</strong></div>
+        </dl></div>
+        <p class="small mt-4 mb-1"><strong>Son:</strong> {{ importe_letras }}</p>
+        <p class="small mb-0" style="color:var(--musa-texto-suave);">Comprobante interno de la operación. No es un comprobante electrónico enviado a SUNAT.</p>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

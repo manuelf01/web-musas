@@ -1,8 +1,19 @@
+import json
 import os
 import random
 
 from bd import obtener_conexion
 from datetime import datetime, timedelta, date
+from dinero import dinero
+from negocio import HORA_PERU, SEDE, horario_dia
+
+
+MEDIOS_PAGO = {
+    "efectivo": "Efectivo",
+    "tarjeta": "Tarjeta",
+    "yape": "Yape",
+    "plin": "Plin",
+}
 
 
 def _hora_env(nombre, defecto):
@@ -61,10 +72,10 @@ class Pedido:
     cont = 0
 
     # --- Franjas de recojo ---------------------------------------------
-    # Producción: 18–22 (6–10 p.m). En local se puede abrir con
+    # Producción: horario semanal de negocio.py. En local se puede abrir con
     #   MUSAS_HORA_APERTURA / MUSAS_HORA_CIERRE  (p. ej. 0 y 24 para probar de noche).
-    HORA_APERTURA = _hora_env("MUSAS_HORA_APERTURA", 18)   # 6:00 p.m
-    HORA_CIERRE = _hora_env("MUSAS_HORA_CIERRE", 22)       # 10:00 p.m
+    HORA_APERTURA = _hora_env("MUSAS_HORA_APERTURA", None)
+    HORA_CIERRE = _hora_env("MUSAS_HORA_CIERRE", None)
     # MUSAS_DEMO=1 -> ignora el corte por hora ya pasada (solo para probar el
     # checkout fuera del horario). NUNCA activar en producción.
     DEMO = os.environ.get("MUSAS_DEMO", "0") == "1"
@@ -135,6 +146,17 @@ class Pedido:
         return f"{h12}:{mm:02d} {sufijo}"
 
     @staticmethod
+    def _hhmm(valor):
+        if valor is None:
+            return ""
+        if hasattr(valor, "seconds"):
+            segundos = valor.seconds
+            return f"{segundos // 3600:02d}:{(segundos % 3600) // 60:02d}"
+        if hasattr(valor, "strftime"):
+            return valor.strftime("%H:%M")
+        return str(valor)[:5]
+
+    @staticmethod
     def franjas_recojo():
         """
         Lista de franjas del día con su disponibilidad:
@@ -143,7 +165,7 @@ class Pedido:
         """
         Pedido._auto_no_show()
 
-        ahora = datetime.now()
+        ahora = datetime.now(HORA_PERU)
         limite = ahora + timedelta(minutes=Pedido.ANTICIPACION_MIN)
         # Se usa la fecha del servidor de aplicacion (no CURDATE() de MySQL) para
         # que el conteo de cupos y el corte por hora esten siempre alineados.
@@ -166,10 +188,13 @@ class Pedido:
             conteo[clave] = conteo.get(clave, 0) + n
 
         franjas = []
-        total_min = (Pedido.HORA_CIERRE - Pedido.HORA_APERTURA) * 60
-        for m in range(0, total_min, Pedido.FRANJA_MINUTOS):
-            hh = Pedido.HORA_APERTURA + m // 60
-            mm = m % 60
+        apertura, cierre = horario_dia(hoy)
+        if Pedido.HORA_APERTURA is not None:
+            apertura = Pedido.HORA_APERTURA * 60
+        if Pedido.HORA_CIERRE is not None:
+            cierre = Pedido.HORA_CIERRE * 60
+        for minutos in range(apertura, cierre, Pedido.FRANJA_MINUTOS):
+            hh, mm = divmod(minutos, 60)
             clave = f"{hh:02d}:{mm:02d}"
             inicio = ahora.replace(hour=hh, minute=mm, second=0, microsecond=0)
             usados = conteo.get(clave, 0)
@@ -297,47 +322,102 @@ class Pedido:
     # el módulo de Ventas del panel (tablas comprobante / detalleComprobante).
     # ------------------------------------------------------------------
     @staticmethod
-    def _emitir_comprobante(cursor, id_pedido):
+    def _emitir_comprobante(cursor, id_pedido, medio_pago, id_cajero=None):
         cursor.execute(
-            "SELECT idUsuario, dniNoRegistrado, estadoBoleta FROM registroPedido WHERE idPedido = %s",
+            "SELECT idUsuario, dniNoRegistrado, estadoBoleta, nombres, numeroTelefono, "
+            "horaRecojo, notas FROM registroPedido WHERE idPedido = %s",
             (id_pedido,),
         )
-        id_usuario, dni, boleta = cursor.fetchone()
+        id_usuario, dni, boleta, cliente, telefono, hora_recojo, notas = cursor.fetchone()
 
         cursor.execute(
-            "SELECT idProducto, nombreProducto, SUM(cantidad), SUM(precioTotal) "
-            "FROM detalleOrden WHERE idPedido = %s GROUP BY idProducto, nombreProducto",
+            "SELECT idDetalleOrden, idProducto, nombreProducto, precioUnidad, cantidad, precioTotal "
+            "FROM detalleOrden WHERE idPedido = %s ORDER BY idDetalleOrden",
             (id_pedido,),
         )
         lineas = cursor.fetchall()
-        total = round(sum(float(l[3] or 0) for l in lineas), 2)
-        sub_total = round(total / 1.18, 2)
-        igv = round(total - sub_total, 2)
-        ahora = datetime.now()
+        ids_detalle = [l[0] for l in lineas]
+        cremas = {}
+        if ids_detalle:
+            marcas = ",".join(["%s"] * len(ids_detalle))
+            cursor.execute(
+                f"SELECT dc.idDetalleOrden, p.nombre FROM detalleCremas dc "
+                f"LEFT JOIN producto p ON p.idProducto = dc.idCrema "
+                f"WHERE dc.idDetalleOrden IN ({marcas}) ORDER BY dc.idDetalleOrden, p.nombre",
+                ids_detalle,
+            )
+            for id_detalle, nombre in cursor.fetchall():
+                cremas.setdefault(id_detalle, []).append(nombre or "Crema")
+
+        total = dinero(sum(dinero(l[5]) for l in lineas))
+        sub_total = dinero(total / dinero("1.18"))
+        igv = dinero(total - sub_total)
+        ahora = datetime.now(HORA_PERU)
         serie = "B001" if boleta else "NV01"
+        medio = MEDIOS_PAGO[medio_pago]
 
         cursor.execute(
             """INSERT INTO comprobante
                (idPedido, idUsuario, dniNoRegistrado, fechaComprobante, horaComprobante,
-                subTotal, montoTotal, igv, numeroComprobante)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                subTotal, montoTotal, igv, numeroComprobante, medioPago, idCajero)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s)""",
             (id_pedido, id_usuario, dni, ahora.date(), ahora.strftime("%H:%M:%S"),
-             sub_total, total, igv, "PENDIENTE"),
+             sub_total, total, igv, medio, id_cajero),
         )
         id_comp = cursor.lastrowid
-        cursor.execute(
-            "UPDATE comprobante SET numeroComprobante = %s WHERE idComprobante = %s",
-            (f"{serie}-{id_comp:08d}", id_comp),
-        )
-        for id_prod, nombre, cant, sub in lineas:
-            cant = int(cant or 0)
-            sub = round(float(sub or 0), 2)
+        numero = f"{serie}-{id_comp:08d}"
+
+        lineas_snapshot = []
+        for id_detalle, id_prod, nombre, precio_unidad, cant, precio_total in lineas:
+            adicionales = cremas.get(id_detalle, [])
+            adicionales_json = json.dumps(adicionales, ensure_ascii=False) if adicionales else None
+            pu = dinero(precio_unidad)
+            pt = dinero(precio_total)
             cursor.execute(
                 """INSERT INTO detalleComprobante
-                   (idComprobante, idProducto, nombreProducto, precioUnidad, cantidad, precioTotal)
-                   VALUES (%s, %s, %s, %s, %s, %s)""",
-                (id_comp, id_prod, nombre, round(sub / cant, 2) if cant else 0, cant, sub),
+                   (idComprobante, idProducto, nombreProducto, precioUnidad, cantidad,
+                    precioTotal, adicionales)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""",
+                (id_comp, id_prod, nombre, pu, int(cant or 0), pt, adicionales_json),
             )
+            lineas_snapshot.append({
+                "nombre": nombre,
+                "precioUnidad": f"{pu:.2f}",
+                "cantidad": int(cant or 0),
+                "precioTotal": f"{pt:.2f}",
+                "adicionales": adicionales,
+            })
+
+        snapshot = {
+            "version": 1,
+            "numero": numero,
+            "tipoDoc": "BOLETA DE VENTA INTERNA" if boleta else "NOTA DE VENTA",
+            "boleta": bool(boleta),
+            "fecha": ahora.strftime("%d/%m/%Y"),
+            "hora": ahora.strftime("%H:%M"),
+            "negocio": {
+                "nombre": "Las Musas - Chiclayo",
+                "direccion": SEDE["direccion"],
+                "referencia": SEDE["referencia"],
+            },
+            "idPedido": int(id_pedido),
+            "cliente": cliente or "Cliente",
+            "dni": dni or "",
+            "telefono": telefono or "",
+            "horaRecojo": Pedido._hhmm(hora_recojo),
+            "notas": notas or "",
+            "medioPago": medio,
+            "idCajero": id_cajero,
+            "subTotal": f"{sub_total:.2f}",
+            "igv": f"{igv:.2f}",
+            "montoTotal": f"{total:.2f}",
+            "lineas": lineas_snapshot,
+        }
+        cursor.execute(
+            "UPDATE comprobante SET numeroComprobante = %s, datosEmision = %s "
+            "WHERE idComprobante = %s",
+            (numero, json.dumps(snapshot, ensure_ascii=False), id_comp),
+        )
         return id_comp
 
     @staticmethod
@@ -528,8 +608,8 @@ class Pedido:
         return salida
 
     @staticmethod
-    def marcar_recogido(id_pedido, key):
-        """'ok' | 'clave_mal' | 'no_existe' (ya recogido, cancelado o inexistente).
+    def marcar_recogido(id_pedido, key, medio_pago=None, id_cajero=None):
+        """'ok' | 'clave_mal' | 'no_listo' | 'pago_invalido' | 'no_existe'.
         Al entregar se emite el comprobante (la venta se cobra en este momento)
         y queda visible en el módulo de Ventas del panel."""
         key = str(key).strip()
@@ -537,8 +617,8 @@ class Pedido:
         try:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT keyPedido, estadoRecojo, cancelado, noShow "
-                    "FROM registroPedido WHERE idPedido = %s",
+                    "SELECT keyPedido, estadoRecojo, cancelado, noShow, estadoPrep, billeteraDigital "
+                    "FROM registroPedido WHERE idPedido = %s FOR UPDATE",
                     (id_pedido,),
                 )
                 fila = cursor.fetchone()
@@ -546,15 +626,22 @@ class Pedido:
                     return "no_existe"
                 if str(fila[0]).strip() != key:
                     return "clave_mal"
+                if int(fila[4] or 0) < PREP_LISTO:
+                    return "no_listo"
+                if medio_pago is None:
+                    medio_pago = "yape" if fila[5] else "efectivo"
+                medio_pago = str(medio_pago).strip().lower()
+                if medio_pago not in MEDIOS_PAGO:
+                    return "pago_invalido"
                 # Update guardado: solo pasa si sigue activo y la clave coincide.
                 cursor.execute(
                     "UPDATE registroPedido SET estadoRecojo = 1 "
-                    "WHERE idPedido = %s AND " + _ACTIVO + " AND keyPedido = %s",
-                    (id_pedido, key),
+                    "WHERE idPedido = %s AND " + _ACTIVO + " AND estadoPrep >= %s AND keyPedido = %s",
+                    (id_pedido, PREP_LISTO, key),
                 )
                 if cursor.rowcount != 1:
                     return "no_existe"
-                Pedido._emitir_comprobante(cursor, id_pedido)
+                Pedido._emitir_comprobante(cursor, id_pedido, medio_pago, id_cajero)
             conexion.commit()
             return "ok"
         finally:

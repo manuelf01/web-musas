@@ -20,7 +20,7 @@
       <h1>Finalizar pedido</h1>
       <p class="conteo">
         <i class="bi bi-geo-alt-fill" style="color: var(--musa-brasa);"></i>
-        Retiro en local: <b>Calle Schell 385, Miraflores</b> · 6:00 p.m – 10:00 p.m
+        Retiro en local: <b>{{ sede.direccion }}</b> · {{ sede.horario }}
       </p>
     </div>
   </div>
@@ -52,7 +52,7 @@
           <i class="bi bi-shop"></i>
           <div>
             <strong>Modalidad: Retiro en tienda</strong>
-            <span>Sede Miraflores · cocina abierta y brasas listas</span>
+            <span>{{ sede.nombre }} · {{ sede.horario }}</span>
           </div>
           <span class="gratis">Sin costo</span>
         </div>
@@ -122,7 +122,7 @@
             {% else %}
               <div class="musa-alert mt-1">
                 <i class="bi bi-clock-history"></i>
-                No hay franjas disponibles para hoy (cocina llena o fuera de horario 6–10 p.m). Intenta más tarde.
+                No hay franjas disponibles para hoy: cocina llena o sin tiempo suficiente para preparar tu pedido. {{ sede.horario }}
               </div>
             {% endif %}
           </div>
@@ -135,8 +135,8 @@
           <label class="ck-opcion">
             <i class="bi bi-receipt"></i>
             <div>
-              <strong>Emitir boleta electrónica</strong>
-              <span>Te la entregamos al recoger tu pedido</span>
+              <strong>Emitir boleta de venta interna</strong>
+              <span>Se genera al pagar y recoger el pedido</span>
             </div>
             <input type="checkbox" name="boleta" value="1" {{ 'checked' if form and form.boleta }} />
           </label>
