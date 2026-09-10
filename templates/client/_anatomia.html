@@ -1,12 +1,47 @@
-{# "Anatomía de Las Musas": la hamburguesa que se despieza.
-   Escena oscura a todo el ancho. El despiece sigue el scroll (o el cursor) y
-   la lista numerada de la derecha es la referencia de capas. En móvil y con
-   "reducir movimiento" la hamburguesa se queda armada y manda la lista. #}
-<section class="anatomia" aria-labelledby="anatomia-titulo">
-  <span class="anatomia__glow" aria-hidden="true"></span>
+{# Portada: la hamburguesa de Las Musas se despieza para mostrar sus 6 capas.
+   Arranca ARMADA. Se abre al pasar el cursor / enfocar / tocar, y hace una
+   demo automática la primera vez que se carga. Conserva la píldora de estado
+   (Abierto / Cerrado según el horario). Con "reducir movimiento" se queda
+   armada y la lista numerada es la referencia. #}
+<section class="hero-anat" aria-label="Las Musas — hamburguesas a la brasa en Chiclayo">
+  <span class="hero-anat__glow" aria-hidden="true"></span>
 
-  <div class="musa-shell anatomia__inner">
-    <div class="anatomia__escena" data-anat-scene>
+  <div class="musa-shell hero-anat__inner">
+    <div class="hero-anat__texto">
+      {% with estado_clase='musa-hero__pill', estado_sufijo=' ahora · Chiclayo' %}
+        {% include '_estado_local.html' %}
+      {% endwith %}
+
+      <h1>Brasas nocturnas<br />en Chiclayo</h1>
+      <p>Seis capas de Angus a la brasa, brioche artesanal y salsas de la casa,
+        montadas a mano cada tarde. Pide, elige tu hora y recoge en tienda.</p>
+
+      <div class="hero-anat__cta">
+        <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">
+          Pedir ahora <i class="bi bi-arrow-right"></i>
+        </a>
+        <a href="{{ url_for('cliente.carta') }}" class="btn-contorno hero-anat__ghost">
+          Ver la carta
+        </a>
+      </div>
+
+      <ol class="anat-lista" aria-label="Las 6 capas, de arriba abajo">
+        <li data-capa="pan"><span class="anat-lista__n">1</span>
+          <div><strong>Brioche artesanal</strong><span>horneado a diario</span></div></li>
+        <li data-capa="lechuga"><span class="anat-lista__n">2</span>
+          <div><strong>Lechuga fresca</strong><span>crocante, del día</span></div></li>
+        <li data-capa="tomate"><span class="anat-lista__n">3</span>
+          <div><strong>Tomate fresco</strong><span>en rodaja gruesa</span></div></li>
+        <li data-capa="cheddar"><span class="anat-lista__n">4</span>
+          <div><strong>Cheddar añejo</strong><span>fundido sobre la carne</span></div></li>
+        <li data-capa="carne"><span class="anat-lista__n">5</span>
+          <div><strong>Angus a la brasa</strong><span>carbón &amp; leña</span></div></li>
+        <li data-capa="salsa"><span class="anat-lista__n">6</span>
+          <div><strong>Salsa de la casa</strong><span>receta reservada</span></div></li>
+      </ol>
+    </div>
+
+    <div class="hero-anat__escena" data-anat-scene>
       <button type="button" class="anat-burger" aria-pressed="false"
               aria-label="Separar las capas de la hamburguesa Las Musas">
         <svg viewBox="60 -70 340 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -58,34 +93,8 @@
       </button>
       <span class="anat-plato" aria-hidden="true"></span>
       <span class="anat-hint" data-anat-hint>
-        <i class="bi bi-arrows-expand"></i> Desplázate o pasa el cursor
+        <i class="bi bi-arrows-expand"></i> <span data-anat-hint-txt>Pasa el cursor para ver las capas</span>
       </span>
-    </div>
-
-    <div class="anatomia__texto" data-reveal>
-      <span class="eyebrow">Cada capa cuenta</span>
-      <h2 id="anatomia-titulo">Anatomía de Las Musas</h2>
-      <p>Seis capas montadas a mano cada tarde. Míralas separarse y descubre
-        de qué está hecha la original.</p>
-
-      <ol class="anat-lista" aria-label="Capas de la hamburguesa, de arriba abajo">
-        <li data-capa="pan"><span class="anat-lista__n">1</span>
-          <div><strong>Brioche artesanal</strong><span>horneado a diario</span></div></li>
-        <li data-capa="lechuga"><span class="anat-lista__n">2</span>
-          <div><strong>Lechuga fresca</strong><span>crocante, del día</span></div></li>
-        <li data-capa="tomate"><span class="anat-lista__n">3</span>
-          <div><strong>Tomate fresco</strong><span>en rodaja gruesa</span></div></li>
-        <li data-capa="cheddar"><span class="anat-lista__n">4</span>
-          <div><strong>Cheddar añejo</strong><span>fundido sobre la carne</span></div></li>
-        <li data-capa="carne"><span class="anat-lista__n">5</span>
-          <div><strong>Angus a la brasa</strong><span>carbón &amp; leña</span></div></li>
-        <li data-capa="salsa"><span class="anat-lista__n">6</span>
-          <div><strong>Salsa de la casa</strong><span>receta reservada</span></div></li>
-      </ol>
-
-      <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">
-        Probar la original <i class="bi bi-arrow-right"></i>
-      </a>
     </div>
   </div>
 </section>

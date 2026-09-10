@@ -8,28 +8,7 @@
 } %}
 
 {% block content %}
-<!-- HERO -->
-<section class="musa-hero">
-  <div class="musa-hero__bg" style="background-image: url('{{ url_for('static', filename='img/hamburguesas/h-2.jpg') }}');"></div>
-  <div class="musa-hero__inner">
-    {% with estado_clase='musa-hero__pill', estado_sufijo=' ahora - Chiclayo' %}
-      {% include '_estado_local.html' %}
-    {% endwith %}
-    <h1>Brasas nocturnas<br />en Chiclayo</h1>
-    <p>
-      Carne Angus certificada, pan brioche artesanal y salsas de la casa.
-      Pide, elige tu hora y recoge en tienda. Listo en ~20 min.
-    </p>
-    <div class="d-flex flex-wrap gap-3 pt-2">
-      <a href="{{ url_for('cliente.carta') }}" class="btn-brasa">Pedir ahora <i class="bi bi-arrow-right"></i></a>
-      <a href="{{ url_for('cliente.carta') }}" class="btn-contorno" style="border-color: rgba(255,255,255,.4); color: #fff;">
-        Ver la carta completa
-      </a>
-    </div>
-  </div>
-</section>
-
-<!-- ANATOMÍA: la hamburguesa que se despieza -->
+<!-- HERO: la hamburguesa que se despieza -->
 {% include "client/_anatomia.html" %}
 
 <!-- CÓMO FUNCIONA -->

@@ -33,58 +33,54 @@
   }, 2500);
 })();
 
-/* "Anatomía de Las Musas": el despiece de la hamburguesa sigue el scroll de la
-   sección (efecto "scroll-scrub"). En desktop, pasar el cursor / enfocar la fija
-   abierta; un clic la deja fija (útil en táctil). El separado real lo hace el CSS
-   con la variable --sep (0 = armada, 1 = despiezada); aquí solo la calculamos.
-   Con "reducir movimiento" no se monta nada: el CSS la deja armada. */
+/* Hero: la hamburguesa se despieza. ARRANCA ARMADA (--sep 0). Se abre al pasar
+   el cursor / enfocar (desktop) y con un toque (móvil); vuelve a armarse al
+   salir. Al cargar hace UNA demo: se abre y se vuelve a cerrar sola, para que
+   se note que es interactiva. El separado lo hace el CSS con la var --sep
+   (0 = armada, 1 = despiezada). Con "reducir movimiento" no se monta nada. */
 (function () {
   var scene = document.querySelector("[data-anat-scene]");
   var burger = scene && scene.querySelector(".anat-burger");
-  var seccion = burger && burger.closest(".anatomia");
-  if (!scene || !burger || !seccion) return;
+  if (!scene || !burger) return;
 
   var mm = window.matchMedia;
   if (mm && mm("(prefers-reduced-motion: reduce)").matches) return;
 
-  var fijado = false;      // el cursor/foco/clic manda por encima del scroll
-  var pendiente = false;
+  var hover = mm && mm("(hover: hover)").matches;
+  var fijado = false;       // clic: deja la hamburguesa fija abierta/cerrada
+  var interactuo = false;   // el usuario ya tocó/pasó el cursor -> se corta la demo
 
   function aplicar(v) {
     v = v < 0 ? 0 : v > 1 ? 1 : v;
     scene.style.setProperty("--sep", v.toFixed(3));
-    var abierto = v > 0.04;
-    burger.classList.toggle("abierto", abierto);
+    burger.classList.toggle("abierto", v > 0.04);
     burger.setAttribute("aria-pressed", v > 0.5 ? "true" : "false");
   }
 
-  function porScroll() {
-    if (fijado) return;
-    if (pendiente) return;
-    pendiente = true;
-    requestAnimationFrame(function () {
-      pendiente = false;
-      var r = seccion.getBoundingClientRect();
-      var vh = window.innerHeight || document.documentElement.clientHeight;
-      // 0 cuando la sección asoma por abajo; 1 cuando su centro cruza el del viewport.
-      var avance = (vh - r.top) / (vh * 0.5 + r.height * 0.5);
-      aplicar((avance - 0.12) * 1.35);
-    });
-  }
+  function abrir()  { aplicar(1); }
+  function cerrar() { if (!fijado) aplicar(0); }
 
-  window.addEventListener("scroll", porScroll, { passive: true });
-  window.addEventListener("resize", porScroll);
-  porScroll();
-
-  if (mm && mm("(hover: hover)").matches) {
-    burger.addEventListener("mouseenter", function () { fijado = true; aplicar(1); });
-    burger.addEventListener("mouseleave", function () { fijado = false; porScroll(); });
-    burger.addEventListener("focus", function () { fijado = true; aplicar(1); });
-    burger.addEventListener("blur", function () { fijado = false; porScroll(); });
+  if (hover) {
+    burger.addEventListener("mouseenter", function () { interactuo = true; abrir(); });
+    burger.addEventListener("mouseleave", cerrar);
   }
+  burger.addEventListener("focus", function () { interactuo = true; abrir(); });
+  burger.addEventListener("blur", cerrar);
 
   burger.addEventListener("click", function () {
+    interactuo = true;
     fijado = !burger.classList.contains("abierto");
     aplicar(fijado ? 1 : 0);
   });
+
+  // Pista distinta según el dispositivo.
+  var pista = scene.querySelector("[data-anat-hint-txt]");
+  if (pista && !hover) pista.textContent = "Toca para ver las capas";
+
+  // Demo automática al cargar (una sola vez, si el usuario no interactuó antes).
+  setTimeout(function () {
+    if (interactuo || fijado) return;
+    aplicar(1);
+    setTimeout(function () { if (!interactuo && !fijado) aplicar(0); }, 2200);
+  }, 1100);
 })();

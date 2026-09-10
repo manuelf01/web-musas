@@ -55,6 +55,7 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
+| 2026-09-09 | **Bloque C v2: la hamburguesa ES el hero.** La escena reemplaza el banner "Brasas nocturnas" (se conserva la píldora Abierto/Cerrado). Arranca ARMADA; se abre al pasar el cursor / tocar y se vuelve a armar; demo automática al cargar. `_anatomia.html` ahora es la portada (`index.html` ya no tiene `<section class="musa-hero">`). Ver "Bloque C · Anatomía 2026-09-09". | `git revert` |
 | 2026-09-09 | **Bloque C: hamburguesa "Anatomía"** — escena oscura a todo el ancho, la hamburguesa se despieza siguiendo el scroll (o el cursor), glow de brasa, plato, lista numerada de capas. Nuevo `templates/client/_anatomia.html`. Ver "Bloque C · Anatomía 2026-09-09" abajo. | `git revert` + restaurar sección en `index.html` |
 | 2026-09-09 | **Bloque B: UI/UX** — un solo ancho de contenido (`--musa-ancho` / `--musa-ancho-lectura` / `--musa-gutter`), promo falsa "2x1 cervezas" fuera, pilares duplicados fuera de la carta, copys de pago/horario cerrado (A4/A15). Ver "Bloque B · UI/UX 2026-09-09" abajo. | `git revert` |
 | 2026-09-09 | **Plan de mejoras** (`PLAN-MEJORAS.md`) + **Bloque A: arreglos de lógica de compra/venta** (reloj de Perú unificado, cupo de franja dentro de la transacción, total del checkout fiable, vaciar carrito por sesión, `Decimal` al cotizar, cremas solo en categorías válidas). Ver "Bloque A · lógica compra/venta 2026-09-09" abajo. | `git revert` |
@@ -112,6 +113,20 @@ curiosidad plana a pieza central. 134 tests en verde.
   propague `:hover` a los `<g>` (el bug de Brave del arreglo anterior). Falta
   probar en Brave con escudos / iOS Safari en dispositivo real.
 - El CSS viejo `.musa-anatomia*`, `.anat-tag`, `.anat-lista__punto` se eliminó.
+
+**Ajuste (mismo día, pedido del usuario):**
+- La escena de la hamburguesa **reemplaza el hero** ("Brasas nocturnas en
+  Chiclayo"). `index.html` ya no tiene `<section class="musa-hero">`;
+  `_anatomia.html` es ahora la portada (clases `.hero-anat*`) y trae la píldora
+  de estado (`_estado_local.html`), el h1, el texto, los CTA "Pedir ahora" /
+  "Ver la carta" y la lista numerada.
+- **El despiece se corrigió:** el scroll-scrub hacía que la hamburguesa nunca se
+  armara (quedaba siempre extendida). Ahora: `--sep` arranca en 0 (**armada**);
+  hover/foco (desktop) y toque (móvil) la abren y al salir se vuelve a armar; un
+  clic la deja fija. Además hace **una demo automática** al cargar (se abre y se
+  cierra sola). Sin scroll-scrub. `prefers-reduced-motion`: se queda armada.
+- El CSS `.musa-hero*` (salvo `.musa-hero__pill` / `__pulse`, que reusa la
+  píldora) queda sin usar.
 
 ### Bloque B · UI/UX 2026-09-09
 Segundo bloque del `PLAN-MEJORAS.md`. 134 tests en verde.

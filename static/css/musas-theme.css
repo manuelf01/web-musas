@@ -3022,52 +3022,75 @@ body.adm { background: var(--musa-crema); }
 }
 
 /* ============================================================
-   INICIO · "Anatomía de Las Musas" — escena oscura, la hamburguesa se despieza
-   con el scroll (o el cursor). La lista numerada es la referencia de capas.
+   INICIO · Hero — la hamburguesa de Las Musas se despieza. Arranca ARMADA;
+   se abre al pasar el cursor / enfocar / tocar (y demo automática al cargar).
+   La lista numerada es la referencia de capas.
    ============================================================ */
-.anatomia {
+.hero-anat {
   position: relative;
-  padding-block: var(--esp-seccion);
   background: var(--musa-carbon);
   color: #fff;
   overflow: hidden;
+  padding-block: clamp(40px, 6vw, 80px);
 }
-.anatomia__glow {
+.hero-anat__glow {
   position: absolute;
   top: 50%;
-  left: 26%;
-  width: min(680px, 70vw);
+  right: 12%;
+  width: min(720px, 80vw);
   aspect-ratio: 1;
-  transform: translate(-50%, -50%);
+  transform: translate(50%, -50%);
   background: radial-gradient(circle, rgba(219, 66, 0, 0.5) 0%, rgba(219, 66, 0, 0.12) 42%, transparent 70%);
   filter: blur(20px);
   pointer-events: none;
   animation: anat-glow 8s ease-in-out infinite;
 }
 @keyframes anat-glow {
-  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
-  50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.08); }
+  0%, 100% { opacity: 0.7;  transform: translate(50%, -50%) scale(1); }
+  50%      { opacity: 1;    transform: translate(50%, -50%) scale(1.08); }
 }
-.anatomia__inner {
+.hero-anat__inner {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: clamp(28px, 5vw, 64px);
+  grid-template-columns: 0.95fr 1.05fr;
+  gap: clamp(24px, 5vw, 56px);
   align-items: center;
+  min-height: min(74vh, 600px);
 }
 
-.anatomia__texto .eyebrow { color: var(--musa-mostaza); }
-.anatomia__texto h2 { font-size: clamp(28px, 4vw, 36px); font-weight: 700; margin: 8px 0 14px; color: #fff; }
-.anatomia__texto p {
+.hero-anat__texto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.hero-anat__texto h1 {
+  font-size: clamp(38px, 5.4vw, 60px);
+  font-weight: 700;
+  line-height: 1.04;
+  margin: 18px 0 0;
+  color: #fff;
+}
+.hero-anat__texto p {
   color: rgba(255, 255, 255, 0.72);
-  max-width: 42ch;
-  margin: 0 0 24px;
+  max-width: 44ch;
+  margin: 14px 0 0;
   line-height: 1.6;
 }
+.hero-anat__cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 24px 0 28px;
+}
+.hero-anat__ghost {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+}
+.hero-anat__ghost:hover { border-color: #fff; background: rgba(255, 255, 255, 0.08); color: #fff; }
 
 /* --- La escena: hamburguesa + plato + pista --- */
-.anatomia__escena {
+.hero-anat__escena {
   position: relative;
   perspective: 1200px;
   --sep: 0;
@@ -3075,7 +3098,7 @@ body.adm { background: var(--musa-crema); }
 .anat-burger {
   display: block;
   width: 100%;
-  max-width: 440px;
+  max-width: 480px;
   margin: 0 auto;
   padding: 0;
   border: 0;
@@ -3103,7 +3126,7 @@ body.adm { background: var(--musa-crema); }
 }
 
 .anat-capa {
-  transform: translateY(calc(var(--step, 0) * var(--sep, 0) * 24px));
+  transform: translateY(calc(var(--step, 0) * var(--sep, 0) * 20px));
   transition: transform 0.55s cubic-bezier(0.34, 1.25, 0.4, 1), filter 0.3s ease;
   transition-delay: var(--d, 0s);
   filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.32));
@@ -3143,18 +3166,17 @@ body.adm { background: var(--musa-crema); }
   pointer-events: none;
   transition: opacity 0.3s ease;
 }
-.anatomia__escena:hover .anat-hint,
+.hero-anat__escena:hover .anat-hint,
 .anat-burger.abierto ~ .anat-hint { opacity: 0; }
 
 /* Lista numerada de capas: referencia siempre visible. */
 .anat-lista {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px 22px;
-  margin: 0 0 26px;
+  gap: 10px 22px;
+  margin: 0;
   padding: 0;
   list-style: none;
-  counter-reset: none;
 }
 .anat-lista li {
   display: grid;
@@ -3182,18 +3204,20 @@ body.adm { background: var(--musa-crema); }
 .anat-lista li > div span { color: rgba(255, 255, 255, 0.55); font-size: 11.5px; }
 
 @media (max-width: 900px) {
-  .anatomia__inner { grid-template-columns: 1fr; gap: 30px; text-align: center; }
-  .anatomia__texto { order: 2; }
-  .anatomia__escena { order: 1; }
-  .anatomia__texto p, .anat-lista { margin-left: auto; margin-right: auto; }
-  .anat-lista { max-width: 460px; }
-  .anat-burger { max-width: 300px; pointer-events: none; }
-  .anatomia__glow { left: 50%; }
+  .hero-anat__inner { grid-template-columns: 1fr; gap: 24px; text-align: center; min-height: 0; }
+  .hero-anat__texto { order: 2; align-items: center; }
+  .hero-anat__escena { order: 1; }
+  .hero-anat__texto p, .anat-lista { margin-left: auto; margin-right: auto; }
+  .hero-anat__cta { justify-content: center; }
+  .anat-lista { max-width: 460px; text-align: left; }
+  .anat-burger { max-width: 320px; pointer-events: none; }
+  .hero-anat__glow { right: 50%; transform: translate(50%, -50%); }
   .anat-hint { display: none; }
 }
 
 @media (max-width: 440px) {
-  .anat-lista { grid-template-columns: 1fr; text-align: left; }
+  .anat-lista { grid-template-columns: 1fr; }
+  .hero-anat__texto h1 { font-size: clamp(32px, 9vw, 40px); }
 }
 
 /* ============================================================
@@ -3314,6 +3338,6 @@ body.adm { background: var(--musa-crema); }
   .anat-capa { transition: none; transform: none !important; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.32)); }
   .anat-burger { cursor: default; transform: none !important; }
   .anat-burger svg { animation: none; }
-  .anatomia__glow { animation: none; }
+  .hero-anat__glow { animation: none; }
   .anat-hint { display: none; }
 }
