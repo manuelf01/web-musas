@@ -6,7 +6,7 @@
 <div class="adm-recibo__acc" style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
   <a href="{{ url_for('admin.ventas.home') }}" class="adm-topbar__link"><i class="bi bi-arrow-left"></i> Volver a ventas</a>
   <div class="d-flex gap-2">
-    <a class="btn-brasa" href="{{ url_for('admin.ventas.descargar_pdf', idComprobante=c.idComprobante) }}"><i class="bi bi-file-earmark-pdf"></i> Descargar PDF</a>
+    <a class="btn-brasa" data-loader-skip href="{{ url_for('admin.ventas.descargar_pdf', idComprobante=c.idComprobante) }}"><i class="bi bi-file-earmark-pdf"></i> Descargar PDF</a>
     <button type="button" class="btn-contorno" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
   </div>
 </div>

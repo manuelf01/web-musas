@@ -106,7 +106,7 @@
                 <a class="btn-contorno" href="{{ url_for('cliente.ver_comprobante', id_pedido=p.idPedido) }}">
                   <i class="bi bi-receipt"></i> Ver comprobante
                 </a>
-                <a class="btn-contorno" href="{{ url_for('cliente.descargar_comprobante', id_pedido=p.idPedido) }}">
+                <a class="btn-contorno" data-loader-skip href="{{ url_for('cliente.descargar_comprobante', id_pedido=p.idPedido) }}">
                   <i class="bi bi-file-earmark-pdf"></i> PDF
                 </a>
               {% endif %}

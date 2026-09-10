@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
+    <script>document.documentElement.classList.add("musa-js");</script>
     <title>{% block title %}Las Musas — Burger Joint{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" />
 
@@ -40,6 +41,7 @@
     {% block head %}{% endblock %}
   </head>
   <body>
+    {% with loader_texto='Encendiendo las brasas…' %}{% include '_loader.html' %}{% endwith %}
     <header class="musa-navbar">
       <div class="inner">
         <a href="{{ url_for('cliente.home') }}" class="musa-logo-link" aria-label="Las Musas - inicio">
@@ -176,6 +178,7 @@
       crossorigin="anonymous"
     ></script>
     <script src="{{ url_for('static', filename='js/carrito.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/loader.js') }}"></script>
     {% if session.pop('limpiar_carrito', False) %}
     <script>
       try {

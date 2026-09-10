@@ -1,0 +1,13 @@
+<div class="musa-loader" data-musa-loader role="status" aria-live="polite" aria-label="Cargando página">
+  <div class="musa-loader__panel">
+    <span class="musa-loader__halo" aria-hidden="true"></span>
+    <img class="musa-loader__logo"
+         src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}"
+         alt="Las Musas" />
+    <strong class="musa-loader__marca">LAS MUSAS</strong>
+    <div class="musa-loader__estado">
+      <span>{{ loader_texto | default('Encendiendo las brasas…') }}</span>
+      <span class="musa-loader__puntos" aria-hidden="true"><i></i><i></i><i></i></span>
+    </div>
+  </div>
+</div>

@@ -181,7 +181,10 @@
     e.preventDefault();
     e.stopPropagation();
     pedir(opcionesDe(a)).then(function (ok) {
-      if (ok) window.location.href = a.href;
+      if (ok) {
+        if (window.MusasLoader) window.MusasLoader.mostrar();
+        window.location.href = a.href;
+      }
     });
   }, true);
 

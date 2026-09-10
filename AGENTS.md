@@ -221,6 +221,11 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   `data-confirm-tono="peligro"`, `data-confirm-icono`). Ya aplicado en Productos,
   Categorías, Usuarios, Pedidos (admin) y Mis pedidos (cliente). API JS:
   `window.MusaConfirm(opts)` → `Promise<boolean>`.
+- **Loader global** (`templates/_loader.html` + `static/js/loader.js`): aparece
+  en la primera carga, enlaces internos y formularios de tienda/panel. El script
+  respeta los formularios con `data-confirm`, el historial bfcache y
+  `prefers-reduced-motion`. Los enlaces que descargan un archivo sin abandonar
+  la página llevan `data-loader-skip` para que el overlay no quede visible.
 - **Imágenes**: `subidas.guardar_imagen(archivo, subcarpeta)` (archivo subido) o
   `subidas.guardar_desde_url(url, subcarpeta)` (enlace de internet — valida
   esquema, bloquea IPs privadas/SSRF, 5 MB, `Image.verify()` de Pillow). Se
