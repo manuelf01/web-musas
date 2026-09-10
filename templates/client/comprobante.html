@@ -4,16 +4,15 @@
 {% block tab_pedidos %}is-active{% endblock %}
 
 {% block content %}
-<section class="musa-section" style="padding-top:40px;">
-  <div class="inner" style="max-width:980px;">
-    <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
-      <a href="{{ url_for('cliente.mis_pedidos') }}" class="btn-contorno"><i class="bi bi-arrow-left"></i> Mis pedidos</a>
-      <a href="{{ url_for('cliente.descargar_comprobante', id_pedido=c.idPedido) }}" class="btn-brasa">
-        <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
-      </a>
-    </div>
+<div class="cx-wrap recibo-cliente">
+  <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
+    <a href="{{ url_for('cliente.mis_pedidos') }}" class="btn-contorno"><i class="bi bi-arrow-left"></i> Mis pedidos</a>
+    <a href="{{ url_for('cliente.descargar_comprobante', id_pedido=c.idPedido) }}" class="btn-brasa">
+      <i class="bi bi-file-earmark-pdf"></i> Descargar PDF
+    </a>
+  </div>
 
-    <div class="adm-recibo">
+  <div class="adm-recibo">
       <div class="adm-recibo__cinta"></div>
       <div class="adm-recibo__in">
         <div class="adm-recibo__cab">
@@ -62,6 +61,5 @@
         <p class="small mb-0" style="color:var(--musa-texto-suave);">Comprobante interno de la operación. No es un comprobante electrónico enviado a SUNAT.</p>
       </div>
     </div>
-  </div>
-</section>
+</div>
 {% endblock %}

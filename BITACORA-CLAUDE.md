@@ -55,6 +55,7 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
+| 2026-09-09 | **Fixes responsive / cross-browser sobre el commit del compañero** (`4031a88`). Ver "Fixes UI 2026-09-09" abajo. | `git revert` |
 | 2026-09-05 | Clonado el repo `manuelf01/web-musas` en `Desktop/web-musas`. | — |
 | 2026-09-05 | Creada y publicada la rama `Ramirez` desde `main` (sin cambios de código). | `git push origin --delete Ramirez` |
 | 2026-09-05 | Creado `cfg.py` local (no versionado). | Borrar archivo |
@@ -82,6 +83,30 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Fix carrito + repaso de seguridad + limpieza de código muerto**. Ver "Limpieza 2026-09-08" abajo. | `git revert` |
+
+### Fixes UI 2026-09-09
+Reportado por el usuario tras integrar `4031a88` del compañero: en pantalla
+ancha "se veía movido" y la disección de la hamburguesa "solo funciona en
+Chrome, en Brave sale como despiezada fija".
+
+- **Anatomía (Brave / navegadores con `prefers-reduced-motion`)**: el bloque
+  `@media (prefers-reduced-motion: reduce)` dejaba la hamburguesa **despiezada
+  permanentemente**. Ahora se queda **armada** y se muestra la lista de
+  ingredientes (`.anat-lista`, que antes era solo para móvil). Además
+  `animaciones.js` mueve el despiece también con `mouseenter/mouseleave` (no
+  solo `:hover` de CSS) por si algún navegador no lo propaga a los `<g>` del SVG.
+- **Página de comprobante del cliente** (`comprobante.html`): usaba clases
+  `.musa-section` / `.inner` que **no existen** en este CSS → el recibo se
+  pegaba a la izquierda con medio ancho en blanco. Ahora va en `.cx-wrap`
+  centrado, con `.recibo-cliente` a máx. 900 px.
+- **Mis pedidos**: era una grilla de 2 columnas con `align-items: stretch` →
+  huecos blancos dentro de las tarjetas más cortas. Ahora **una sola columna
+  centrada** (`#mis-pedidos` máx. 760 px), sin huecos, simétrica en cualquier
+  ancho. Añadido `@media (max-width: 480px)` para apilar los botones.
+- **Cross-browser**: `-webkit-backdrop-filter` en los 4 blur del CSS (Safari);
+  fallback de `:has()` (clase `.is-sel` por JS) para el resaltado de cremas
+  (`detalle-producto.js`) y de medio de pago (`checkout.js`) en Firefox < 121.
+- Sin cambios de backend ni BD. 129 tests siguen en verde.
 
 ### Limpieza 2026-09-08
 - **Carrito — botón "Agregar":** dos arreglos.

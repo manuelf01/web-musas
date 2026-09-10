@@ -89,6 +89,11 @@
     var yape = document.getElementById("ck-yape-info");
     var sel = document.querySelector('input[name="pago"]:checked');
     if (yape && sel) yape.hidden = sel.value !== "digital";
+    // Fallback de :has() (Firefox < 121): marca la opción elegida.
+    document.querySelectorAll(".ck-opcion").forEach(function (op) {
+      var input = op.querySelector("input");
+      op.classList.toggle("is-sel", !!(input && input.checked));
+    });
   }
   document.querySelectorAll('input[name="pago"]').forEach(function (r) {
     r.addEventListener("change", syncYape);

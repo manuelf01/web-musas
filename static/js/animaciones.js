@@ -33,24 +33,40 @@
   }, 2500);
 })();
 
-/* "Anatomía de Las Musas": click para fijar/soltar el despiece; en pantallas
-   táctiles (sin hover) se abre solo al entrar en el viewport. */
+/* "Anatomía de Las Musas": el despiece funciona con :hover en CSS, pero algunos
+   navegadores (Brave con escudos, Firefox en ciertos casos) no propagan bien
+   el :hover a los <g> del SVG — así que también lo movemos con JS. Click fija /
+   suelta; en pantallas táctiles se abre solo al entrar en el viewport. */
 (function () {
   var burger = document.querySelector(".anat-burger");
   if (!burger) return;
 
-  burger.addEventListener("click", function () {
-    var abierto = burger.classList.toggle("abierto");
-    burger.setAttribute("aria-pressed", abierto ? "true" : "false");
-  });
+  var mm = window.matchMedia;
+  // Con "reducir movimiento" el CSS ya muestra la lista de ingredientes armada:
+  // no montamos ninguna interacción de despiece.
+  if (mm && mm("(prefers-reduced-motion: reduce)").matches) return;
 
-  var tactil = window.matchMedia && window.matchMedia("(hover: none)").matches;
+  var fijado = false;
+
+  function marcar(abierto) {
+    burger.classList.toggle("abierto", abierto);
+    burger.setAttribute("aria-pressed", abierto ? "true" : "false");
+  }
+
+  burger.addEventListener("click", function () {
+    fijado = !burger.classList.contains("abierto");
+    marcar(fijado);
+  });
+  burger.addEventListener("mouseenter", function () { marcar(true); });
+  burger.addEventListener("mouseleave", function () { if (!fijado) marcar(false); });
+
+  var tactil = mm && mm("(hover: none)").matches;
   if (tactil && "IntersectionObserver" in window) {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) {
         if (!e.isIntersecting) return;
-        burger.classList.add("abierto");
-        burger.setAttribute("aria-pressed", "true");
+        marcar(true);
+        fijado = true;
         io.disconnect();
       });
     }, { threshold: 0.55 });

@@ -84,6 +84,7 @@ h1, h2, h3, h4, h5, h6, .musa-title {
   top: 0;
   z-index: 1030;
   background: rgba(251, 247, 240, 0.9);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--musa-borde);
   box-shadow: 0 4px 20px rgba(26, 21, 18, 0.05);
@@ -533,6 +534,7 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
   top: var(--musa-nav-h);
   z-index: 1020;
   background: rgba(251, 247, 240, 0.95);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--musa-borde);
 }
@@ -1152,7 +1154,8 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .crema-card:hover { background: var(--musa-crema-baja); }
-.crema-card:has(.crema-check:checked) { border-color: var(--musa-brasa); background: #fff; }
+.crema-card:has(.crema-check:checked),
+.crema-card.is-sel { border-color: var(--musa-brasa); background: #fff; }
 .crema-card__info { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .crema-card__img {
   width: 38px; height: 38px;
@@ -1230,6 +1233,12 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 .cx-wrap { max-width: 1240px; margin: 0 auto; padding: 24px 40px 96px; }
 @media (max-width: 1024px) { .cx-wrap { padding: 24px 28px 96px; } }
 @media (max-width: 768px) { .cx-wrap { padding: 16px 16px 80px; } }
+
+/* Comprobante del cliente: documento centrado, no a lo ancho de la pantalla */
+.recibo-cliente { max-width: 900px; padding-top: 32px; }
+.recibo-cliente .adm-recibo { max-width: 100%; }
+.recibo-cliente .adm-recibo__in { padding: 30px 34px; }
+@media (max-width: 640px) { .recibo-cliente .adm-recibo__in { padding: 22px 18px; } }
 .cx-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; margin: 8px 0 28px; }
 .cx-head h1 { font-size: 30px; font-weight: 700; margin: 0; }
 .cx-head .conteo { font-size: 13px; color: var(--musa-texto-suave); }
@@ -1475,7 +1484,8 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
   cursor: pointer;
   margin-bottom: 10px;
 }
-.ck-opcion:has(input:checked) { border-color: var(--musa-brasa); background: #fff; }
+.ck-opcion:has(input:checked),
+.ck-opcion.is-sel { border-color: var(--musa-brasa); background: #fff; }
 .ck-opcion i { color: var(--musa-brasa); font-size: 20px; }
 .ck-opcion strong { display: block; font-family: "Space Grotesk", sans-serif; font-size: 14px; }
 .ck-opcion span { font-size: 12px; color: var(--musa-texto-suave); }
@@ -1585,8 +1595,12 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
    MIS PEDIDOS
    ============================================================ */
 .mp-filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-.mp-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 18px; }
-@media (max-width: 1000px) { .mp-lista { grid-template-columns: 1fr; } }
+#mis-pedidos { max-width: 760px; }   /* historial: columna única centrada */
+.mp-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 .mp-vacio-filtro { text-align: center; color: var(--musa-texto-suave); padding: 40px 0; grid-column: 1 / -1; }
 
 .mp-card {
@@ -1737,6 +1751,16 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 .mp-acciones { display: flex; gap: 10px; flex-wrap: wrap; }
 .mp-acciones .btn-brasa, .mp-acciones .btn-contorno { min-height: 40px; padding: 8px 14px; font-size: 14px; }
 
+/* Teléfonos angostos: acciones apiladas y línea de tiempo más compacta */
+@media (max-width: 480px) {
+  .mp-acciones { flex-direction: column; }
+  .mp-acciones .btn-brasa,
+  .mp-acciones .btn-contorno,
+  .mp-acciones form { width: 100%; flex: none; }
+  .mp-timeline { padding: 14px 8px 4px; }
+  .mp-timeline__label { font-size: 10px; }
+}
+
 /* ============================================================
    BACKOFFICE / ADMIN
    ============================================================ */
@@ -1811,6 +1835,7 @@ body.adm { background: var(--musa-crema); }
   z-index: 1020;
   height: 56px;
   background: rgba(251, 247, 240, 0.9);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--musa-borde);
   display: flex;
@@ -2332,6 +2357,7 @@ body.adm { background: var(--musa-crema); }
     left: 0; right: 0; bottom: 0;
     z-index: 1040;
     background: rgba(251, 247, 240, 0.97);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     border-top: 1px solid var(--musa-borde);
     box-shadow: 0 -4px 20px rgba(26, 21, 18, 0.06);
@@ -3085,8 +3111,35 @@ body.adm { background: var(--musa-crema); }
   transform: translateX(-50%) translateY(6px);
 }
 
-/* Lista de ingredientes (solo se ve en pantallas chicas, donde no hay hover) */
-.anat-lista { display: none; }
+/* Lista de ingredientes: se ve cuando NO hay disección (pantallas chicas o
+   "reducir movimiento"). El layout está siempre definido; solo cambia display. */
+.anat-lista {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 18px;
+  max-width: 460px;
+  margin: 22px auto 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.anat-lista li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 9px;
+  align-items: center;
+  font-size: 13px;
+}
+.anat-lista__punto {
+  grid-row: 1 / 3;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--musa-brasa);
+}
+.anat-lista strong { font-family: "Space Grotesk", sans-serif; font-size: 13px; }
+.anat-lista span:last-child { color: var(--musa-texto-suave); font-size: 11.5px; }
 
 @media (max-width: 900px) {
   .musa-anatomia { padding: 56px 0; }
@@ -3095,34 +3148,7 @@ body.adm { background: var(--musa-crema); }
   .anat-burger { max-width: 300px; pointer-events: none; }
   .anat-hint { display: none; }
   .anat-tag { display: none; }
-
-  .anat-lista {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 18px;
-    max-width: 440px;
-    margin: 22px auto 0;
-    padding: 0;
-    list-style: none;
-    text-align: left;
-  }
-  .anat-lista li {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto auto;
-    column-gap: 9px;
-    align-items: center;
-    font-size: 13px;
-  }
-  .anat-lista__punto {
-    grid-row: 1 / 3;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--musa-brasa);
-  }
-  .anat-lista strong { font-family: "Space Grotesk", sans-serif; font-size: 13px; }
-  .anat-lista span:last-child { color: var(--musa-texto-suave); font-size: 11.5px; }
+  .anat-lista { display: grid; }
 }
 
 @media (max-width: 440px) {
@@ -3243,10 +3269,15 @@ body.adm { background: var(--musa-crema); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .anat-capa {
-    transition: none;
-    transform: translateY(calc(var(--step, 0) * 20px));
-  }
-  .anat-tag { transition: none; opacity: 1; }
-  .anat-hint { display: none; }
+  /* Sin animación: la hamburguesa se queda armada y se muestra la lista. */
+  .anat-capa { transition: none; transform: none; }
+  .anat-burger:hover .anat-capa,
+  .anat-burger:focus-visible .anat-capa,
+  .anat-burger.abierto .anat-capa { transform: none; }
+  .anat-burger:hover svg,
+  .anat-burger:focus-visible svg,
+  .anat-burger.abierto svg { transform: none; }
+  .anat-tag, .anat-hint { display: none; }
+  .anat-burger { cursor: default; }
+  .anat-lista { display: grid; }
 }

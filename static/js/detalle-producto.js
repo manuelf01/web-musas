@@ -66,7 +66,16 @@
   });
 
   document.querySelectorAll(".crema-check").forEach(function (c) {
-    c.addEventListener("change", reactivar);
+    function pintar() {
+      // Fallback de :has() para navegadores viejos (Firefox < 121).
+      var card = c.closest(".crema-card");
+      if (card) card.classList.toggle("is-sel", c.checked);
+    }
+    c.addEventListener("change", function () {
+      pintar();
+      reactivar();
+    });
+    pintar();
   });
 
   document.querySelectorAll("[data-agregar]").forEach(function (b) {
