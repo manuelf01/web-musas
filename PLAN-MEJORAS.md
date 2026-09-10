@@ -9,6 +9,11 @@
 > espacios en blanco · **C)** rediseño de la hamburguesa "Anatomía".
 > Al final hay una tabla de prioridad (impacto / esfuerzo / riesgo).
 
+> **Estado (2026-09-09):** hecho A1, A2, A3, A4, A5, A10, A12, A15 · B1, B3
+> (B4/B7 ya estaban) · **C completo**. Detalle en `BITACORA-CLAUDE.md`
+> ("Bloque A/B/C · 2026-09-09"). Pendiente: A6, A7, A8, A11(nota), A13, A14 ·
+> B2, B5, B6, B8 · **A9 (IGV en nota de venta) a coordinar con el compañero**.
+
 ---
 
 ## A. Lógica del proceso de compra y venta
