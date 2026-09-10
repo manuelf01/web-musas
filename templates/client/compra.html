@@ -122,7 +122,13 @@
             {% else %}
               <div class="musa-alert mt-1">
                 <i class="bi bi-clock-history"></i>
-                No hay franjas disponibles para hoy: cocina llena o sin tiempo suficiente para preparar tu pedido. {{ sede.horario }}
+                {% if not local_estado.abierto %}
+                  Ahora estamos cerrados. Hoy atendemos {{ local_estado.horario_hoy }}.
+                  Vuelve dentro del horario para elegir tu hora de recojo.
+                {% else %}
+                  No quedan franjas para hoy: se llenaron o ya no hay tiempo para
+                  preparar tu pedido antes del cierre. {{ sede.horario }}
+                {% endif %}
               </div>
             {% endif %}
           </div>
@@ -142,23 +148,24 @@
           </label>
 
           <p class="musa-field-label mt-3 mb-2">Forma de pago</p>
+          <p class="musa-field-hint mb-2">El pago siempre es al recoger en el local. Elige cómo prefieres pagar:</p>
           <label class="ck-opcion">
             <i class="bi bi-qr-code"></i>
             <div>
-              <strong>Billetera digital (Yape / Plin)</strong>
-              <span>Coordinamos el pago al confirmar</span>
+              <strong>Yape / Plin al recoger</strong>
+              <span>Escaneas y pagas en caja al momento de recoger</span>
             </div>
             <input type="radio" name="pago" value="digital" {{ 'checked' if not (form and form.pago == 'tienda') }} />
           </label>
           <div class="ck-yape" id="ck-yape-info">
             <strong>Yape / Plin a Las Musas:</strong> 987 654 321<br />
-            <span style="color: var(--musa-texto-suave);">Muestra la confirmación del pago al recoger.</span>
+            <span style="color: var(--musa-texto-suave);">También puedes pagar en caja con este número.</span>
           </div>
           <label class="ck-opcion">
             <i class="bi bi-cash-coin"></i>
             <div>
-              <strong>Pagar al recoger</strong>
-              <span>Efectivo o tarjeta en el local</span>
+              <strong>Efectivo o tarjeta al recoger</strong>
+              <span>Pagas en caja del local</span>
             </div>
             <input type="radio" name="pago" value="tienda" {{ 'checked' if form and form.pago == 'tienda' }} />
           </label>

@@ -24,14 +24,14 @@
       {% if pedido.billeteraDigital %}
         <i class="bi bi-qr-code"></i>
         <div>
-          <strong>Pago con Yape / Plin.</strong>
-          Yapea o Plinea <b>S/ {{ '%.2f'|format(pedido.total) }}</b> al <b>987 654 321</b>
-          y muestra la confirmación al recoger.
+          <strong>Pagarás con Yape / Plin al recoger.</strong>
+          En caja escaneas y pagas <b>S/ {{ '%.2f'|format(pedido.total) }}</b>
+          (Yape / Plin a <b>987 654 321</b>) al momento de recoger tu pedido.
         </div>
       {% else %}
         <i class="bi bi-cash-coin"></i>
         <div>
-          <strong>Pago al recoger.</strong>
+          <strong>Pagarás al recoger.</strong>
           Paga <b>S/ {{ '%.2f'|format(pedido.total) }}</b> en caja al momento de recoger tu pedido
           (efectivo o tarjeta).
         </div>

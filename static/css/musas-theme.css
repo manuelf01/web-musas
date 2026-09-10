@@ -29,6 +29,13 @@
   --musa-sombra-hover: 0 12px 32px rgba(26, 21, 18, 0.12);
   --musa-nav-h: 80px;
 
+  /* Layout: un solo ancho de contenido para toda la app (evita que las
+     páginas "salten" de ancho y margen al navegar). */
+  --musa-ancho: 1200px;            /* general: home, carta, carrito, checkout, panel */
+  --musa-ancho-lectura: 760px;     /* páginas de lectura: confirmación, historial, comprobante */
+  --musa-gutter: clamp(16px, 4vw, 40px);
+  --esp-seccion: clamp(52px, 8vw, 96px);   /* separación vertical entre secciones */
+
   /* Overrides de Bootstrap */
   --bs-primary: #DB4200;
   --bs-primary-rgb: 219, 66, 0;
@@ -90,13 +97,13 @@ h1, h2, h3, h4, h5, h6, .musa-title {
   box-shadow: 0 4px 20px rgba(26, 21, 18, 0.05);
 }
 .musa-navbar .inner {
-  max-width: 1440px;
+  max-width: var(--musa-ancho);
   margin: 0 auto;
   height: var(--musa-nav-h);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 32px;
+  padding: 0 var(--musa-gutter);
 }
 .musa-nav-links { display: flex; gap: 32px; height: 100%; }
 .musa-nav-links a {
@@ -168,7 +175,7 @@ h1, h2, h3, h4, h5, h6, .musa-title {
   color: var(--musa-crema);
   padding: 64px 0 40px;
 }
-.musa-footer .inner { max-width: 1440px; margin: 0 auto; padding: 0 32px; }
+.musa-footer .inner { max-width: var(--musa-ancho); margin: 0 auto; padding: 0 var(--musa-gutter); }
 .musa-footer h3 {
   font-family: "Space Grotesk", sans-serif;
   font-size: 14px;
@@ -456,9 +463,7 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 /* ============================================================
    HOME / TIENDA
    ============================================================ */
-.musa-shell { max-width: 1320px; margin: 0 auto; padding: 0 40px; }
-@media (max-width: 1024px) { .musa-shell { padding: 0 28px; } }
-@media (max-width: 768px) { .musa-shell { padding: 0 16px; } }
+.musa-shell { max-width: var(--musa-ancho); margin: 0 auto; padding: 0 var(--musa-gutter); }
 
 /* ---------- Hero ---------- */
 .musa-hero {
@@ -483,9 +488,9 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 .musa-hero__inner {
   position: relative;
   z-index: 1;
-  max-width: 1200px;
+  max-width: var(--musa-ancho);
   margin: 0 auto;
-  padding: 96px 32px;
+  padding: 96px var(--musa-gutter);
   min-height: 520px;
   display: flex;
   flex-direction: column;
@@ -539,9 +544,9 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
   border-bottom: 1px solid var(--musa-borde);
 }
 .musa-catbar__inner {
-  max-width: 1200px;
+  max-width: var(--musa-ancho);
   margin: 0 auto;
-  padding: 14px 32px;
+  padding: 14px var(--musa-gutter);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1230,9 +1235,8 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 /* ============================================================
    CARRITO
    ============================================================ */
-.cx-wrap { max-width: 1240px; margin: 0 auto; padding: 24px 40px 96px; }
-@media (max-width: 1024px) { .cx-wrap { padding: 24px 28px 96px; } }
-@media (max-width: 768px) { .cx-wrap { padding: 16px 16px 80px; } }
+.cx-wrap { max-width: var(--musa-ancho); margin: 0 auto; padding: 24px var(--musa-gutter) 96px; }
+@media (max-width: 768px) { .cx-wrap { padding-bottom: 80px; } }
 
 /* Comprobante del cliente: documento centrado, no a lo ancho de la pantalla */
 .recibo-cliente { max-width: 900px; padding-top: 32px; }
@@ -1544,7 +1548,7 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
 /* ============================================================
    CONFIRMACIÓN DE PEDIDO
    ============================================================ */
-.conf-wrap { max-width: 720px; margin: 0 auto; padding: 48px 32px 96px; }
+.conf-wrap { max-width: var(--musa-ancho-lectura); margin: 0 auto; padding: 48px var(--musa-gutter) 96px; }
 .conf-card {
   background: #fff;
   border: 1px solid var(--musa-borde);
@@ -1608,7 +1612,7 @@ textarea.musa-input { height: auto; min-height: 96px; padding: 0.7rem 0.9rem; }
    MIS PEDIDOS
    ============================================================ */
 .mp-filtros { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
-#mis-pedidos { max-width: 760px; }   /* historial: columna única centrada */
+#mis-pedidos { max-width: var(--musa-ancho-lectura); }   /* historial: columna única centrada */
 .mp-lista {
   display: flex;
   flex-direction: column;

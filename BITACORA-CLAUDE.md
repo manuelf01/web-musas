@@ -55,6 +55,7 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
+| 2026-09-09 | **Bloque B: UI/UX** — un solo ancho de contenido (`--musa-ancho` / `--musa-ancho-lectura` / `--musa-gutter`), promo falsa "2x1 cervezas" fuera, pilares duplicados fuera de la carta, copys de pago/horario cerrado (A4/A15). Ver "Bloque B · UI/UX 2026-09-09" abajo. | `git revert` |
 | 2026-09-09 | **Plan de mejoras** (`PLAN-MEJORAS.md`) + **Bloque A: arreglos de lógica de compra/venta** (reloj de Perú unificado, cupo de franja dentro de la transacción, total del checkout fiable, vaciar carrito por sesión, `Decimal` al cotizar, cremas solo en categorías válidas). Ver "Bloque A · lógica compra/venta 2026-09-09" abajo. | `git revert` |
 | 2026-09-09 | **`docs/arquitectura.html`**: diagrama de arquitectura del proyecto (HTML autónomo, 4 vistas guiadas) generado con la skill `tt-a1i/archify`. Fuente: `docs/arquitectura.archify.json`. Ver "Diagrama de arquitectura 2026-09-09" abajo. | Borrar `docs/` |
 | 2026-09-09 | **Fixes responsive / cross-browser sobre el commit del compañero** (`4031a88`). Ver "Fixes UI 2026-09-09" abajo. | `git revert` |
@@ -85,6 +86,38 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Fix carrito + repaso de seguridad + limpieza de código muerto**. Ver "Limpieza 2026-09-08" abajo. | `git revert` |
+
+### Bloque B · UI/UX 2026-09-09
+Segundo bloque del `PLAN-MEJORAS.md`. 134 tests en verde.
+
+- **B1 · Un solo ancho de contenido.** Tokens nuevos en `:root`: `--musa-ancho`
+  (1200px), `--musa-ancho-lectura` (760px), `--musa-gutter`
+  (`clamp(16px,4vw,40px)`). Migrados al token: navbar `.inner`, footer `.inner`,
+  `.musa-shell` (antes 1320), `.musa-hero__inner` (1200 → token, padding-inline
+  igualado), `.musa-catbar__inner`, `.cx-wrap` (antes 1240). Migrados a
+  `--musa-ancho-lectura`: `.conf-wrap` (antes 720), `#mis-pedidos` (antes 760).
+  Antes cada página tenía su propio ancho → el contenido "saltaba" y el hero
+  quedaba indentado. Ahora todo comparte borde izquierdo/derecho.
+  *No tocado a propósito:* `.dp-wrap` (1000, lectura de un producto) y
+  `.adm-content` (panel, layout con sidebar) — quedan para otra pasada.
+- **B3 · Menos relleno.** Fuera la banda de promo **falsa** "2x1 en Cervezas"
+  (`index.html`) — era contenido inventado, riesgo de publicidad engañosa. Fuera
+  el bloque `.musa-pilares` **duplicado** al final de `carta.html` (se queda solo
+  en la home). El CSS `.musa-promo` queda sin usar (no molesta; reusable).
+- **A4 · Copys de pago.** El checkout y la confirmación ya no dicen "coordinamos
+  el pago al confirmar" (era falso: el pago siempre es en caja al recoger). Las
+  opciones ahora son "Yape / Plin al recoger" vs "Efectivo o tarjeta al recoger".
+- **A15 · Local cerrado.** Si no hay franjas *porque está cerrado*, el checkout
+  ahora lo dice ("Ahora estamos cerrados. Hoy atendemos …") en vez de "cocina
+  llena". Usa `local_estado` del context_processor.
+- **Ya estaban hechos** (de "Fixes UI 2026-09-09"): B4 (resúmenes `sticky`) y B7
+  (alturas de `.producto-card` parejas con flex).
+- **Pendiente:** B2 (escala de espaciado vertical), B5 (timeline de mis-pedidos),
+  B6 (redes del footer en `href="#"`), B8 (ancho del panel) — polish, sin urgencia.
+- **⚠️ Dato basura en `db_musuas`:** hay un producto **"Internet — S/ 30.00"** en
+  la categoría Hamburguesas (alguien lo creó probando el CRUD). Se ve en la carta
+  pública. Borrarlo desde el panel o con
+  `DELETE FROM producto WHERE nombre = 'Internet';`.
 
 ### Bloque A · lógica compra/venta 2026-09-09
 Primer bloque del `PLAN-MEJORAS.md`. Sin cambios visuales; 134 tests en verde
