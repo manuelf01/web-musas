@@ -55,6 +55,7 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
+| 2026-09-10 | **"Vaciar todo" del carrito** usa el modal de confirmación de la app (`window.MusaConfirm`) en vez del `confirm()` nativo. Solo `static/js/carrito-pagina.js`. | `git revert` |
 | 2026-09-09 | **Bloque C v2: la hamburguesa ES el hero.** La escena reemplaza el banner "Brasas nocturnas" (se conserva la píldora Abierto/Cerrado). Arranca ARMADA; se abre al pasar el cursor / tocar y se vuelve a armar; demo automática al cargar. `_anatomia.html` ahora es la portada (`index.html` ya no tiene `<section class="musa-hero">`). Ver "Bloque C · Anatomía 2026-09-09". | `git revert` |
 | 2026-09-09 | **Bloque C: hamburguesa "Anatomía"** — escena oscura a todo el ancho, la hamburguesa se despieza siguiendo el scroll (o el cursor), glow de brasa, plato, lista numerada de capas. Nuevo `templates/client/_anatomia.html`. Ver "Bloque C · Anatomía 2026-09-09" abajo. | `git revert` + restaurar sección en `index.html` |
 | 2026-09-09 | **Bloque B: UI/UX** — un solo ancho de contenido (`--musa-ancho` / `--musa-ancho-lectura` / `--musa-gutter`), promo falsa "2x1 cervezas" fuera, pilares duplicados fuera de la carta, copys de pago/horario cerrado (A4/A15). Ver "Bloque B · UI/UX 2026-09-09" abajo. | `git revert` |

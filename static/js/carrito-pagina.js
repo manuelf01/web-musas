@@ -193,10 +193,23 @@
   var btnVaciar = document.getElementById("carrito-vaciar");
   if (btnVaciar) {
     btnVaciar.addEventListener("click", function () {
-      if (confirm("¿Vaciar el carrito?")) {
+      // Mismo modal de confirmación que el resto de la app (ui-comun.js).
+      var opciones = {
+        titulo: "Vaciar el carrito",
+        texto: "Se quitarán todos los productos de tu carrito. Esta acción no se puede deshacer.",
+        ok: "Sí, vaciar",
+        cancelar: "No, volver",
+        tono: "peligro",
+        icono: "bi-trash3",
+      };
+      var confirmar = window.MusaConfirm
+        ? window.MusaConfirm(opciones)
+        : Promise.resolve(window.confirm("¿Vaciar el carrito?"));
+      confirmar.then(function (ok) {
+        if (!ok) return;
         window.MusasCarrito.vaciar();
         render();
-      }
+      });
     });
   }
 
