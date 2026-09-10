@@ -3210,9 +3210,9 @@ body.adm { background: var(--musa-crema); }
   .hero-anat__texto p, .anat-lista { margin-left: auto; margin-right: auto; }
   .hero-anat__cta { justify-content: center; }
   .anat-lista { max-width: 460px; text-align: left; }
-  .anat-burger { max-width: 320px; pointer-events: none; }
+  .anat-burger { max-width: 320px; }
   .hero-anat__glow { right: 50%; transform: translate(50%, -50%); }
-  .anat-hint { display: none; }
+  .anat-hint { position: static; transform: none; margin: 10px auto 0; }
 }
 
 @media (max-width: 440px) {
@@ -3334,10 +3334,13 @@ body.adm { background: var(--musa-crema); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Sin animación: la hamburguesa se queda armada y manda la lista numerada. */
-  .anat-capa { transition: none; transform: none !important; filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.32)); }
-  .anat-burger { cursor: default; transform: none !important; }
+  /* "Reducir movimiento": se quitan la flotación, el pulso del halo, la demo
+     automática y la inclinación 3D. El despiece SÍ funciona (lo pide el usuario
+     al pasar el cursor / tocar), pero sin transición: las capas saltan a su
+     sitio en vez de deslizarse. */
+  .anat-capa { transition-duration: 0.001s; }
+  .anat-burger { transition: none; }
+  .anat-burger.abierto { transform: none; }
   .anat-burger svg { animation: none; }
   .hero-anat__glow { animation: none; }
-  .anat-hint { display: none; }
 }

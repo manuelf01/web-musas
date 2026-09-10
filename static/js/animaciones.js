@@ -34,18 +34,18 @@
 })();
 
 /* Hero: la hamburguesa se despieza. ARRANCA ARMADA (--sep 0). Se abre al pasar
-   el cursor / enfocar (desktop) y con un toque (móvil); vuelve a armarse al
-   salir. Al cargar hace UNA demo: se abre y se vuelve a cerrar sola, para que
-   se note que es interactiva. El separado lo hace el CSS con la var --sep
-   (0 = armada, 1 = despiezada). Con "reducir movimiento" no se monta nada. */
+   el cursor / enfocar / tocar; vuelve a armarse al salir; un clic la deja fija.
+   El separado lo hace el CSS con la var --sep (0 = armada, 1 = despiezada).
+   Con "reducir movimiento": la interacción SIGUE funcionando (es a pedido del
+   usuario), solo se salta la demo automática y las transiciones son instantáneas
+   (eso lo hace el CSS). */
 (function () {
   var scene = document.querySelector("[data-anat-scene]");
   var burger = scene && scene.querySelector(".anat-burger");
   if (!scene || !burger) return;
 
   var mm = window.matchMedia;
-  if (mm && mm("(prefers-reduced-motion: reduce)").matches) return;
-
+  var pocaMotion = mm && mm("(prefers-reduced-motion: reduce)").matches;
   var hover = mm && mm("(hover: hover)").matches;
   var fijado = false;       // clic: deja la hamburguesa fija abierta/cerrada
   var interactuo = false;   // el usuario ya tocó/pasó el cursor -> se corta la demo
@@ -60,27 +60,32 @@
   function abrir()  { aplicar(1); }
   function cerrar() { if (!fijado) aplicar(0); }
 
-  if (hover) {
-    burger.addEventListener("mouseenter", function () { interactuo = true; abrir(); });
-    burger.addEventListener("mouseleave", cerrar);
-  }
+  burger.addEventListener("mouseenter", function () { interactuo = true; abrir(); });
+  burger.addEventListener("mouseleave", cerrar);
   burger.addEventListener("focus", function () { interactuo = true; abrir(); });
   burger.addEventListener("blur", cerrar);
-
+  // En táctil (o cuando el navegador manda click sin hover) alterna fijo.
   burger.addEventListener("click", function () {
     interactuo = true;
     fijado = !burger.classList.contains("abierto");
     aplicar(fijado ? 1 : 0);
   });
 
-  // Pista distinta según el dispositivo.
+  // Texto de la pista según el dispositivo.
   var pista = scene.querySelector("[data-anat-hint-txt]");
-  if (pista && !hover) pista.textContent = "Toca para ver las capas";
+  if (pista) {
+    pista.textContent = hover
+      ? "Pasa el cursor para ver las capas"
+      : "Toca para ver las capas";
+  }
 
-  // Demo automática al cargar (una sola vez, si el usuario no interactuó antes).
-  setTimeout(function () {
-    if (interactuo || fijado) return;
-    aplicar(1);
-    setTimeout(function () { if (!interactuo && !fijado) aplicar(0); }, 2200);
-  }, 1100);
+  // Demo automática al cargar (una vez). Se salta si hay "reducir movimiento"
+  // o si el usuario ya interactuó.
+  if (!pocaMotion) {
+    setTimeout(function () {
+      if (interactuo || fijado) return;
+      aplicar(1);
+      setTimeout(function () { if (!interactuo && !fijado) aplicar(0); }, 2200);
+    }, 1100);
+  }
 })();
