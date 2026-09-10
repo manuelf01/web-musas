@@ -1,0 +1,344 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Las Musas — Arquitectura (web-musas)",
+    "output": "web-musas-arquitectura.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1120,
+      520
+    ],
+    "views": [
+      {
+        "id": "flujo-compra",
+        "label": "Flujo de compra",
+        "focus": [
+          "cliente",
+          "flask",
+          "bp_cliente",
+          "modelos",
+          "db"
+        ],
+        "note": "Del navegador al pedido guardado: el carrito vive en localStorage y el servidor re-cotiza en /compra."
+      },
+      {
+        "id": "panel",
+        "label": "Panel de administración",
+        "focus": [
+          "panel",
+          "flask",
+          "bp_admin",
+          "modelos",
+          "db"
+        ],
+        "note": "Cocina, ventas y los CRUD de productos, categorías y usuarios."
+      },
+      {
+        "id": "seguridad",
+        "label": "Seguridad",
+        "focus": [
+          "flask",
+          "seguridad",
+          "bp_admin"
+        ],
+        "note": "CSRF de sesión en cada POST y captcha del panel; las contraseñas van con pbkdf2:sha256."
+      },
+      {
+        "id": "comprobante",
+        "label": "Comprobante PDF",
+        "focus": [
+          "bp_cliente",
+          "modelos",
+          "pdf"
+        ],
+        "note": "Al entregar el pedido se emite el comprobante y se congela un snapshot para el PDF."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "panel",
+      "type": "external",
+      "label": "Navegador · Panel",
+      "sublabel": "cocina · ventas",
+      "pos": [
+        40,
+        64
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "cliente",
+      "type": "external",
+      "label": "Navegador · Cliente",
+      "sublabel": "la tienda",
+      "pos": [
+        40,
+        254
+      ],
+      "size": [
+        150,
+        64
+      ],
+      "tag": "carrito en localStorage"
+    },
+    {
+      "id": "assets",
+      "type": "external",
+      "label": "static/",
+      "sublabel": "CSS · JS · imágenes",
+      "pos": [
+        40,
+        438
+      ],
+      "size": [
+        150,
+        58
+      ]
+    },
+    {
+      "id": "flask",
+      "type": "backend",
+      "label": "Flask · app.py",
+      "sublabel": "enruta blueprints",
+      "pos": [
+        268,
+        160
+      ],
+      "size": [
+        156,
+        64
+      ]
+    },
+    {
+      "id": "seguridad",
+      "type": "security",
+      "label": "seguridad.py",
+      "sublabel": "CSRF · captcha",
+      "pos": [
+        268,
+        378
+      ],
+      "size": [
+        156,
+        62
+      ],
+      "tag": "pbkdf2:sha256"
+    },
+    {
+      "id": "bp_admin",
+      "type": "backend",
+      "label": "Blueprint admin",
+      "sublabel": "el panel",
+      "pos": [
+        500,
+        62
+      ],
+      "size": [
+        168,
+        64
+      ]
+    },
+    {
+      "id": "bp_cliente",
+      "type": "backend",
+      "label": "Blueprint cliente",
+      "sublabel": "carta · /compra",
+      "pos": [
+        500,
+        254
+      ],
+      "size": [
+        168,
+        64
+      ]
+    },
+    {
+      "id": "modelos",
+      "type": "backend",
+      "label": "Modelos (model/)",
+      "sublabel": "1 clase por tabla",
+      "pos": [
+        744,
+        160
+      ],
+      "size": [
+        162,
+        64
+      ],
+      "tag": "SQL a mano · pymysql"
+    },
+    {
+      "id": "pdf",
+      "type": "backend",
+      "label": "comprobante_pdf.py",
+      "sublabel": "reportlab",
+      "pos": [
+        744,
+        378
+      ],
+      "size": [
+        162,
+        58
+      ]
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "MariaDB",
+      "sublabel": "db_musuas · 8 tablas",
+      "pos": [
+        960,
+        160
+      ],
+      "size": [
+        148,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "App Flask · MVC (Python 3.10)",
+      "wraps": [
+        "flask",
+        "seguridad",
+        "bp_admin",
+        "bp_cliente",
+        "modelos",
+        "pdf"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "CSRF de sesión + cabeceras",
+      "wraps": [
+        "flask",
+        "seguridad"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "cliente-a-flask",
+      "from": "cliente",
+      "to": "flask",
+      "label": "HTTP",
+      "variant": "emphasis"
+    },
+    {
+      "id": "panel-a-flask",
+      "from": "panel",
+      "to": "flask",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cliente-assets",
+      "from": "cliente",
+      "to": "assets",
+      "label": "CSS + JS",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        246,
+        369
+      ]
+    },
+    {
+      "id": "flask-seguridad",
+      "from": "flask",
+      "to": "seguridad",
+      "label": "CSRF por POST",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        346,
+        316
+      ]
+    },
+    {
+      "id": "flask-bpadmin",
+      "from": "flask",
+      "to": "bp_admin"
+    },
+    {
+      "id": "flask-bpcliente",
+      "from": "flask",
+      "to": "bp_cliente"
+    },
+    {
+      "id": "bpcliente-modelos",
+      "from": "bp_cliente",
+      "to": "modelos",
+      "label": "crea el pedido",
+      "labelAt": [
+        708,
+        254
+      ]
+    },
+    {
+      "id": "bpadmin-modelos",
+      "from": "bp_admin",
+      "to": "modelos",
+      "label": "estados",
+      "fromSide": "right",
+      "toSide": "top",
+      "labelAt": [
+        712,
+        112
+      ]
+    },
+    {
+      "id": "modelos-db",
+      "from": "modelos",
+      "to": "db",
+      "label": "pymysql",
+      "variant": "emphasis"
+    },
+    {
+      "id": "bpcliente-pdf",
+      "from": "bp_cliente",
+      "to": "pdf",
+      "label": "comprobante PDF",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Frontend",
+      "items": [
+        "Templates Jinja + CSS propio (musas-theme.css), JS vanilla sin build step",
+        "Carrito 100% en localStorage; el servidor re-cotiza contra la BD en /compra",
+        "Sondeo en vivo: cocina /admin/pedidos/pulso 15 s, cliente /mis-pedidos/estado 20 s"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Backend (Flask MVC)",
+      "items": [
+        "app.py registra los blueprints cliente y admin",
+        "model/ = una clase por tabla, SQL a mano con pymysql (bd.py abre la conexion)",
+        "Estados del pedido: recibido -> preparando -> listo -> recogido; al entregar se emite el comprobante + PDF (reportlab, snapshot datosEmision)"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Seguridad",
+      "items": [
+        "Token CSRF de sesion propio, exigido en todo POST del navegador",
+        "Contrasenas pbkdf2:sha256 (min. 8, con mayuscula y numero)",
+        "subidas.py bloquea IPs privadas/loopback al traer una imagen por URL"
+      ]
+    }
+  ]
+}

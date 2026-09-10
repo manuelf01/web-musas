@@ -55,6 +55,7 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
+| 2026-09-09 | **`docs/arquitectura.html`**: diagrama de arquitectura del proyecto (HTML autónomo, 4 vistas guiadas) generado con la skill `tt-a1i/archify`. Fuente: `docs/arquitectura.archify.json`. Ver "Diagrama de arquitectura 2026-09-09" abajo. | Borrar `docs/` |
 | 2026-09-09 | **Fixes responsive / cross-browser sobre el commit del compañero** (`4031a88`). Ver "Fixes UI 2026-09-09" abajo. | `git revert` |
 | 2026-09-05 | Clonado el repo `manuelf01/web-musas` en `Desktop/web-musas`. | — |
 | 2026-09-05 | Creada y publicada la rama `Ramirez` desde `main` (sin cambios de código). | `git push origin --delete Ramirez` |
@@ -83,6 +84,22 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Fix carrito + repaso de seguridad + limpieza de código muerto**. Ver "Limpieza 2026-09-08" abajo. | `git revert` |
+
+### Diagrama de arquitectura 2026-09-09
+Generado con la skill open-source **`tt-a1i/archify`** (MIT, ~56k ★). Se revisó
+antes de usarla: no tiene scripts de ciclo de vida (`postinstall`, etc.), no usa
+`eval` ni código ofuscado, lee el repo en local con `git`, y su única salida a
+red es (a) un chequeo de versión sobre un JSON estático —desactivable con
+`ARCHIFY_UPDATE_CHECK_DISABLED=1`— y (b) una descarga de marca *iniciada por el
+usuario* con guardas anti-SSRF (bloquea IPs privadas/loopback). Veredicto: segura.
+
+- **`docs/arquitectura.html`** — página HTML autónoma (sin dependencias, abrir con
+  doble clic). 10 componentes, el camino navegador → Flask → blueprints → modelos →
+  MariaDB, la frontera MVC y el grupo CSRF, más 4 vistas guiadas: *Flujo de compra*,
+  *Panel de administración*, *Seguridad* y *Comprobante PDF*.
+- **`docs/arquitectura.archify.json`** — la fuente del diagrama. Para regenerar:
+  `node bin/archify.mjs deliver architecture docs/arquitectura.archify.json docs/arquitectura.html --quality showcase`
+  (requiere clonar `tt-a1i/archify` y Node ≥18).
 
 ### Fixes UI 2026-09-09
 Reportado por el usuario tras integrar `4031a88` del compañero: en pantalla
