@@ -55,7 +55,8 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 
 | Fecha | Cambio | Reversible |
 |---|---|---|
-| 2026-09-10 | **Loader global con logo:** tienda y panel muestran una pantalla de carga de Las Musas al abrir páginas, navegar y enviar formularios. Accesible, responsive y sin dependencias. | `git revert` |
+| 2026-09-14 | **Rebranding: "Las Musas" → "Las de Siempre"**, y el logo pasa a ser un ícono de hamburguesa + el nombre como texto (no como imagen), para que un futuro cambio de nombre no obligue a rehacer el logo. Ver "Rebranding 2026-09-14" abajo. | `git revert` |
+| 2026-09-10 | **Loader global con logo:** tienda y panel muestran una pantalla de carga al abrir páginas, navegar y enviar formularios. Accesible, responsive y sin dependencias. | `git revert` |
 | 2026-09-10 | **"Vaciar todo" del carrito** usa el modal de confirmación de la app (`window.MusaConfirm`) en vez del `confirm()` nativo. Solo `static/js/carrito-pagina.js`. | `git revert` |
 | 2026-09-09 | **Bloque C v2: la hamburguesa ES el hero.** La escena reemplaza el banner "Brasas nocturnas" (se conserva la píldora Abierto/Cerrado). Arranca ARMADA; se abre al pasar el cursor / tocar y se vuelve a armar; demo automática al cargar. `_anatomia.html` ahora es la portada (`index.html` ya no tiene `<section class="musa-hero">`). Ver "Bloque C · Anatomía 2026-09-09". | `git revert` |
 | 2026-09-09 | **Bloque C: hamburguesa "Anatomía"** — escena oscura a todo el ancho, la hamburguesa se despieza siguiendo el scroll (o el cursor), glow de brasa, plato, lista numerada de capas. Nuevo `templates/client/_anatomia.html`. Ver "Bloque C · Anatomía 2026-09-09" abajo. | `git revert` + restaurar sección en `index.html` |
@@ -90,6 +91,35 @@ El detalle y qué NO se tomó de `Manuelf` está en la sección 0 de este archiv
 | 2026-09-08 | **Upsell en el carrito** («Completa tu pedido»). Ver "Upsell carrito 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Suite de tests (pytest) + CI (GitHub Actions)**. Ver "Tests + CI 2026-09-08" abajo. | `git revert` |
 | 2026-09-08 | **Fix carrito + repaso de seguridad + limpieza de código muerto**. Ver "Limpieza 2026-09-08" abajo. | `git revert` |
+
+### Rebranding 2026-09-14
+El negocio pasó a llamarse **"Las de Siempre"** (antes "Las Musas"). Cambios:
+
+- **Nombre centralizado:** `negocio.NOMBRE_NEGOCIO = "Las de Siempre"` — único
+  lugar del código con el nombre. Se expone a Jinja como `nombre_negocio`
+  (context processor en `app.py`) y a JS como `window.NOMBRE_NEGOCIO` (inyectado
+  en `client/base.html`, usado por `seguimiento-pedido.js`).
+- **El logo ahora es solo un ícono de hamburguesa** (`static/img/marca/v1/simbolo.svg`,
+  ya no tenía texto) **+ el nombre como texto real** al lado (`.musa-brand` /
+  `.musa-brand__nombre` en `musas-theme.css`), no como imagen. Así, el próximo
+  cambio de nombre es una sola línea en `negocio.py` — no hay que rehacer ningún
+  logo. Migrado en: navbar y footer (`client/base.html`), sidebar del panel
+  (`admin/base.html`), tarjeta de registro (`registro.html`) y el comprobante
+  del cliente (`comprobante.html`). El archivo `logo.svg` (ícono + texto en una
+  sola imagen) se actualizó igual por si algo lo sigue usando, pero ya no es la
+  fuente principal.
+- **Comprobantes:** el PDF (`services/comprobante_pdf.py`) arma la cabecera con
+  el ícono SVG + `NOMBRE_NEGOCIO` como texto (antes incrustaba `logo.svg` con el
+  nombre dibujado). Los comprobantes **ya emitidos conservan su nombre
+  histórico** (`datosEmision.negocio.nombre`, snapshot congelado) — es
+  correcto que un comprobante de antes de hoy siga diciendo "Las Musas": así
+  fue esa venta. Los comprobantes sin snapshot (legado) y los nuevos usan el
+  nombre actual.
+- **Sin tocar a propósito:** el producto **"Smash Las Musas"** (nombre de un
+  ítem de la carta, dato en `sql.sql`/BD) — cambiar nombres de productos es una
+  decisión de contenido/menú, no de marca; avisar si también se quiere renombrar.
+- 134 tests en verde (se actualizó `tests/test_comprobante_pdf.py` para esperar
+  "LAS DE SIEMPRE" en el PDF en vez de "LAS MUSAS").
 
 ### Bloque C · Anatomía 2026-09-09
 Tercer bloque del `PLAN-MEJORAS.md`: la sección "Anatomía de Las Musas" pasó de

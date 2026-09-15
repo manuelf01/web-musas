@@ -1,9 +1,9 @@
 {% extends "client/base.html" %}
-{% block title %}{{ producto.nombre }} · Las Musas{% endblock %}
+{% block title %}{{ producto.nombre }} · {{ nombre_negocio }}{% endblock %}
 {% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}
 
 {% block meta_desc %}{{ producto.descripcion | truncate(180) }}{% endblock %}
-{% block og_title %}{{ producto.nombre }} — S/ {{ '%.2f'|format(producto.precio or 0) }} · Las Musas{% endblock %}
+{% block og_title %}{{ producto.nombre }} — S/ {{ '%.2f'|format(producto.precio or 0) }} · {{ nombre_negocio }}{% endblock %}
 {% block og_image %}{% if producto.imagen %}{{ url_for('static', filename='img/' ~ producto.imagen, _external=True) }}{% else %}{{ url_for('static', filename='img/hamburguesas/h-2.jpg', _external=True) }}{% endif %}{% endblock %}
 
 {% set agotado = not producto.existencias or producto.existencias <= 0 %}

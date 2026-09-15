@@ -1,5 +1,5 @@
 {% extends "client/base.html" %}
-{% block title %}Comprobante {{ c.numero }} · Las Musas{% endblock %}
+{% block title %}Comprobante {{ c.numero }} · {{ nombre_negocio }}{% endblock %}
 {% block nav_pedidos %}is-active{% endblock %}
 {% block tab_pedidos %}is-active{% endblock %}
 
@@ -16,7 +16,10 @@
       <div class="adm-recibo__cinta"></div>
       <div class="adm-recibo__in">
         <div class="adm-recibo__cab">
-          <img class="musa-logo" style="height:64px;" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas" />
+          <div class="musa-brand musa-brand--grande">
+            <img class="musa-logo musa-logo--simbolo" src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" alt="" />
+            <span class="musa-brand__nombre">{{ c.negocio.nombre }}</span>
+          </div>
           <div class="adm-recibo__tipo">
             <b>{{ c.tipoDoc }}</b>
             <strong>{{ c.numero }}</strong>

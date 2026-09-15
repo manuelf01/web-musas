@@ -10,7 +10,9 @@
 
 ## 1. Qué es
 
-**Las Musas** — e-commerce de una hamburguesería nocturna en Chiclayo.
+**Las de Siempre** (antes "Las Musas") — e-commerce de una hamburguesería
+nocturna en Chiclayo. El nombre comercial vive en `negocio.NOMBRE_NEGOCIO`;
+cambiarlo ahí actualiza toda la app (ver "Rebranding" en `BITACORA-CLAUDE.md`).
 Web MVC en **Flask** + **MariaDB** (XAMPP). Proyecto de tesis, 2 integrantes.
 
 **Sede actual:** Av. José Balta Sur 006, Chiclayo 14008, Perú (numeración

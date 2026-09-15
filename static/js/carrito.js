@@ -1,4 +1,4 @@
-/* Carrito de Las Musas — almacenamiento en localStorage (sin dependencias).
+/* Carrito de la tienda — almacenamiento en localStorage (sin dependencias).
    Clave:  musas_carrito
    Valor:  [ { idProducto, nombre, precio, imagen, cantidad,
                cremas: [ { idProducto, nombre, precio } ] } ]

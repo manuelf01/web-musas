@@ -33,7 +33,7 @@
     }
     if (window.Notification && Notification.permission === "granted") {
       try {
-        new Notification("Las Musas", {
+        new Notification(window.NOMBRE_NEGOCIO || "Pedido listo", {
           body: "Tu pedido N° " + id + " está listo para recoger 🛍️",
         });
       } catch (e) {}

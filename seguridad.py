@@ -1,5 +1,5 @@
 """
-Utilidades de seguridad del login de Las Musas.
+Utilidades de seguridad del login.
 
 - Generación del captcha de imagen distorsionada (para el acceso de administradores).
 - El hash de contraseñas se hace con werkzeug.security desde model/Usuario.py y

@@ -1,5 +1,5 @@
 {% extends "client/base.html" %}
-{% block title %}Libro de Reclamaciones — Las Musas{% endblock %}
+{% block title %}Libro de Reclamaciones — {{ nombre_negocio }}{% endblock %}
 
 {% block content %}
 <section class="pagina-hero">
@@ -21,7 +21,7 @@
   {% endwith %}
 
   <div class="reclamo-legal">
-    <strong>Las Musas Burger Joint SAC · RUC 20608945123</strong><br />
+    <strong>{{ nombre_negocio }} Burger Joint SAC · RUC 20608945123</strong><br />
     {{ sede.direccion }}. El reclamo o queja registrado será
     atendido en un plazo no mayor a 15 días hábiles. La formulación del reclamo
     no impide acudir a otras vías de solución de controversias ni es requisito
@@ -72,7 +72,7 @@
     </div>
 
     <div class="musa-field">
-      <label for="pedido_cliente" class="musa-field-label">Lo que pides a Las Musas</label>
+      <label for="pedido_cliente" class="musa-field-label">Lo que pides a {{ nombre_negocio }}</label>
       <textarea class="musa-input" id="pedido_cliente" name="pedido_cliente" rows="3"
         placeholder="Ej. reembolso, cambio de producto, disculpas."></textarea>
     </div>

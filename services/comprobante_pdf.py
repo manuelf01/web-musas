@@ -17,6 +17,7 @@ from reportlab.platypus import (
 from svglib.svglib import svg2rlg
 
 from formato import soles_en_letras
+from negocio import NOMBRE_NEGOCIO
 
 
 BRASA = colors.HexColor("#DB4200")
@@ -26,7 +27,9 @@ CREMA = colors.HexColor("#FBF7F0")
 BORDE = colors.HexColor("#E7DFD5")
 SUAVE = colors.HexColor("#6B6157")
 RAIZ = Path(__file__).resolve().parent.parent
-LOGO = RAIZ / "static" / "img" / "marca" / "v1" / "logo.svg"
+# Ícono de hamburguesa sin texto: si el negocio cambia de nombre, el PDF no
+# necesita un logo nuevo (el nombre se arma con NOMBRE_NEGOCIO, como texto).
+LOGO = RAIZ / "static" / "img" / "marca" / "v1" / "simbolo.svg"
 FUENTE_INTER = RAIZ / "static" / "fonts" / "Inter-Variable.ttf"
 FUENTE_TITULOS = RAIZ / "static" / "fonts" / "SpaceGrotesk-Variable.ttf"
 
@@ -42,18 +45,40 @@ def _texto(valor):
     return escape(str(valor or ""))
 
 
-def _logo():
+def _icono(alto=16 * mm):
     dibujo = svg2rlg(str(LOGO))
     if dibujo is None:
-        return Paragraph("LAS MUSAS", ParagraphStyle(
-            "logo-fallback", fontName="SpaceMusas", fontSize=22, textColor=CARBON,
-        ))
-    ancho = 73 * mm
-    escala = ancho / dibujo.width
-    dibujo.width = ancho
-    dibujo.height *= escala
+        return None
+    escala = alto / dibujo.height
+    dibujo.width *= escala
+    dibujo.height = alto
     dibujo.scale(escala, escala)
     return dibujo
+
+
+def _marca():
+    """Ícono + nombre del negocio como texto (no como imagen): un cambio de
+    nombre en negocio.NOMBRE_NEGOCIO se refleja acá sin tocar ningún logo."""
+    icono = _icono()
+    nombre = Paragraph(_texto(NOMBRE_NEGOCIO.upper()), ParagraphStyle(
+        "marca-nombre", fontName="SpaceMusas", fontSize=20, leading=22, textColor=CARBON,
+    ))
+    subtitulo = Paragraph("HAMBURGUESAS A LA BRASA", ParagraphStyle(
+        "marca-sub", fontName="InterMusas", fontSize=7.5, leading=10,
+        textColor=BRASA, spaceBefore=1,
+    ))
+    columna = [nombre, subtitulo]
+    if icono is None:
+        return columna
+    tabla = Table([[icono, columna]], colWidths=[20 * mm, None])
+    tabla.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (1, 0), (1, 0), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    return tabla
 
 
 def _pie(canvas, doc):
@@ -62,7 +87,7 @@ def _pie(canvas, doc):
     canvas.line(18 * mm, 14 * mm, 192 * mm, 14 * mm)
     canvas.setFont("InterMusas", 8)
     canvas.setFillColor(SUAVE)
-    canvas.drawString(18 * mm, 9 * mm, "Las Musas · Comprobante interno de venta")
+    canvas.drawString(18 * mm, 9 * mm, f"{NOMBRE_NEGOCIO} · Comprobante interno de venta")
     canvas.drawRightString(192 * mm, 9 * mm, f"Página {doc.page}")
     canvas.restoreState()
 
@@ -78,7 +103,7 @@ def generar_comprobante_pdf(comprobante):
         topMargin=15 * mm,
         bottomMargin=20 * mm,
         title=f"Comprobante {comprobante['numero']}",
-        author="Las Musas - Chiclayo",
+        author=f"{NOMBRE_NEGOCIO} - Chiclayo",
         subject=f"Venta del pedido {comprobante['idPedido']}",
     )
     base = getSampleStyleSheet()
@@ -112,7 +137,7 @@ def generar_comprobante_pdf(comprobante):
         Paragraph(f"{_texto(comprobante['fecha'])} · {_texto(comprobante['hora'])}", pequeno),
     ]
     cabecera = Table(
-        [[_logo(), cabecera_derecha]], colWidths=[98 * mm, 76 * mm],
+        [[_marca(), cabecera_derecha]], colWidths=[98 * mm, 76 * mm],
         style=TableStyle([
             ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ("BOX", (0, 0), (-1, -1), 1, BORDE),
@@ -125,7 +150,7 @@ def generar_comprobante_pdf(comprobante):
     )
 
     direccion = Paragraph(
-        f"<b>{_texto(negocio.get('nombre', 'Las Musas - Chiclayo'))}</b><br/>"
+        f"<b>{_texto(negocio.get('nombre', NOMBRE_NEGOCIO + ' - Chiclayo'))}</b><br/>"
         f"{_texto(negocio.get('direccion'))}<br/>"
         f"<font color='#6B6157'>{_texto(negocio.get('referencia'))}</font>",
         normal,
@@ -205,7 +230,7 @@ def generar_comprobante_pdf(comprobante):
     historia.extend([
         Spacer(1, 7 * mm),
         KeepTogether([
-            Paragraph("Gracias por elegir Las Musas.", ParagraphStyle(
+            Paragraph(f"Gracias por elegir {_texto(NOMBRE_NEGOCIO)}.", ParagraphStyle(
                 "gracias", parent=normal, fontName="SpaceMusas", fontSize=12,
                 alignment=TA_CENTER, textColor=BRASA,
             )),

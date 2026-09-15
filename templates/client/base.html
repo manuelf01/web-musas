@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <script>document.documentElement.classList.add("musa-js");</script>
-    <title>{% block title %}Las Musas — Burger Joint{% endblock %}</title>
+    <title>{% block title %}{{ nombre_negocio }} — Burger Joint{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" />
 
     {# --- Vista previa al compartir el enlace (WhatsApp, redes) --- #}
     <meta name="description" content="{% block meta_desc %}Brasas nocturnas en Chiclayo: carne Angus, pan brioche artesanal y salsas de la casa. Pide, elige tu hora y recoge en tienda.{% endblock %}" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Las Musas Burger Joint" />
+    <meta property="og:site_name" content="{{ nombre_negocio }} Burger Joint" />
     <meta property="og:locale" content="es_PE" />
     <meta property="og:title" content="{% block og_title %}{{ self.title() }}{% endblock %}" />
     <meta property="og:description" content="{% block og_desc %}{{ self.meta_desc() }}{% endblock %}" />
@@ -44,8 +44,9 @@
     {% with loader_texto='Encendiendo las brasas…' %}{% include '_loader.html' %}{% endwith %}
     <header class="musa-navbar">
       <div class="inner">
-        <a href="{{ url_for('cliente.home') }}" class="musa-logo-link" aria-label="Las Musas - inicio">
-          <img class="musa-logo musa-logo--nav" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas, hamburguesas a la brasa" />
+        <a href="{{ url_for('cliente.home') }}" class="musa-logo-link musa-brand" aria-label="{{ nombre_negocio }} - inicio">
+          <img class="musa-logo musa-logo--simbolo" src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" alt="" />
+          <span class="musa-brand__nombre">{{ nombre_negocio }}<small>Hamburguesas a la brasa</small></span>
         </a>
 
         <nav class="musa-nav-links">
@@ -115,7 +116,10 @@
       <div class="inner">
         <div class="row g-4">
           <div class="col-lg-4">
-            <img class="musa-logo musa-logo--footer mb-3" src="{{ url_for('static', filename='img/marca/v1/logo.svg') }}" alt="Las Musas" />
+            <div class="musa-brand musa-brand--inverso musa-brand--grande mb-3">
+              <img class="musa-logo musa-logo--simbolo" src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" alt="" />
+              <span class="musa-brand__nombre">{{ nombre_negocio }}<small>Hamburguesas a la brasa</small></span>
+            </div>
             <p style="color: rgba(251, 247, 240, 0.8); max-width: 34ch; font-size: 14px;">
               Sabor nocturno y brasas artesanales en Chiclayo. Carne madurada, pan
               brioche horneado a diario y salsas de la casa.
@@ -161,7 +165,7 @@
         </div>
 
         <div class="footer-bottom d-flex flex-column flex-md-row justify-content-between gap-2">
-          <span>© 2026 Las Musas Burger Joint SAC · Hecho en Chiclayo, Perú</span>
+          <span>© 2026 {{ nombre_negocio }} Burger Joint SAC · Hecho en Chiclayo, Perú</span>
           <span class="d-flex gap-3">
             <a href="#" data-bs-toggle="modal" data-bs-target="#modalTerminos">Términos y condiciones</a>
             <a href="#" data-bs-toggle="modal" data-bs-target="#modalPrivacidad">Política de privacidad</a>
@@ -177,6 +181,11 @@
       integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
       crossorigin="anonymous"
     ></script>
+    <script>
+      // Nombre del negocio para el JS (notificaciones, etc.). Único lugar en
+      // Python: negocio.NOMBRE_NEGOCIO. No lo escribas de nuevo en los .js.
+      window.NOMBRE_NEGOCIO = {{ nombre_negocio | tojson }};
+    </script>
     <script src="{{ url_for('static', filename='js/carrito.js') }}"></script>
     <script src="{{ url_for('static', filename='js/loader.js') }}"></script>
     {% if session.pop('limpiar_carrito', False) %}

@@ -70,7 +70,7 @@ def test_cliente_y_caja_descargan_el_mismo_pdf(bd_limpia, cliente_client, admin_
         assert respuesta.mimetype == "application/pdf"
         assert respuesta.data.startswith(b"%PDF")
         texto = "".join(p.extract_text() or "" for p in PdfReader(BytesIO(respuesta.data)).pages)
-        assert "LAS MUSAS" in texto
+        assert "LAS DE SIEMPRE" in texto
         assert "B001-" in texto
         assert "42.00" in texto
 

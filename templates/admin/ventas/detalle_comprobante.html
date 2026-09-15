@@ -24,8 +24,8 @@
     <div class="adm-recibo__in">
       <div class="adm-recibo__cab">
         <div>
-          <h3>LAS MUSAS <span style="color: var(--musa-brasa);">●</span></h3>
-          <small>Las Musas - Chiclayo</small>
+          <h3>{{ c.negocio.nombre.split(' - ')[0].upper() }} <span style="color: var(--musa-brasa);">●</span></h3>
+          <small>{{ c.negocio.nombre }}</small>
         </div>
         <div class="adm-recibo__tipo">
           <b>{{ c.tipoDoc }}</b>

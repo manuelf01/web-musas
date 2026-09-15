@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% block title %}Categorías · Backoffice Las Musas{% endblock %}
+{% block title %}Categorías · Backoffice {{ nombre_negocio }}{% endblock %}
 {% block nav_categorias %}is-active{% endblock %}
 
 {% set emojis = {
@@ -12,7 +12,7 @@
   <div class="adm-head" style="margin-bottom: 0;">
     <div>
       <h1>Categorías de productos <span class="adm-count-pill">{{ conteos.activas }} activas</span></h1>
-      <p class="adm-sub">Organiza la carta y clasifica los platos de Las Musas.</p>
+      <p class="adm-sub">Organiza la carta y clasifica los platos de {{ nombre_negocio }}.</p>
     </div>
     <button type="button" class="btn-brasa" data-cat-abrir data-modo="crear">
       <i class="bi bi-plus-lg"></i> Nueva categoría

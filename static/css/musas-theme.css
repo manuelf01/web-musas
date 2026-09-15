@@ -1,5 +1,5 @@
 /* ============================================================
-   Las Musas — Sistema de diseño "Neo-brasa"
+   Sistema de diseño "Neo-brasa" (marca: negocio.NOMBRE_NEGOCIO)
    Tokens + capa sobre Bootstrap 5. Sin build step (CSS puro).
    Fuente de verdad: DESIGN.md (export de Stitch).
    Dueño: Dev 1. No reescribir sin avisar (ver BITACORA sección 3).
@@ -197,6 +197,42 @@ html.musa-cargando { overflow: hidden; }
     animation: none !important;
     transition-duration: .01ms !important;
   }
+}
+
+/* Marca = ícono de hamburguesa (simbolo.svg, sin texto) + nombre del negocio
+   como texto real. Así, si el negocio cambia de nombre, no hay que rehacer
+   ningún logo: se cambia negocio.NOMBRE_NEGOCIO y listo. */
+.musa-brand { display: inline-flex; align-items: center; gap: 10px; }
+.musa-brand__nombre {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1.15;
+  color: var(--musa-carbon);
+  white-space: nowrap;
+}
+.musa-brand__nombre small {
+  display: block;
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--musa-brasa);
+  margin-top: 1px;
+}
+.musa-brand--inverso .musa-brand__nombre { color: var(--musa-crema); }
+.musa-brand--inverso .musa-brand__nombre small { color: var(--musa-mostaza); }
+.musa-brand--grande .musa-brand__nombre { font-size: 23px; }
+.musa-brand--grande .musa-logo--simbolo { width: 54px; height: 54px; }
+@media (max-width: 560px) {
+  .musa-brand__nombre { font-size: 16px; }
+  .musa-brand__nombre small { display: none; }
+}
+.musa-brand--auth {
+  background: rgba(251, 247, 240, .94);
+  border-radius: 14px;
+  padding: 8px 14px;
 }
 
 /* ---------- Navbar (tienda) ---------- */
@@ -3136,7 +3172,7 @@ body.adm { background: var(--musa-crema); }
 }
 
 /* ============================================================
-   INICIO · Hero — la hamburguesa de Las Musas se despieza. Arranca ARMADA;
+   INICIO · Hero — la hamburguesa se despieza. Arranca ARMADA;
    se abre al pasar el cursor / enfocar / tocar (y demo automática al cargar).
    La lista numerada es la referencia de capas.
    ============================================================ */

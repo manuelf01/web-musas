@@ -1,5 +1,5 @@
 {% extends "client/base.html" %}
-{% block title %}Finalizar pedido · Las Musas{% endblock %}
+{% block title %}Finalizar pedido · {{ nombre_negocio }}{% endblock %}
 {% block tab_carrito %}active{% endblock %}
 {% block flash %}{% endblock %}
 
@@ -158,7 +158,7 @@
             <input type="radio" name="pago" value="digital" {{ 'checked' if not (form and form.pago == 'tienda') }} />
           </label>
           <div class="ck-yape" id="ck-yape-info">
-            <strong>Yape / Plin a Las Musas:</strong> 987 654 321<br />
+            <strong>Yape / Plin a {{ nombre_negocio }}:</strong> 987 654 321<br />
             <span style="color: var(--musa-texto-suave);">También puedes pagar en caja con este número.</span>
           </div>
           <label class="ck-opcion">

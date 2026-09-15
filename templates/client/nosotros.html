@@ -1,5 +1,5 @@
 {% extends "client/base.html" %}
-{% block title %}Conócenos — Las Musas{% endblock %}
+{% block title %}Conócenos — {{ nombre_negocio }}{% endblock %}
 
 {% block content %}
 <section class="pagina-hero">
@@ -7,7 +7,7 @@
     <span class="eyebrow">Conócenos</span>
     <h1>Brasas nocturnas hechas en Chiclayo</h1>
     <p>
-      Disfruta Las Musas en Chiclayo. Elige tu hamburguesa favorita
+      Disfruta {{ nombre_negocio }} en Chiclayo. Elige tu hamburguesa favorita
       y recoge tu pedido en nuestra sede de Av. José Balta.
     </p>
   </div>
@@ -17,7 +17,7 @@
   <section id="historia">
     <h2>Historia</h2>
     <p>
-      Las Musas reúne hamburguesas, salchipapas y bebidas para acompañar
+      {{ nombre_negocio }} reúne hamburguesas, salchipapas y bebidas para acompañar
       tus noches en Chiclayo. Consulta la carta y elige tu hora de recojo.
     </p>
     <p>

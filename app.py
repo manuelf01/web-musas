@@ -2,7 +2,7 @@ import os
 from datetime import timedelta
 
 from flask import Flask, request, session, jsonify
-from negocio import SEDE, estado_local
+from negocio import SEDE, NOMBRE_NEGOCIO, estado_local
 
 from controllers.admin import *
 from controllers.cliente import *
@@ -68,6 +68,7 @@ def _inyectar_sesion():
     return {
         "admin_sesion": session.get("admin.auth"),
         "sede": SEDE,
+        "nombre_negocio": NOMBRE_NEGOCIO,
         "local_estado": estado_local(),
     }
 

@@ -4,7 +4,7 @@ import json
 from datetime import date, timedelta
 
 from bd import obtener_conexion
-from negocio import SEDE
+from negocio import SEDE, NOMBRE_NEGOCIO
 
 
 class Comprobante:
@@ -214,7 +214,7 @@ class Comprobante:
                 })
 
         negocio = snapshot.get("negocio") or {
-            "nombre": "Las Musas - Chiclayo",
+            "nombre": f"{NOMBRE_NEGOCIO} - Chiclayo",
             "direccion": SEDE["direccion"],
             "referencia": SEDE["referencia"],
         }

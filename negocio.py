@@ -13,10 +13,17 @@ def ahora_peru():
     de cupos, el corte por hora y el auto-no-show quedan alineados aunque la app
     corra en un servidor en otra zona horaria."""
     return datetime.now(HORA_PERU)
+# Nombre comercial del negocio. Único lugar donde vive el texto: cámbialo acá
+# y se actualiza en toda la app (Jinja, PDF del comprobante, notificaciones JS
+# vía window.NOMBRE_NEGOCIO en base.html). El logo es un ícono de hamburguesa
+# sin texto (static/img/marca/v1/simbolo.svg) para que un cambio de nombre no
+# obligue a rehacer el logo.
+NOMBRE_NEGOCIO = "Las de Siempre"
+
 SEDE = {
     "nombre": "Sede Chiclayo",
     "direccion": "Av. José Balta Sur 006, Chiclayo 14008, Perú",
-    "referencia": "La Paperia / Las de Siempre Burger, cerca del Hotel Colibrí",
+    "referencia": "La Paperia, cerca del Hotel Colibrí",
     "horario": "Lunes a sábado · 6:00 p.m. – 11:30 p.m. | Domingo · 9:00 a.m. – 11:00 p.m.",
 }
 _direccion_mapa = quote("La Paperia, " + SEDE["direccion"])

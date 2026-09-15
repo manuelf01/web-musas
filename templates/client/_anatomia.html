@@ -1,9 +1,9 @@
-{# Portada: la hamburguesa de Las Musas se despieza para mostrar sus 6 capas.
+{# Portada: la hamburguesa del negocio se despieza para mostrar sus 6 capas.
    Arranca ARMADA. Se abre al pasar el cursor / enfocar / tocar, y hace una
    demo automática la primera vez que se carga. Conserva la píldora de estado
    (Abierto / Cerrado según el horario). Con "reducir movimiento" se queda
    armada y la lista numerada es la referencia. #}
-<section class="hero-anat" aria-label="Las Musas — hamburguesas a la brasa en Chiclayo">
+<section class="hero-anat" aria-label="{{ nombre_negocio }} — hamburguesas a la brasa en Chiclayo">
   <span class="hero-anat__glow" aria-hidden="true"></span>
 
   <div class="musa-shell hero-anat__inner">
@@ -43,7 +43,7 @@
 
     <div class="hero-anat__escena" data-anat-scene>
       <button type="button" class="anat-burger" aria-pressed="false"
-              aria-label="Separar las capas de la hamburguesa Las Musas">
+              aria-label="Separar las capas de la hamburguesa">
         <svg viewBox="60 -70 340 400" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <!-- 6 · Base brioche + salsa de la casa -->
           <g class="anat-capa" data-capa="salsa" style="--step: 3; --d: 0s">

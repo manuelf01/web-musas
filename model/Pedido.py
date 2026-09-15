@@ -5,7 +5,7 @@ import random
 from bd import obtener_conexion
 from datetime import timedelta
 from dinero import dinero
-from negocio import SEDE, ahora_peru, horario_dia
+from negocio import SEDE, NOMBRE_NEGOCIO, ahora_peru, horario_dia
 
 
 MEDIOS_PAGO = {
@@ -417,7 +417,7 @@ class Pedido:
             "fecha": ahora.strftime("%d/%m/%Y"),
             "hora": ahora.strftime("%H:%M"),
             "negocio": {
-                "nombre": "Las Musas - Chiclayo",
+                "nombre": f"{NOMBRE_NEGOCIO} - Chiclayo",
                 "direccion": SEDE["direccion"],
                 "referencia": SEDE["referencia"],
             },
