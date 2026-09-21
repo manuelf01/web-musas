@@ -13,6 +13,7 @@ from model.Pedido import Pedido, StockInsuficiente, LimitePedidos, FranjaLlena
 from dinero import dinero
 from model.Usuario import Usuario
 from seguridad import password_valida
+from avisos import ok_deshacer, error_en_formulario
 from formato import soles_en_letras
 from services.comprobante_pdf import generar_comprobante_pdf
 from negocio import PAGO_DIGITAL
@@ -232,6 +233,55 @@ def cancelar_pedido(id_pedido):
     return redirect(url_for("cliente.mis_pedidos"))
 
 
+@cliente.route("/mi-cuenta/foto", methods=["POST"])
+def mi_cuenta_foto():
+    user = session.get("cliente.auth", None)
+    if not user:
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.mi_cuenta")))
+    from subidas import guardar_avatar, podar_avatares
+    ruta, error = guardar_avatar(request.files.get("foto"), user["idUsuario"])
+    if error:
+        flash(error, "error")
+    else:
+        anterior = Usuario.actualizar_foto(user["idUsuario"], ruta)
+        podar_avatares(user["idUsuario"], [ruta, anterior])
+        ok_deshacer("Tu foto de perfil se actualizó.", url_for("cliente.mi_cuenta_restaurar_foto"),
+                    {"ruta": anterior or ""})
+    return redirect(url_for("cliente.mi_cuenta"))
+
+
+@cliente.route("/mi-cuenta/foto/quitar", methods=["POST"])
+def mi_cuenta_quitar_foto():
+    user = session.get("cliente.auth", None)
+    if not user:
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.mi_cuenta")))
+    from subidas import podar_avatares
+    anterior = Usuario.actualizar_foto(user["idUsuario"], None)
+    podar_avatares(user["idUsuario"], [anterior])
+    if anterior:
+        ok_deshacer("Quitaste tu foto de perfil.", url_for("cliente.mi_cuenta_restaurar_foto"), {"ruta": anterior})
+    else:
+        flash("Quitaste tu foto de perfil.", "ok")
+    return redirect(url_for("cliente.mi_cuenta"))
+
+
+@cliente.route("/mi-cuenta/foto/restaurar", methods=["POST"])
+def mi_cuenta_restaurar_foto():
+    """«Deshacer» de la foto: vuelve a la anterior (o a las iniciales si no había)."""
+    user = session.get("cliente.auth", None)
+    if not user:
+        return redirect(url_for("cliente.auth.login", next=url_for("cliente.mi_cuenta")))
+    from subidas import podar_avatares, ruta_avatar_valida
+    ruta = (request.form.get("ruta") or "").strip()
+    if ruta and not ruta_avatar_valida(ruta, user["idUsuario"]):
+        flash("Esa foto ya no está disponible.", "error")
+        return redirect(url_for("cliente.mi_cuenta"))
+    actual = Usuario.actualizar_foto(user["idUsuario"], ruta or None)
+    podar_avatares(user["idUsuario"], [ruta, actual])
+    ok_deshacer("Foto restaurada.", url_for("cliente.mi_cuenta_restaurar_foto"), {"ruta": actual or ""})
+    return redirect(url_for("cliente.mi_cuenta"))
+
+
 @cliente.route("/mi-cuenta", methods=["GET", "POST"])
 def mi_cuenta():
     user = session.get("cliente.auth", None)
@@ -246,20 +296,21 @@ def mi_cuenta():
         contra = request.form.get("contraseña") or ""
         contra2 = request.form.get("contraseña2") or ""
 
-        error = None
+        antes = Usuario.obtener_dict(user["idUsuario"])
+        error, campo = None, None
         if correo and not RE_CORREO.match(correo):
             error = "Ingresa un correo válido."
         elif telefono and not RE_TEL.match(telefono):
             error = "El teléfono debe tener 9 dígitos."
         elif contra and contra != contra2:
-            error = "Las contraseñas nuevas no coinciden."
+            error, campo = "Las contraseñas nuevas no coinciden.", "contraseña2"
         elif contra:
             error = password_valida(contra)
         if error is None:
             error = Usuario.actualizar_perfil(user["idUsuario"], nombres, apellidos, correo, None, telefono, contra)
 
         if error:
-            flash(error, "error")
+            error_en_formulario(error, "pagina", request.form, campo=campo)
         else:
             d = Usuario.obtener_dict(user["idUsuario"])
             session["cliente.auth"].update({
@@ -267,7 +318,12 @@ def mi_cuenta():
                 "correo": d["correo"], "dni": d["dni"], "telefono": d["telefono"],
             })
             session.modified = True
-            flash("Tus datos se actualizaron.", "ok")
+            if contra or not antes:
+                flash("Tus datos se actualizaron." + (" Tu contraseña cambió." if contra else ""), "ok")
+            else:
+                ok_deshacer("Tus datos se actualizaron.", url_for("cliente.mi_cuenta"), {
+                    "nombres": antes["nombres"], "apellidos": antes["apellidos"] or "",
+                    "correo": antes["correo"], "telefono": antes["telefono"] or ""})
         return redirect(url_for("cliente.mi_cuenta"))
 
     return render_template(

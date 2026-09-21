@@ -22,6 +22,7 @@ _REGLAS = (
     ("correo", "correo"),
     ("teléfono", "telefono"),
     ("nombres y apellidos", "nombres"),
+    ("código de verificación", "captcha"),
     ("rol", "rol"),
 )
 
@@ -38,7 +39,7 @@ def _valores_seguros(formulario):
 def campo_del_error(mensaje, valores, obligatorios=()):
     """Adivina qué campo causó el error a partir del texto de validación."""
     texto = (mensaje or "").lower()
-    if texto.startswith("completa nombres"):
+    if "nombres y apellidos" in texto:
         return "nombres" if not valores.get("nombres", "").strip() else "apellidos"
     for fragmento, campo in _REGLAS:
         if fragmento in texto:
@@ -50,13 +51,15 @@ def campo_del_error(mensaje, valores, obligatorios=()):
     return None
 
 
-def error_en_formulario(mensaje, modo, formulario, id_registro=None, obligatorios=()):
-    """Avisa el error (rojo) y guarda dónde ocurrió para poder señalarlo."""
+def error_en_formulario(mensaje, modo, formulario, id_registro=None, obligatorios=(), campo=None):
+    """Avisa el error (rojo) y guarda dónde ocurrió para poder señalarlo.
+    modo: 'crear' / 'editar' (formulario en panel deslizante) o 'pagina' (formulario ya
+    visible en la página: login, registro, mi cuenta). `campo` fuerza el campo señalado."""
     flash(mensaje, "error")
     valores = _valores_seguros(formulario)
     session["_error_form"] = {
         "modo": modo, "id": str(id_registro) if id_registro is not None else "",
-        "campo": campo_del_error(mensaje, valores, obligatorios),
+        "campo": campo or campo_del_error(mensaje, valores, obligatorios),
         "mensaje": mensaje, "valores": valores,
     }
 

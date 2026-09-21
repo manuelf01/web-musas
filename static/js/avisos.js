@@ -21,13 +21,22 @@
     ubicacion.addEventListener("click", function () {
       var caja = ubicacion.closest("[data-aviso]");
       if (caja) cerrar(caja);
-      var selector = info.modo === "editar"
-        ? '[data-modo="editar"][data-id="' + info.id + '"]'
-        : '[data-modo="crear"]';
-      var abrir = document.querySelector(selector) || document.querySelector('[data-modo="crear"]');
-      if (abrir) abrir.click();
+      var enPagina = info.modo === "pagina";
+      if (!enPagina) {
+        var selector = info.modo === "editar"
+          ? '[data-modo="editar"][data-id="' + info.id + '"]'
+          : '[data-modo="crear"]';
+        var abrir = document.querySelector(selector) || document.querySelector('[data-modo="crear"]');
+        if (abrir) abrir.click();
+      }
       setTimeout(function () {
-        var form = document.querySelector(".adm-panel.abierto form, .adm-modal__backdrop.abierto form, .adm-modal__backdrop.is-abierto form, form[enctype]");
+        var form;
+        if (enPagina) {
+          var destino = document.querySelector('[name="' + info.campo + '"]');
+          form = destino && destino.closest("form");
+        } else {
+          form = document.querySelector(".adm-panel.abierto form, .adm-modal__backdrop.abierto form, .adm-modal__backdrop.is-abierto form, form[enctype]");
+        }
         if (!form) return;
         Object.keys(info.valores || {}).forEach(function (n) {
           var el = form.elements[n];
@@ -40,7 +49,8 @@
         aviso.className = "musa-campo-error";
         aviso.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i>';
         aviso.appendChild(document.createTextNode(info.mensaje));
-        (campo.closest(".musa-field") || campo.parentNode).appendChild(aviso);
+        var ancla = campo.closest(".musa-input-icon, .musa-pass") || campo;
+        ancla.parentNode.insertBefore(aviso, ancla.nextSibling);
         campo.scrollIntoView({ block: "center", behavior: "smooth" });
         campo.focus();
         var limpiar = function () {

@@ -1,0 +1,23 @@
+{#- Subir / cambiar / quitar la foto de perfil. Recibe: foto_accion, foto_quitar_accion. -#}
+{% import '_avatar.html' as av -%}
+<div class="perfil-foto" data-perfil-foto>
+  <div class="perfil-foto__visor" data-foto-visor>{{ av.avatar(mi_perfil, 'perfil-foto__img') }}</div>
+  <div class="perfil-foto__acc">
+    <form method="post" action="{{ foto_accion }}" enctype="multipart/form-data" class="perfil-foto__form">
+      {{ campo_csrf() }}
+      <input type="file" name="foto" id="foto-archivo" accept="image/png,image/jpeg,image/webp,image/gif" hidden data-foto-archivo />
+      <label for="foto-archivo" class="btn-contorno perfil-foto__btn"><i class="bi bi-camera"></i> {{ 'Cambiar foto' if mi_perfil and mi_perfil.foto else 'Subir foto' }}</label>
+      <button type="submit" class="btn-brasa perfil-foto__btn" hidden data-foto-guardar><i class="bi bi-check-lg"></i> Guardar foto</button>
+    </form>
+    {% if mi_perfil and mi_perfil.foto %}
+    <form method="post" action="{{ foto_quitar_accion }}">
+      {{ campo_csrf() }}
+      <button type="submit" class="perfil-foto__quitar"
+        data-confirm="Se quitará tu foto y volverán a verse tus iniciales."
+        data-confirm-titulo="Quitar foto de perfil" data-confirm-ok="Sí, quitar" data-confirm-tono="peligro">
+        <i class="bi bi-trash"></i> Quitar foto</button>
+    </form>
+    {% endif %}
+    <p class="perfil-foto__hint" data-foto-hint>JPG, PNG, WEBP o GIF · máx. 5 MB. Se recorta en cuadrado.</p>
+  </div>
+</div>

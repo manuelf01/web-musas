@@ -1,0 +1,9 @@
+{#- Avatar de una persona: su foto (cuadrada, recortada en círculo) o, si no tiene, sus iniciales.
+    Uso: {% import '_avatar.html' as av -%}{{ av.avatar(mi_perfil, 'musa-avatar') }} -#}
+{% macro avatar(p, clase='musa-avatar') -%}
+{%- if p and p.fotoUrl -%}
+<span class="{{ clase }} {{ clase }}--foto"><img src="{{ p.fotoUrl }}" alt="" loading="lazy" /></span>
+{%- else -%}
+<span class="{{ clase }}">{{ p.iniciales if p else '' }}</span>
+{%- endif -%}
+{%- endmacro %}

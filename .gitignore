@@ -11,6 +11,7 @@ cfg.py
 # Imágenes subidas desde el panel (no son código; cada entorno tiene las suyas)
 static/img/productos/
 static/img/categorias/
+static/img/perfiles/
 
 # Entorno local de desarrollo
 .local-runtime/

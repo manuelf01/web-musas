@@ -49,6 +49,7 @@ CREATE TABLE `usuario` (
   `noShows`     smallint(6)  NOT NULL DEFAULT 0,-- veces que no recogió su pedido
   `rol`         varchar(20)  NOT NULL DEFAULT 'usuario',
   `activo`      tinyint(1)   NOT NULL DEFAULT 1,
+  `fotoPerfil`  varchar(255) DEFAULT NULL,      -- p. ej. perfiles/ab12.jpg (static/img/)
   PRIMARY KEY (`idUsuario`),
   UNIQUE KEY `uq_usuario_correo` (`correo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

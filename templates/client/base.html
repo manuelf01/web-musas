@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+{% import '_avatar.html' as av -%}
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -63,8 +64,9 @@
           </a>
 
           {% if cliente %}
-            <a href="{{ url_for('cliente.mi_cuenta') }}" class="d-none d-sm-inline text-decoration-none" style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: var(--musa-carbon);">
-              {{ cliente }}
+            <a href="{{ url_for('cliente.mi_cuenta') }}" class="musa-perfil" title="Mi cuenta">
+              {{ av.avatar(mi_perfil, 'musa-avatar') }}
+              <span class="musa-perfil__txt"><strong>{{ cliente }}</strong><small>Mi cuenta</small></span>
             </a>
             <a href="{{ url_for('cliente.auth.logout') }}" class="text-decoration-none small" style="color: var(--musa-texto-suave);"
                data-confirm="¿Estás seguro de que quieres cerrar sesión?"
@@ -74,21 +76,21 @@
               Salir
             </a>
           {% elif admin_sesion %}
-            <span class="d-none d-sm-inline" style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px; color: var(--musa-brasa);">
-              Modo administrador
-            </span>
-            <a href="{{ url_for('admin.home') }}" class="d-none d-sm-inline text-decoration-none" style="color: var(--musa-carbon); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;">
-              Ir al panel
+            <a href="{{ url_for('admin.home') }}" class="musa-perfil" title="Ir al panel">
+              {{ av.avatar(mi_perfil, 'musa-avatar') }}
+              <span class="musa-perfil__txt"><strong>{{ mi_perfil.nombres if mi_perfil else 'Administrador' }}</strong><small>Ir al panel</small></span>
             </a>
           {% else %}
             <a href="{{ url_for('cliente.auth.login') }}" class="d-none d-sm-inline text-decoration-none" style="color: var(--musa-carbon); font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;">
               Iniciar sesión
             </a>
+            <span class="musa-avatar"><i class="bi bi-person-fill"></i></span>
           {% endif %}
-          <span class="musa-avatar"><i class="bi bi-person-fill"></i></span>
         </div>
       </div>
     </header>
+
+    {% with avisos_clase='aviso-pila--tienda' %}{% include '_avisos.html' %}{% endwith %}
 
     {% if migas %}
     <div class="migas-barra">
@@ -99,7 +101,7 @@
     {% endif %}
 
     <main>
-      {% block flash %}{% include "client/_flash.html" %}{% endblock %}
+      {% block flash %}{% endblock %}
       {% block content %}{% endblock %}
     </main>
 
@@ -207,6 +209,7 @@
     <script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/ui-comun.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/estado-local.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/avisos.js') }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

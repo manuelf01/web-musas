@@ -65,6 +65,23 @@ def _proteger_csrf():
         return cuerpo, 400
 
 
+def _perfil_actual():
+    """Quién tiene la sesión abierta (con su foto) para la cabecera de tienda y panel.
+    En el panel manda la sesión de admin; en la tienda, la de cliente."""
+    from model.Usuario import Usuario
+    clave = ("admin.auth", "cliente.auth") if (request.blueprint or "").startswith("admin") \
+        else ("cliente.auth", "admin.auth")
+    for k in clave:
+        sesion = session.get(k)
+        if sesion and sesion.get("idUsuario"):
+            d = Usuario.obtener_dict(sesion["idUsuario"])
+            if d:
+                d["fotoUrl"] = f"/static/img/{d['foto']}" if d["foto"] else None
+                d["panel"] = k == "admin.auth"
+                return d
+    return None
+
+
 @app.context_processor
 def _inyectar_sesion():
     # Disponible en todas las plantillas: saber si hay un admin logueado
@@ -74,6 +91,7 @@ def _inyectar_sesion():
         "sede": SEDE,
         "nombre_negocio": NOMBRE_NEGOCIO,
         "local_estado": estado_local(),
+        "mi_perfil": _perfil_actual(),
         "pop_deshacer": avisos.pop_deshacer,
         "pop_error_form": avisos.pop_error_form,
     }

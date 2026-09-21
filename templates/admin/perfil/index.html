@@ -72,8 +72,10 @@
   <aside class="adm-recibo-side">
     <h4>Sesión actual</h4>
     <h3>{{ datos.nombreCompleto }}</h3>
-    <div class="adm-recibo-side__cli">
-      <span class="adm-thumb" style="width:42px;height:42px;font-family:'Space Grotesk',sans-serif;color:var(--musa-brasa);">{{ datos.iniciales }}</span>
+    {% with foto_accion=url_for('admin.perfil.foto'), foto_quitar_accion=url_for('admin.perfil.quitar_foto') %}
+      {% include '_perfil_foto.html' %}
+    {% endwith %}
+    <div class="adm-recibo-side__cli" style="margin-top: 14px;">
       <div><strong>{{ datos.rolTexto }}</strong><span>{{ datos.correo }}</span></div>
     </div>
     <p style="font-size: 13px; color: var(--musa-texto-suave); margin-top: 16px;">
@@ -81,4 +83,8 @@
     </p>
   </aside>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/perfil-foto.js') }}" defer></script>
 {% endblock %}

@@ -18,14 +18,6 @@
     </div>
   </div>
 
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for category, message in messages %}
-      <div class="musa-alert {{ 'musa-alert--ok' if category == 'ok' }} d-flex gap-2 mb-4">
-        <i class="bi bi-exclamation-circle-fill mt-1"></i><div class="small">{{ message }}</div>
-      </div>
-    {% endfor %}
-  {% endwith %}
-
   <!-- Aviso carrito vacío -->
   <div id="ck-vacio" class="cx-empty" hidden>
     <i class="bi bi-bag"></i>

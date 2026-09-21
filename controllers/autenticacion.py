@@ -1,6 +1,7 @@
 import re
 import time
 
+from avisos import error_en_formulario
 from flask import (
     request,
     render_template,
@@ -95,16 +96,19 @@ def login():
             return _rerender()
 
         if not (RE_DNI.match(identificador) or RE_CORREO.match(identificador)):
-            flash("Ingresa tu correo electrónico o el DNI de administrador.", "error")
+            error_en_formulario("Ingresa tu correo electrónico o el DNI de administrador.", "pagina",
+                                request.form, campo="usuario")
             return _rerender()
         if not contraseña:
-            flash("Ingresa tu contraseña.", "error")
+            error_en_formulario("Ingresa tu contraseña.", "pagina", request.form, campo="contraseña")
             return _rerender()
 
         resultado = Autenticacion.login_unificado(identificador, contraseña)
         if isinstance(resultado, str):
             _registrar_fallo_login()
-            flash(resultado, "error")
+            # «No encontramos una cuenta…» o «dada de baja» -> el usuario; «contraseña incorrecta» -> la clave.
+            campo = "contraseña" if "contraseña" in resultado.lower() else "usuario"
+            error_en_formulario(resultado, "pagina", request.form, campo=campo)
             return _rerender()
 
         fila, tipo = resultado
@@ -118,17 +122,20 @@ def login():
             ingresado = (request.form.get("captcha") or "").strip().upper()
             if not esperado or ingresado != esperado:
                 _registrar_fallo_login()
-                flash("El código de verificación no coincide. Intenta de nuevo.", "error")
+                error_en_formulario("El código de verificación no coincide. Intenta de nuevo.", "pagina",
+                                    request.form, campo="captcha")
                 return _rerender()
 
             _limpiar_fallos_login()
             session.pop("cliente.auth", None)
             session["admin.auth"] = _datos_sesion(fila)
+            flash("Inicio de sesión exitoso", "ok")
             return redirect(url_for("admin.home"))
 
         _limpiar_fallos_login()
         session.pop("admin.auth", None)
         session["cliente.auth"] = _datos_sesion(fila)
+        flash("Inicio de sesión exitoso", "ok")
         return redirect(_destino_post_login(url_for("cliente.home")))
 
     return render_template("client/login.html", next=request.args.get("next", ""))
@@ -184,7 +191,8 @@ def registro():
             flash("¡Cuenta creada! Ya puedes iniciar sesión.", "ok")
             return redirect(url_for("cliente.auth.login"))
 
-        flash(error, "error")
+        error_en_formulario(error, "pagina", request.form,
+                            obligatorios=("nombres", "apellidos", "correo", "telefono"))
         return render_template("client/registro.html", form=request.form.to_dict())
 
     if session.get("cliente.auth"):

@@ -1,0 +1,37 @@
+{#- Avisos de tienda y panel: verde (con «Deshacer» si aplica) y rojo (con «Ver dónde me equivoqué»). -#}
+{% with mensajes = get_flashed_messages(with_categories=true) %}
+  {% if mensajes %}
+  {% set undo = pop_deshacer() %}
+  {% set errf = pop_error_form() %}
+  {% set ns = namespace(undo=false, err=false) %}
+  <div class="aviso-pila {{ avisos_clase }}" role="region" aria-label="Avisos">
+    {% for categoria, mensaje in mensajes %}
+      {% set ok = categoria == 'ok' %}
+      {% set con_undo = ok and undo and not ns.undo %}
+      {% set con_err = (not ok) and errf and not ns.err %}
+      {% if con_undo %}{% set ns.undo = true %}{% endif %}
+      {% if con_err %}{% set ns.err = true %}{% endif %}
+      {% set ms = 10000 if con_undo else (12000 if con_err else (5000 if ok else 8000)) %}
+      <div class="aviso {{ 'aviso--ok' if ok else 'aviso--error' }}" role="{{ 'status' if ok else 'alert' }}" data-aviso>
+        <span class="aviso__icono"><i class="bi {{ 'bi-check-lg' if ok else 'bi-exclamation-lg' }}"></i></span>
+        <div class="aviso__texto">
+          <strong>{{ 'Listo' if ok else 'Atención' }}</strong>
+          <span>{{ mensaje }}</span>
+          {% if con_undo %}
+            <form method="post" action="{{ undo.url }}" class="aviso__form" data-loader-skip-form>
+              {{ campo_csrf() }}
+              {% for k, v in undo.campos.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}" />{% endfor %}
+              <button type="submit" class="aviso__accion"><i class="bi bi-arrow-counterclockwise"></i> {{ undo.etiqueta }}</button>
+            </form>
+          {% elif con_err and errf.campo %}
+            <button type="button" class="aviso__accion" data-ver-donde><i class="bi bi-crosshair"></i> Ver dónde me equivoqué</button>
+          {% endif %}
+        </div>
+        <button type="button" class="aviso__cerrar" aria-label="Cerrar aviso"><i class="bi bi-x-lg"></i></button>
+        <span class="aviso__tiempo" style="animation-duration: {{ ms }}ms"></span>
+      </div>
+    {% endfor %}
+  </div>
+  {% if errf and errf.campo %}<script type="application/json" id="musa-error-form">{{ errf | tojson }}</script>{% endif %}
+  {% endif %}
+{% endwith %}

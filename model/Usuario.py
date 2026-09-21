@@ -102,10 +102,11 @@ class Usuario:
             "esSuper": rol == "superusuario",
             "activo": bool(f[8]) if len(f) > 8 and f[8] is not None else True,
             "noShows": int(f[9] or 0) if len(f) > 9 else 0,
+            "foto": (f[10] or None) if len(f) > 10 else None,
         }
 
     _SEL = ("SELECT idUsuario, dni, nombres, apellidos, correo, numTelf, rol, "
-            "tipoUsuario, activo, COALESCE(noShows, 0) FROM usuario")
+            "tipoUsuario, activo, COALESCE(noShows, 0), fotoPerfil FROM usuario")
 
     @staticmethod
     def obtener_todos():
@@ -115,6 +116,21 @@ class Usuario:
             filas = cursor.fetchall()
         conexion.close()
         return [Usuario._fila_a_dict(f) for f in filas]
+
+    @staticmethod
+    def actualizar_foto(id, ruta):
+        """Guarda (o quita, con None) la foto de perfil. Devuelve la ruta anterior."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("SELECT fotoPerfil FROM usuario WHERE idUsuario = %s", (id,))
+                fila = cursor.fetchone()
+                anterior = fila[0] if fila else None
+                cursor.execute("UPDATE usuario SET fotoPerfil = %s WHERE idUsuario = %s", (ruta, id))
+            conexion.commit()
+            return anterior
+        finally:
+            conexion.close()
 
     @staticmethod
     def obtener_dict(id):

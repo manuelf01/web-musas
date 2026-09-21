@@ -2570,6 +2570,12 @@ html.adm-anima .adm-main { transition: margin-left .24s ease; }
   box-shadow: 0 0 0 3px rgba(214, 40, 57, 0.16) !important;
   animation: aviso-sacudir 0.45s ease;
 }
+.musa-input.is-invalid, form input.is-invalid, form select.is-invalid, form textarea.is-invalid {
+  border-color: #d62839 !important; background: #fff5f6 !important;
+  box-shadow: 0 0 0 3px rgba(214, 40, 57, 0.16) !important;
+}
+.aviso-pila--tienda { top: 96px; }
+@media (max-width: 720px) { .aviso-pila--tienda { top: 80px; } }
 .musa-campo-error {
   display: flex; align-items: center; gap: 6px; margin-top: 6px;
   color: #d62839; font-size: 12.5px; font-weight: 600;
@@ -2792,6 +2798,51 @@ a.vnav__flecha:hover { border-color: var(--musa-brasa); color: var(--musa-brasa)
 }
 @media (max-width: 420px) { .migas__actual { max-width: 16ch; } .adm-topbar__link { font-size: 12px; } }
 @media print { .migas-barra { display: none; } }
+
+/* --- Foto de perfil y chip de sesión (tienda y panel) ---------------- */
+.musa-avatar, .adm-avatar, .perfil-foto__img {
+  font-family: "Space Grotesk", sans-serif; font-weight: 700; user-select: none;
+}
+.musa-avatar--foto, .adm-avatar--foto, .perfil-foto__img--foto { overflow: hidden; background: #fff; padding: 0; }
+.musa-avatar--foto img, .adm-avatar--foto img, .perfil-foto__img--foto img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.musa-perfil, .adm-perfil {
+  display: inline-flex; align-items: center; gap: 10px; padding: 4px 14px 4px 4px; border-radius: 999px;
+  border: 1px solid transparent; text-decoration: none; line-height: 1.15; transition: background .15s ease, border-color .15s ease;
+}
+.musa-perfil:hover, .adm-perfil:hover { background: var(--musa-crema-baja); border-color: var(--musa-borde); }
+.musa-perfil .musa-avatar, .adm-perfil .adm-avatar {
+  width: 40px; height: 40px; font-size: 14px; flex: 0 0 auto;
+  box-shadow: 0 0 0 2px var(--musa-crema), 0 0 0 3.5px var(--musa-brasa);
+}
+.musa-perfil__txt, .adm-perfil__txt { display: flex; flex-direction: column; min-width: 0; }
+.musa-perfil__txt strong, .adm-perfil__txt strong {
+  font: 600 14px "Space Grotesk", sans-serif; color: var(--musa-carbon);
+  max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.musa-perfil__txt small, .adm-perfil__txt small { font-size: 11px; color: var(--musa-texto-suave); letter-spacing: .02em; }
+.adm-topbar__der { gap: 14px; }
+@media (max-width: 720px) {
+  .musa-perfil, .adm-perfil { padding: 2px; }
+  .musa-perfil__txt, .adm-perfil__txt { display: none; }
+}
+
+.perfil-foto { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.perfil-foto__img {
+  width: 104px; height: 104px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--musa-brasa); color: #fff; font-size: 34px;
+  box-shadow: 0 0 0 4px var(--musa-crema), 0 0 0 6px var(--musa-brasa);
+}
+.perfil-foto__acc { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; min-width: 0; }
+.perfil-foto__form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.perfil-foto__btn { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; font-size: 13px; margin: 0; }
+.perfil-foto__quitar {
+  border: 0; background: transparent; padding: 2px 0; color: var(--musa-peligro); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.perfil-foto__quitar:hover { text-decoration: underline; }
+.perfil-foto__hint { margin: 0; font-size: 12px; color: var(--musa-texto-suave); max-width: 32ch; }
+.perfil-foto__hint.is-error { color: #d62839; font-weight: 600; }
 
 /* --- tabla de recogidos --- */
 .ped-tabla-wrap { overflow-x: auto; }
