@@ -1068,3 +1068,10 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - Sábado cierra a las 23:00 por indicación del usuario. Se mejoraron los mensajes de horario del checkout y los datos de pago digital en la confirmación.
 - Migración `013_clientes_correo_y_caja.sql` integrada en `sql.sql` y aplicada a la base local `db_musuas`.
 - Validación: suite completa aprobada, 138 pruebas; compilación Python, verificación de plantillas/rutas y smoke HTTP local (`/`, `/login`, `/registro`, `/estado-local`) correctos.
+
+## 2026-09-21 - Actualización de panel, ventas y pagos
+- Rama `Ramirez` actualizada por fast-forward de `84baaa6` a `5e48598`, conservando la base local y sin importar `sql.sql`.
+- Respaldo local previo: `respaldo_antes_de_actualizar.sql`. Se agregó `respaldo_*.sql` al `.gitignore` para impedir que datos locales lleguen al repositorio.
+- Aplicada y verificada `migrations/014_anulacion_ventas.sql`; la columna `comprobante.anulado` ya existe. La migración anunciada `015_foto_perfil.sql` no está en `origin/Ramirez`, `sql.sql` ni el código descargado, por lo que no se inventó ni aplicó.
+- Login administrativo comprobado con la contraseña local `musas2026`. Se agregó el aviso verde «Inicio de sesión exitoso» para panel y clientes, junto con pruebas de regresión.
+- Verificación: 167 pruebas aprobadas; Resumen, Pedidos, Productos, Categorías, Ventas, Pagos, Usuarios y Mi perfil respondieron HTTP 200 en el servidor local.
