@@ -1,19 +1,12 @@
 {% extends "client/base.html" %}
 {% block title %}Finalizar pedido · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Carrito', url_for('cliente.pag_carrito'), 'bi-bag'), ('Retiro y pago', None, 'bi-shop')] %}
 {% block tab_carrito %}active{% endblock %}
 {% block flash %}{% endblock %}
 
 {% block content %}
 {% set d = sesion if sesion else None %}
 <div class="cx-wrap">
-  <nav class="carta-breadcrumb" aria-label="Ruta">
-    <a href="{{ url_for('cliente.home') }}">Inicio</a>
-    <span>/</span>
-    <a href="{{ url_for('cliente.pag_carrito') }}">Carrito</a>
-    <span>/</span>
-    <span class="actual">Finalizar pedido</span>
-  </nav>
-
   <div class="cx-head">
     <div>
       <span class="dp-eyebrow">Retiro en mostrador</span>

@@ -42,6 +42,7 @@
         {
           idProducto: s.idProducto, nombre: s.nombre, precio: s.precio,
           imagen: s.imagen || null, cantidad: 1, cremas: [],
+          admiteCremas: s.categoria === "Hamburguesas" || s.categoria === "Salchipapas",
         },
         this,
         { mensaje: s.nombre + " agregado" }
@@ -118,11 +119,13 @@
     top.appendChild(quitar);
     body.appendChild(top);
 
-    var editar = document.createElement("a");
-    editar.className = "adm-btn-sm";
-    editar.href = "/producto/" + encodeURIComponent(it.idProducto) + "?editar=" + idx;
-    editar.innerHTML = '<i class="bi bi-pencil-square"></i> Editar cantidad y cremas';
-    body.appendChild(editar);
+    if (it.admiteCremas !== false) {
+      var editar = document.createElement("a");
+      editar.className = "adm-btn-sm";
+      editar.href = "/producto/" + encodeURIComponent(it.idProducto) + "?editar=" + idx;
+      editar.innerHTML = '<i class="bi bi-pencil-square"></i> Editar cantidad y cremas';
+      body.appendChild(editar);
+    }
 
     if (it.cremas && it.cremas.length) {
       var chips = document.createElement("div");

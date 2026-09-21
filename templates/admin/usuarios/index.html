@@ -1,5 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}Usuarios · Backoffice {{ nombre_negocio }}{% endblock %}
+{% set _rol = {'superusuario': ' · Superusuarios', 'administrador': ' · Administradores', 'usuario': ' · Clientes'} %}
+{% set migas = [('Usuarios' ~ _rol.get(filtro, '') ~ (' · de baja' if estado == 'baja' else ''), None, 'bi-people')] %}
 {% block nav_usuarios %}is-active{% endblock %}
 
 {% block content %}
@@ -70,6 +72,8 @@
                   <div class="acciones">
                     <button type="button" class="adm-btn-sm" data-user-abrir data-modo="editar"
                       data-id="{{ u.idUsuario }}" data-nombre="{{ u.nombreCompleto }}" data-rol="{{ u.rol }}"
+                      data-dni="{{ u.dni or '' }}" data-nombres="{{ u.nombres }}" data-apellidos="{{ u.apellidos or '' }}"
+                      data-correo="{{ u.correo }}" data-telefono="{{ u.telefono or '' }}"
                       data-activo="{{ 1 if u.activo else 0 }}">
                       <i class="bi bi-person-badge"></i> Editar
                     </button>
@@ -128,8 +132,8 @@
       </div>
 
       <p class="musa-field-hint" data-solo-editar hidden style="margin-top: 14px;">
-        <i class="bi bi-info-circle"></i> Desde aquí solo se cambia el <b>rol</b>. El correo,
-        teléfono y contraseña los edita cada persona en <b>«Mi perfil»</b>.
+        <i class="bi bi-info-circle"></i> Puedes corregir los datos de la cuenta y cambiar su rol.
+        La <b>contraseña</b> solo la cambia cada persona en <b>«Mi perfil»</b>.
       </p>
       <div class="musa-field mt-3" data-solo-editar hidden>
         <label class="musa-field-label" for="pu-activo">Estado</label>
@@ -139,11 +143,11 @@
         </select>
       </div>
 
-      <div class="musa-field mt-3" data-solo-crear>
+      <div class="musa-field mt-3">
         <label class="musa-field-label" for="pu-dni">DNI <span class="musa-field-hint">obligatorio para personal del panel</span></label>
         <input class="musa-input" id="pu-dni" name="dni" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="8 dígitos" />
       </div>
-      <div class="row g-3 mt-0" data-solo-crear>
+      <div class="row g-3 mt-0">
         <div class="col-6 musa-field">
           <label class="musa-field-label" for="pu-nombres">Nombres</label>
           <input class="musa-input" id="pu-nombres" name="nombres" placeholder="Ej. Manuel" />
@@ -153,11 +157,11 @@
           <input class="musa-input" id="pu-apellidos" name="apellidos" placeholder="Ej. Fernández" />
         </div>
       </div>
-      <div class="musa-field mt-3" data-solo-crear>
+      <div class="musa-field mt-3">
         <label class="musa-field-label" for="pu-correo">Correo</label>
         <input class="musa-input" id="pu-correo" name="correo" type="email" placeholder="nombre@correo.com" />
       </div>
-      <div class="musa-field mt-3" data-solo-crear>
+      <div class="musa-field mt-3">
         <label class="musa-field-label" for="pu-telefono">Teléfono</label>
         <input class="musa-input" id="pu-telefono" name="telefono" inputmode="numeric" maxlength="9" pattern="[0-9]{9}" placeholder="9 dígitos" />
       </div>
@@ -206,16 +210,16 @@
       form.reset();
       var editar = b.dataset.modo === "editar";
       form.action = editar ? URL_EDITAR : URL_CREAR;
-      panel.querySelector("[data-user-titulo]").textContent = editar ? "Cambiar rol" : "Agregar usuario";
+      panel.querySelector("[data-user-titulo]").textContent = editar ? "Editar usuario" : "Agregar usuario";
       panel.querySelector("[data-user-sub]").textContent = editar
-        ? "El administrador solo cambia el rol o da de baja la cuenta." : "Elige el rol y completa los datos.";
-      panel.querySelector("[data-user-btn]").textContent = editar ? "Guardar rol" : "Guardar usuario";
+        ? "Corrige los datos, cambia el rol o da de baja la cuenta." : "Elige el rol y completa los datos.";
+      panel.querySelector("[data-user-btn]").textContent = editar ? "Guardar cambios" : "Guardar usuario";
       var submit = document.getElementById("pu-submit");
       if (editar) {
-        submit.dataset.confirm = "Se cambiará el rol de «" + b.dataset.nombre +
-          "». Esto ajusta a qué partes del sistema puede entrar.";
-        submit.dataset.confirmTitulo = "Cambiar rol";
-        submit.dataset.confirmOk = "Guardar rol";
+        submit.dataset.confirm = "Se actualizarán los datos y el rol de «" + b.dataset.nombre +
+          "». El rol define a qué partes del sistema puede entrar.";
+        submit.dataset.confirmTitulo = "Guardar cambios";
+        submit.dataset.confirmOk = "Guardar cambios";
       } else {
         submit.dataset.confirm = "Se creará la cuenta con el rol seleccionado.";
         submit.dataset.confirmTitulo = "Crear usuario";
@@ -228,6 +232,11 @@
         document.getElementById("pu-id").value = b.dataset.id;
         document.getElementById("pu-rol").value = b.dataset.rol;
         document.getElementById("pu-activo").value = b.dataset.activo;
+        document.getElementById("pu-dni").value = b.dataset.dni || "";
+        document.getElementById("pu-nombres").value = b.dataset.nombres || "";
+        document.getElementById("pu-apellidos").value = b.dataset.apellidos || "";
+        document.getElementById("pu-correo").value = b.dataset.correo || "";
+        document.getElementById("pu-telefono").value = b.dataset.telefono || "";
       }
       abrir();
     });

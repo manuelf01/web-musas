@@ -1,5 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}Pedidos · Backoffice {{ nombre_negocio }}{% endblock %}
+{% set _est = {'pendiente': 'Por entregar', 'todos': 'Todos los pedidos', 'recibido': 'Recibidos', 'preparando': 'En preparación', 'listo': 'Listos para cobrar', 'recogido': 'Entregados'} %}
+{% set migas = [('Pedidos', None, 'bi-receipt'), (_est.get(estado, 'Por entregar'), None)] %}
 {% block nav_pedidos %}is-active{% endblock %}
 
 {% macro linea(l) %}
@@ -135,27 +137,26 @@
             <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
             <input type="hidden" name="estado" value="{{ estado }}" />
             <label>Palabra clave del cliente</label>
-            <p class="ped-confirmar__hint">Verifica la clave y registra cómo pagó antes de entregar.</p>
-            <select name="medio_pago" required aria-label="Medio de pago recibido">
-              <option value="efectivo" {{ 'selected' if p.medioPago == 'efectivo' }}>Efectivo</option>
-              <option value="tarjeta" {{ 'selected' if p.medioPago == 'tarjeta' }}>Tarjeta</option>
-              <option value="yape" {{ 'selected' if p.medioPago == 'yape' }}>Yape</option>
-              <option value="plin" {{ 'selected' if p.medioPago == 'plin' }}>Plin</option>
-            </select>
+            <p class="ped-confirmar__hint">Verifica la clave y elige el comprobante. El pago es el que eligió el cliente ({{ p.medioPago|capitalize }}).</p>
             <select name="tipo_comprobante" required aria-label="Tipo de comprobante">
-              <option value="boleta">Boleta</option>
-              <option value="factura">Factura</option>
+              <option value="boleta_simple">Boleta simple (sin DNI)</option>
+              <option value="boleta_dni">Boleta con DNI</option>
+              <option value="factura">Factura (con RUC)</option>
             </select>
-            <input type="text" name="documento" inputmode="numeric" maxlength="8"
-                   pattern="[0-9]{8}" placeholder="DNI (8 dígitos)" required autocomplete="off"
-                   aria-label="DNI o RUC para el comprobante" />
+            <div data-doc-wrap hidden>
+              <input type="text" name="documento" inputmode="numeric" maxlength="8"
+                     pattern="[0-9]{8}" placeholder="DNI (8 dígitos)" autocomplete="off" disabled
+                     aria-label="DNI o RUC para el comprobante" />
+            </div>
             <div data-razon-social hidden>
               <input type="text" name="razon_social" maxlength="200" placeholder="Razón social"
-                     aria-label="Razón social" />
+                     aria-label="Razón social" disabled />
             </div>
             <div class="ped-confirmar__row">
+              {% set clave_mala = request.args.get('clave_error') == p.idPedido|string %}
               <input type="text" name="key" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"
-                     placeholder="0000" required autocomplete="off" aria-label="Palabra clave" />
+                     placeholder="0000" required autocomplete="off" aria-label="Palabra clave"
+                     class="{{ 'is-invalida' if clave_mala }}" {{ 'data-enfocar aria-invalid=true' if clave_mala }} />
               <button type="submit" class="btn-brasa"
                 data-confirm="Se registrará el pago, se entregará el pedido #{{ p.idPedido }} y se emitirá un comprobante para el cliente y caja."
                 data-confirm-titulo="Confirmar cobro y entrega" data-confirm-ok="Cobrar y entregar">

@@ -1,5 +1,6 @@
 {% extends "client/base.html" %}
 {% block title %}Mis pedidos · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Mis pedidos', None, 'bi-receipt')] %}
 {% block nav_pedidos %}active{% endblock %}{% block tab_pedidos %}active{% endblock %}
 
 {% macro mp_badge(estado) -%}

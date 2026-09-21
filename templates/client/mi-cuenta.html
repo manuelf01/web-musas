@@ -1,13 +1,9 @@
 {% extends "client/base.html" %}
 {% block title %}Mi cuenta · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Mi cuenta', None, 'bi-person')] %}
 
 {% block content %}
 <div class="cx-wrap">
-  <nav class="carta-breadcrumb" aria-label="Ruta">
-    <a href="{{ url_for('cliente.home') }}">Inicio</a><span>/</span>
-    <span class="actual">Mi cuenta</span>
-  </nav>
-
   <div class="cx-head">
     <div>
       <h1>Mi cuenta</h1>

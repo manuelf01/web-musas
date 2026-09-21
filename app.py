@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 
 from flask import Flask, request, session, jsonify
+import avisos
 from negocio import SEDE, NOMBRE_NEGOCIO, estado_local
 
 from controllers.admin import *
@@ -12,6 +13,7 @@ from controllers.admin_categoria_producto import *
 from controllers.admin_usuarios import *
 from controllers.admin_pedidos import *
 from controllers.admin_ventas import *
+from controllers.admin_pagos import *
 from controllers.admin_perfil import perfil as admin_perfil
 from seguridad import (
     campo_csrf, token_csrf, csrf_valido, CAMPO_CSRF,
@@ -72,6 +74,8 @@ def _inyectar_sesion():
         "sede": SEDE,
         "nombre_negocio": NOMBRE_NEGOCIO,
         "local_estado": estado_local(),
+        "pop_deshacer": avisos.pop_deshacer,
+        "pop_error_form": avisos.pop_error_form,
     }
 
 
@@ -95,6 +99,7 @@ admin.register_blueprint(categoria_producto)
 admin.register_blueprint(usuarios)
 admin.register_blueprint(pedidos)
 admin.register_blueprint(ventas)
+admin.register_blueprint(pagos)
 admin.register_blueprint(admin_perfil)
 admin.register_blueprint(auth)
 cliente.register_blueprint(auth)

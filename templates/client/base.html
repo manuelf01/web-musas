@@ -90,6 +90,14 @@
       </div>
     </header>
 
+    {% if migas %}
+    <div class="migas-barra">
+      {% with migas_raiz={'texto': 'Inicio', 'url': url_for('cliente.home'), 'icono': 'bi-house-door-fill'}, migas_clase='migas--tienda' %}
+        {% include '_migas.html' %}
+      {% endwith %}
+    </div>
+    {% endif %}
+
     <main>
       {% block flash %}{% include "client/_flash.html" %}{% endblock %}
       {% block content %}{% endblock %}

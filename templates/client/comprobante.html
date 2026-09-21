@@ -1,5 +1,6 @@
 {% extends "client/base.html" %}
 {% block title %}Comprobante {{ c.numero }} · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Mis pedidos', url_for('cliente.mis_pedidos'), 'bi-receipt'), ('Pedido N° ' ~ c.idPedido, None), ('Comprobante ' ~ c.numero, None, 'bi-file-earmark-text')] %}
 {% block nav_pedidos %}is-active{% endblock %}
 {% block tab_pedidos %}is-active{% endblock %}
 
@@ -12,7 +13,14 @@
     </a>
   </div>
 
-  <div class="adm-recibo">
+  {% if c.anulado %}
+    <div class="vanulado" role="status" style="margin-bottom: 16px;">
+      <i class="bi bi-slash-circle-fill"></i>
+      <div><strong>Este comprobante fue anulado el {{ c.fechaAnulacion }}</strong>
+        <p>Motivo: {{ c.motivoAnulacion }}. No tiene validez como comprobante de venta.</p></div>
+    </div>
+  {% endif %}
+  <div class="adm-recibo {{ 'adm-recibo--anulado' if c.anulado }}">
       <div class="adm-recibo__cinta"></div>
       <div class="adm-recibo__in">
         <div class="adm-recibo__cab">

@@ -44,6 +44,16 @@ class CategoriaProducto:
         return categoria
 
     @staticmethod
+    def ultimo_id():
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("SELECT COALESCE(MAX(idCategoria), 0) FROM categoriaProducto")
+                return int(cursor.fetchone()[0])
+        finally:
+            conexion.close()
+
+    @staticmethod
     def cambiar_estado(idCategoria, activo):
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:

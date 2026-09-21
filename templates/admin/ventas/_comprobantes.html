@@ -1,0 +1,58 @@
+{% set hay_filtros = filtros.q or filtros.tipo or filtros.medio or filtros.desde or filtros.hasta or filtros.estado %}
+{% if comprobantes %}
+  <div class="adm-tabla-wrap">
+    <table class="adm-tabla">
+      <thead>
+        <tr>
+          <th>Comprobante</th><th>Cliente</th><th>Forma de pago</th>
+          <th class="num">Subtotal</th><th class="num">IGV (18%)</th><th class="num">Total</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in comprobantes %}
+          <tr class="{{ 'fila-anulada' if c.anulado }}">
+            <td>
+              <strong style="font-family: 'Space Grotesk', sans-serif;">{{ c.numero }}</strong>
+              {% if c.anulado %}<span class="vbadge-anulado"><i class="bi bi-slash-circle-fill"></i> Anulada</span>{% endif %}
+              <span class="adm-badge-cat" style="margin-left: 6px;">{{ 'Factura' if c.tipoComprobante == 'factura' else 'Boleta' }}</span><br />
+              <span style="color: var(--musa-texto-suave); font-size: 12px;">{{ c.fecha }} · {{ c.hora }}</span>
+            </td>
+            <td>
+              <div class="adm-prod-cel">
+                <span class="adm-thumb adm-avatar--sm" style="font-size:11px; color: var(--musa-brasa); font-family:'Space Grotesk',sans-serif; width:34px; height:34px;">{{ c.iniciales }}</span>
+                <div><strong style="font-size:13px;">{{ c.cliente }}</strong>
+                  <p>{% if c.dni %}{{ 'RUC' if c.tipoComprobante == 'factura' else 'DNI' }} {{ c.dni }}{% else %}Sin documento{% endif %}</p></div>
+              </div>
+            </td>
+            <td>
+              <span class="adm-badge-pago {{ 'digital' if c.formaPago != 'Efectivo' else 'efectivo' }}">
+                <i class="bi {{ 'bi-qr-code' if c.formaPago != 'Efectivo' else 'bi-cash' }}"></i> {{ c.formaPago }}
+              </span>
+            </td>
+            <td class="num">S/ {{ '%.2f'|format(c.subTotal) }}</td>
+            <td class="num">S/ {{ '%.2f'|format(c.igv) }}</td>
+            <td class="num" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(c.montoTotal) }}</td>
+            <td>
+              <a class="adm-btn-sm" href="{{ url_for('admin.ventas.show_detalle', idComprobante=c.idComprobante) }}">
+                <i class="bi bi-eye"></i> Ver detalle
+              </a>
+              <a class="adm-btn-sm mt-1" data-loader-skip href="{{ url_for('admin.ventas.descargar_pdf', idComprobante=c.idComprobante) }}">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ total }} comprobante{{ '' if total == 1 else 's' }}{{ ' con estos filtros' if hay_filtros }}</p>
+  <div class="adm-pag">{{ pagination.links }}</div>
+{% elif hay_filtros %}
+  <p class="adm-vacio"><i class="bi bi-search d-block mb-2" style="font-size: 32px;"></i>
+    Ningún comprobante coincide con estos filtros. Prueba con otro texto o pulsa «Limpiar».
+  </p>
+{% else %}
+  <p class="adm-vacio"><i class="bi bi-receipt-cutoff d-block mb-2" style="font-size: 32px;"></i>
+    Todavía no se ha emitido ningún comprobante. Se generan al entregar un pedido con su palabra clave.
+  </p>
+{% endif %}

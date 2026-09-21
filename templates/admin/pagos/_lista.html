@@ -1,0 +1,65 @@
+{% set iconos = {'Efectivo': 'bi-cash-coin', 'Yape': 'bi-qr-code', 'Plin': 'bi-phone', 'Tarjeta': 'bi-credit-card-2-front'} %}
+
+<div class="vpagos-grid">
+  <div class="vpago vpago--total">
+    <span class="vpago__label">Total cobrado</span>
+    <strong class="vpago__monto">S/ {{ '%.2f'|format(resumen.total) }}</strong>
+    <span class="vpago__sub">{{ resumen.cantidad }} pago{{ '' if resumen.cantidad == 1 else 's' }} vigente{{ '' if resumen.cantidad == 1 else 's' }}</span>
+    {% if resumen.anulado.cantidad %}
+      <span class="vpago__anul"><i class="bi bi-slash-circle"></i> {{ resumen.anulado.cantidad }} anulado{{ '' if resumen.anulado.cantidad == 1 else 's' }} · S/ {{ '%.2f'|format(resumen.anulado.total) }} (no suma)</span>
+    {% endif %}
+  </div>
+  {% for m in resumen.medios %}
+    <div class="vpago {{ 'is-activo' if filtros.medio == m.medio }}">
+      <span class="vpago__label"><i class="bi {{ iconos.get(m.medio, 'bi-wallet2') }}"></i> {{ m.medio }}</span>
+      <strong class="vpago__monto">S/ {{ '%.2f'|format(m.total) }}</strong>
+      <span class="vpago__sub">{{ m.cantidad }} pago{{ '' if m.cantidad == 1 else 's' }} · {{ m.pct }}%</span>
+      <div class="adm-bar"><div style="width: {{ m.pct }}%;"></div></div>
+    </div>
+  {% endfor %}
+</div>
+
+{% set hay_filtros = filtros.q or filtros.medio or filtros.estado %}
+{% if pagos %}
+  <div class="adm-tabla-wrap">
+    <table class="adm-tabla">
+      <thead>
+        <tr><th>Fecha y hora</th><th>Pedido</th><th>Cliente</th><th>Medio</th><th class="num">Monto</th><th>Registró</th><th>Comprobante</th></tr>
+      </thead>
+      <tbody>
+        {% for p in pagos %}
+          <tr class="{{ 'fila-anulada' if p.anulado }}">
+            <td><strong style="font-family: 'Space Grotesk', sans-serif;">{{ p.fecha }}</strong><br />
+              <span style="color: var(--musa-texto-suave); font-size: 12px;">{{ p.hora }}</span></td>
+            <td>N.° {{ p.idPedido }}</td>
+            <td>
+              <div class="adm-prod-cel">
+                <span class="adm-thumb adm-avatar--sm" style="font-size:11px; color: var(--musa-brasa); font-family:'Space Grotesk',sans-serif; width:34px; height:34px;">{{ p.iniciales }}</span>
+                <div><strong style="font-size:13px;">{{ p.cliente }}</strong></div>
+              </div>
+            </td>
+            <td>
+              <span class="adm-badge-pago {{ 'digital' if p.medio != 'Efectivo' else 'efectivo' }}">
+                <i class="bi {{ iconos.get(p.medio, 'bi-wallet2') }}"></i> {{ p.medio }}
+              </span>
+            </td>
+            <td class="num" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(p.monto) }}</td>
+            <td>{{ p.cajero }}</td>
+            <td>
+              <a class="adm-btn-sm" href="{{ url_for('admin.ventas.show_detalle', idComprobante=p.idComprobante) }}">
+                <i class="bi bi-receipt"></i> {{ p.numero }}</a>
+              {% if p.anulado %}<span class="vbadge-anulado"><i class="bi bi-slash-circle-fill"></i> Anulado</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ total }} pago{{ '' if total == 1 else 's' }}{{ ' con estos filtros' if hay_filtros }}</p>
+  <div class="adm-pag">{{ pagination.links }}</div>
+{% else %}
+  <p class="adm-vacio"><i class="bi bi-wallet2 d-block mb-2" style="font-size: 32px;"></i>
+    {% if hay_filtros or filtros.desde or filtros.hasta %}No hay pagos con estos filtros. Prueba con otro período o pulsa «Todo».
+    {% else %}Todavía no hay pagos registrados. Se registran al cobrar y entregar un pedido.{% endif %}
+  </p>
+{% endif %}

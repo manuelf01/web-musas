@@ -1,5 +1,6 @@
 {% extends "admin/base.html" %}
 {% block title %}{{ c.numero }} · Comprobante{% endblock %}
+{% set migas = [('Ventas y caja', None, 'bi-cash-stack'), ('Ventas', url_for('admin.ventas.home')), ('Comprobante ' ~ c.numero, None, 'bi-file-earmark-text')] %}
 {% block nav_ventas %}is-active{% endblock %}
 
 {% block content %}
@@ -14,12 +15,33 @@
 <div class="adm-head" style="margin-bottom: 20px;">
   <div>
     <h1>Comprobante {{ c.numero }}</h1>
-    <p><i class="bi bi-check-circle-fill" style="color: var(--musa-exito);"></i> Emitido · pedido #{{ c.idPedido }}</p>
+    {% if c.anulado %}
+      <p><i class="bi bi-slash-circle-fill" style="color: var(--musa-peligro);"></i> <b style="color: var(--musa-peligro);">Anulado</b> · pedido #{{ c.idPedido }}</p>
+    {% else %}
+      <p><i class="bi bi-check-circle-fill" style="color: var(--musa-exito);"></i> Emitido · pedido #{{ c.idPedido }}</p>
+    {% endif %}
   </div>
 </div>
 
+{% if c.anulado %}
+  <div class="vanulado" role="status">
+    <i class="bi bi-slash-circle-fill"></i>
+    <div>
+      <strong>Venta anulada el {{ c.fechaAnulacion }}{% if c.anuladoPor %} por {{ c.anuladoPor }}{% endif %}</strong>
+      <p>Motivo: {{ c.motivoAnulacion }}{% if c.stockDevuelto %} · Los productos volvieron al inventario.{% endif %}</p>
+    </div>
+    <form method="post" action="{{ url_for('admin.ventas.restaurar', idComprobante=c.idComprobante) }}">
+      {{ campo_csrf() }}
+      <button class="btn-contorno" type="submit"
+        data-confirm="La venta volverá a contar en los totales{% if c.stockDevuelto %} y se descontarán otra vez los productos del inventario{% endif %}."
+        data-confirm-titulo="Deshacer la anulación" data-confirm-ok="Sí, restaurar venta">
+        <i class="bi bi-arrow-counterclockwise"></i> Deshacer anulación</button>
+    </form>
+  </div>
+{% endif %}
+
 <div class="adm-recibo-wrap">
-  <div class="adm-recibo">
+  <div class="adm-recibo {{ 'adm-recibo--anulado' if c.anulado }}">
     <div class="adm-recibo__cinta"></div>
     <div class="adm-recibo__in">
       <div class="adm-recibo__cab">
@@ -106,6 +128,25 @@
       </div>
     {% endif %}
     <p class="small mt-3 mb-0" style="color:var(--musa-texto-suave);">Comprobante interno de la operación. No es un comprobante electrónico enviado a SUNAT.</p>
+
+    {% if not c.anulado %}
+    <form method="post" action="{{ url_for('admin.ventas.anular', idComprobante=c.idComprobante) }}" class="vanular">
+      {{ campo_csrf() }}
+      <h4><i class="bi bi-slash-circle"></i> Anular esta venta</h4>
+      <p>El comprobante se conserva marcado como anulado y deja de sumar en las ventas.</p>
+      <label class="musa-field-label" for="anular-motivo">Motivo (obligatorio)</label>
+      <textarea id="anular-motivo" name="motivo" class="musa-input" rows="2" minlength="5" maxlength="255" required
+                placeholder="Ej. Cobro duplicado, cliente devolvió el pedido…"></textarea>
+      <label class="vanular__check">
+        <input type="checkbox" name="devolver_stock" value="1" />
+        Devolver los productos al inventario
+      </label>
+      <button type="submit" class="btn-peligro"
+        data-confirm="El comprobante {{ c.numero }} (S/ {{ '%.2f'|format(c.montoTotal) }}) quedará anulado y dejará de contar en las ventas. Podrás deshacerlo desde esta misma pantalla."
+        data-confirm-titulo="Anular venta" data-confirm-ok="Sí, anular" data-confirm-tono="peligro">
+        <i class="bi bi-slash-circle"></i> Anular venta</button>
+    </form>
+    {% endif %}
   </aside>
 </div>
 {% endblock %}

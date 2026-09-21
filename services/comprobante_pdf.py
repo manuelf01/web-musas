@@ -217,7 +217,25 @@ def generar_comprobante_pdf(comprobante):
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))
 
-    historia = [cabecera, Spacer(1, 7 * mm), direccion, Spacer(1, 5 * mm), tabla_datos,
+    aviso_anulado = []
+    if comprobante.get("anulado"):
+        motivo = _texto(comprobante.get("motivoAnulacion") or "—")
+        fecha_anul = _texto(comprobante.get("fechaAnulacion") or "")
+        aviso_anulado = [
+            Table([[Paragraph(
+                f"<b>COMPROBANTE ANULADO</b> · {fecha_anul}<br/>Motivo: {motivo}. "
+                "No tiene validez como comprobante de venta.",
+                ParagraphStyle("anulado", fontName="InterMusas", fontSize=9.5, leading=13,
+                               textColor=colors.white))]],
+                  colWidths=[174 * mm],
+                  style=TableStyle([
+                      ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#D62839")),
+                      ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                      ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                  ])),
+            Spacer(1, 5 * mm),
+        ]
+    historia = aviso_anulado + [cabecera, Spacer(1, 7 * mm), direccion, Spacer(1, 5 * mm), tabla_datos,
                 Spacer(1, 6 * mm), tabla_lineas, Spacer(1, 5 * mm), totales]
     historia.append(Spacer(1, 5 * mm))
     historia.append(Paragraph(

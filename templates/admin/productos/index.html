@@ -1,5 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}Productos · Backoffice {{ nombre_negocio }}{% endblock %}
+{% set _est = {'sin_stock': 'Productos · Sin stock', 'baja': 'Productos · De baja', 'todos': 'Productos · Todos'} %}
+{% set migas = [('Gestión', None, 'bi-egg-fried'), (_est.get(estado, 'Productos'), None)] %}
 {% block nav_productos %}is-active{% endblock %}
 
 {% block content %}

@@ -1,5 +1,10 @@
 {% extends "client/base.html" %}
 {% block title %}{{ producto.nombre }} · {{ nombre_negocio }}{% endblock %}
+{% if editar_indice is not none %}
+  {% set migas = [('Carrito', url_for('cliente.pag_carrito'), 'bi-bag'), ('Editar ' ~ producto.nombre, None, 'bi-pencil')] %}
+{% else %}
+  {% set migas = [('Carta', url_for('cliente.carta'), 'bi-card-list'), (producto.nombreCategoria, url_for('cliente.productos_categoria', categoria=producto.nombreCategoria)), (producto.nombre, None)] %}
+{% endif %}
 {% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}
 
 {% block meta_desc %}{{ producto.descripcion | truncate(180) }}{% endblock %}
@@ -15,17 +20,9 @@
      data-nombre="{{ producto.nombre }}"
      data-precio="{{ producto.precio or 0 }}"
      data-imagen="{{ producto.imagen or '' }}"
+     data-admite-cremas="{{ '1' if admite_cremas else '0' }}"
      data-editar-indice="{{ editar_indice if editar_indice is not none else '' }}"
      data-carrito-url="{{ url_for('cliente.pag_carrito') }}">
-
-  <!-- Breadcrumb -->
-  <nav class="carta-breadcrumb" aria-label="Ruta">
-    <a href="{{ url_for('cliente.home') }}">Inicio</a>
-    <span>/</span>
-    <a href="{{ url_for('cliente.productos_categoria', categoria=producto.nombreCategoria) }}">{{ producto.nombreCategoria }}</a>
-    <span>/</span>
-    <span class="actual">{{ producto.nombre }}</span>
-  </nav>
 
   <div class="dp-grid">
     <!-- Columna imagen -->

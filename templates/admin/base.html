@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <script>document.documentElement.classList.add("musa-js");</script>
+    <script>try { if (localStorage.getItem("musa.adm.menu") === "colapsado") document.documentElement.classList.add("adm-colapsado"); } catch (e) {}</script>
     <title>{% block title %}Backoffice · {{ nombre_negocio }}{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,35 +31,67 @@
     {% with loader_texto='Preparando el panel…' %}{% include '_loader.html' %}{% endwith %}
     <aside class="adm-side">
       <div>
-        <div class="adm-side__brand">
-          <div class="adm-marca-full musa-brand musa-brand--inverso">
+        <div class="adm-side__brand musa-brand musa-brand--inverso">
+          <button type="button" class="adm-side__toggle" data-adm-toggle aria-controls="menu-admin"
+                  aria-expanded="true" aria-label="Contraer menú" title="Contraer menú">
             <img class="musa-logo musa-logo--simbolo" src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" alt="" />
-            <span class="musa-brand__nombre">{{ nombre_negocio }}</span>
-          </div>
-          <img class="adm-marca-mini musa-logo--simbolo" src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" alt="{{ nombre_negocio }}" />
+          </button>
+          <span class="musa-brand__nombre">{{ nombre_negocio }}</span>
         </div>
-        <nav class="adm-nav">
-          <a href="{{ url_for('admin.home') }}" class="{% block nav_resumen %}{% endblock %}" title="Resumen">
+        {% set ep = request.endpoint or '' %}
+        {% set a_res = ep == 'admin.home' %}
+        {% set a_ped = ep == 'admin.pedidos.home' %}
+        {% set a_prod = ep == 'admin.productos.home' %}
+        {% set a_cat = ep == 'admin.categoria.home' %}
+        {% set a_vent = ep.startswith('admin.ventas') %}
+        {% set a_pag = ep == 'admin.pagos.home' %}
+        {% set a_usr = ep == 'admin.usuarios.home' %}
+        {% set a_perfil = ep == 'admin.perfil.home' %}
+
+        {% macro grupo(id, icono, titulo, activo) -%}
+        <div class="adm-grupo {{ 'is-activo is-abierto' if activo }}" data-grupo="{{ id }}">
+          <button type="button" class="adm-grupo__cab" aria-expanded="{{ 'true' if activo else 'false' }}"
+                  aria-controls="sub-{{ id }}" title="{{ titulo }}">
+            <i class="bi {{ icono }}"></i><span>{{ titulo }}</span><i class="bi bi-chevron-down adm-grupo__flecha"></i>
+          </button>
+          <div class="adm-grupo__sub" id="sub-{{ id }}" role="group" aria-label="{{ titulo }}">
+            <p class="adm-grupo__titulo">{{ titulo }}</p>
+            {{ caller() }}
+          </div>
+        </div>
+        {%- endmacro %}
+        {% macro sub(url, texto, activo, ayuda='') -%}
+        <a href="{{ url }}" class="adm-sub__item {{ 'is-active' if activo }}"{% if activo %} aria-current="page"{% endif %}{% if ayuda %} title="{{ ayuda }}"{% endif %}>{{ texto }}</a>
+        {%- endmacro %}
+
+        {# Solo pantallas de destino. Filtros y acciones viven dentro de cada pantalla. Un módulo
+           con una sola pantalla no lleva submenú: va como ítem suelto. #}
+        <nav class="adm-nav" id="menu-admin" aria-label="Menú del panel">
+          <a href="{{ url_for('admin.home') }}" class="adm-nav__item {{ 'is-active' if a_res }}" title="Resumen del día">
             <i class="bi bi-grid-1x2"></i> <span>Resumen</span>
           </a>
-          <a href="{{ url_for('admin.pedidos.home') }}" class="{% block nav_pedidos %}{% endblock %}" title="Pedidos">
+
+          <a href="{{ url_for('admin.pedidos.home') }}" class="adm-nav__item {{ 'is-active' if a_ped }}" title="RS 6 y 9.1 · Consultar pedidos, actualizar su estado, cancelar y cobrar al entregar">
             <i class="bi bi-receipt"></i> <span>Pedidos</span>
           </a>
-          <a href="{{ url_for('admin.productos.home') }}" class="{% block nav_productos %}{% endblock %}" title="Productos">
-            <i class="bi bi-egg-fried"></i> <span>Productos</span>
-          </a>
-          <a href="{{ url_for('admin.categoria.home') }}" class="{% block nav_categorias %}{% endblock %}" title="Categorías">
-            <i class="bi bi-tags"></i> <span>Categorías</span>
-          </a>
+
+          {% call grupo('gestion', 'bi-egg-fried', 'Gestión', a_prod or a_cat) %}
+            {{ sub(url_for('admin.productos.home'), 'Productos', a_prod, 'RS 3 y 5.2 · Registrar, modificar, consultar y dar de baja productos; actualizar su stock') }}
+            {{ sub(url_for('admin.categoria.home'), 'Categorías', a_cat, 'RS 4 · Registrar, modificar, consultar y dar de baja categorías') }}
+          {% endcall %}
+
+          {% call grupo('ventas', 'bi-cash-stack', 'Ventas y caja', a_vent or a_pag) %}
+            {{ sub(url_for('admin.ventas.home'), 'Ventas', a_vent, 'RS 10, 11, 13 y 14 · Consultar ventas y comprobantes, y anularlas') }}
+            {{ sub(url_for('admin.pagos.home'), 'Pagos', a_pag, 'RS 9 · Consultar los pagos cobrados por medio') }}
+          {% endcall %}
+
           {% if usuario and usuario.rol == 'superusuario' %}
-          <a href="{{ url_for('admin.usuarios.home') }}" class="{% block nav_usuarios %}{% endblock %}" title="Usuarios">
+          <a href="{{ url_for('admin.usuarios.home') }}" class="adm-nav__item {{ 'is-active' if a_usr }}" title="RS 1 y 2 · Registrar, modificar y consultar usuarios">
             <i class="bi bi-people"></i> <span>Usuarios</span>
           </a>
           {% endif %}
-          <a href="{{ url_for('admin.ventas.home') }}" class="{% block nav_ventas %}{% endblock %}" title="Ventas">
-            <i class="bi bi-graph-up"></i> <span>Ventas</span>
-          </a>
-          <a href="{{ url_for('admin.perfil.home') }}" class="{% block nav_perfil %}{% endblock %}" title="Mi perfil">
+
+          <a href="{{ url_for('admin.perfil.home') }}" class="adm-nav__item adm-nav__item--util {{ 'is-active' if a_perfil }}" title="RS 2.2 · Corregir mis propios datos">
             <i class="bi bi-person-gear"></i> <span>Mi perfil</span>
           </a>
         </nav>
@@ -89,20 +122,57 @@
 
     <div class="adm-main">
       <header class="adm-topbar">
-        <span class="adm-topbar__local">{{ nombre_negocio }} - Chiclayo</span>
-        <a href="{{ url_for('cliente.home') }}" class="adm-topbar__link" target="_blank">
-          <i class="bi bi-shop"></i> Ver tienda
-        </a>
+        {% if migas %}
+          {% with migas_raiz={'texto': 'Panel', 'url': url_for('admin.home'), 'icono': 'bi-grid-1x2-fill'}, migas_clase='migas--panel' %}
+            {% include '_migas.html' %}
+          {% endwith %}
+        {% else %}
+          <span class="adm-topbar__local">{{ nombre_negocio }} - Chiclayo</span>
+        {% endif %}
+        <div class="adm-topbar__der">
+          {% if migas %}<span class="adm-topbar__local adm-topbar__local--der">{{ nombre_negocio }} · Chiclayo</span>{% endif %}
+          <a href="{{ url_for('cliente.home') }}" class="adm-topbar__link" target="_blank">
+            <i class="bi bi-shop"></i> <span class="adm-topbar__txt">Ver tienda</span>
+          </a>
+        </div>
       </header>
 
       <main class="adm-content">
         {% with mensajes = get_flashed_messages(with_categories=true) %}
-          {% for categoria, mensaje in mensajes %}
-            <div class="musa-alert {{ 'musa-alert--ok' if categoria == 'ok' }} d-flex gap-2 mb-3">
-              <i class="bi {{ 'bi-check-circle-fill' if categoria == 'ok' else 'bi-exclamation-triangle-fill' }} mt-1"></i>
-              <div class="small">{{ mensaje }}</div>
-            </div>
-          {% endfor %}
+          {% if mensajes %}
+          {% set undo = pop_deshacer() %}
+          {% set errf = pop_error_form() %}
+          {% set ns = namespace(undo=false, err=false) %}
+          <div class="aviso-pila" role="region" aria-label="Avisos">
+            {% for categoria, mensaje in mensajes %}
+              {% set ok = categoria == 'ok' %}
+              {% set con_undo = ok and undo and not ns.undo %}
+              {% set con_err = (not ok) and errf and not ns.err %}
+              {% if con_undo %}{% set ns.undo = true %}{% endif %}
+              {% if con_err %}{% set ns.err = true %}{% endif %}
+              {% set ms = 10000 if con_undo else (12000 if con_err else (5000 if ok else 8000)) %}
+              <div class="aviso {{ 'aviso--ok' if ok else 'aviso--error' }}" role="{{ 'status' if ok else 'alert' }}" data-aviso>
+                <span class="aviso__icono"><i class="bi {{ 'bi-check-lg' if ok else 'bi-exclamation-lg' }}"></i></span>
+                <div class="aviso__texto">
+                  <strong>{{ 'Listo' if ok else 'Atención' }}</strong>
+                  <span>{{ mensaje }}</span>
+                  {% if con_undo %}
+                    <form method="post" action="{{ undo.url }}" class="aviso__form" data-loader-skip-form>
+                      {{ campo_csrf() }}
+                      {% for k, v in undo.campos.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}" />{% endfor %}
+                      <button type="submit" class="aviso__accion"><i class="bi bi-arrow-counterclockwise"></i> {{ undo.etiqueta }}</button>
+                    </form>
+                  {% elif con_err and errf.campo %}
+                    <button type="button" class="aviso__accion" data-ver-donde><i class="bi bi-crosshair"></i> Ver dónde me equivoqué</button>
+                  {% endif %}
+                </div>
+                <button type="button" class="aviso__cerrar" aria-label="Cerrar aviso"><i class="bi bi-x-lg"></i></button>
+                <span class="aviso__tiempo" style="animation-duration: {{ ms }}ms"></span>
+              </div>
+            {% endfor %}
+          </div>
+          {% if errf and errf.campo %}<script type="application/json" id="musa-error-form">{{ errf | tojson }}</script>{% endif %}
+          {% endif %}
         {% endwith %}
         {% block content %}{% endblock %}
       </main>
@@ -115,6 +185,8 @@
     ></script>
     <script src="{{ url_for('static', filename='js/ui-comun.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/loader.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/avisos.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/admin-menu.js') }}" defer></script>
     <script src="{{ url_for('static', filename='js/estado-local.js') }}" defer></script>
     {% block scripts %}{% endblock %}
   </body>

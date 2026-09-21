@@ -1,0 +1,31 @@
+{# Gráfico de barras responsivo. Uso: {% from 'admin/ventas/_grafico.html' import grafico %}{{ grafico(serie, 'texto para lectores de pantalla') }} #}
+{% macro grafico(s, descripcion) %}
+  {% if s.vacio %}
+    <p class="adm-vacio vchart-vacio"><i class="bi bi-bar-chart d-block mb-2" style="font-size: 30px;"></i>
+      Sin ventas cobradas en este período.</p>
+  {% else %}
+    <div class="vchart {{ 'vchart--denso' if s.denso }}" role="img"
+         aria-label="{{ descripcion }}: {{ s.ventas }} de {{ s.n }} con ventas, total S/ {{ '%.2f'|format(s.total) }}">
+      <div class="vchart__eje" aria-hidden="true">
+        <span>S/ {{ '%g'|format(s.tope) }}</span>
+        <span>S/ {{ '%g'|format(s.mitad) }}</span>
+        <span>0</span>
+      </div>
+      <div class="vchart__scroll">
+        <div class="vchart__plot" style="--n: {{ s.n }};">
+          {% for d in s.barras %}
+            <div class="vchart__col {{ 'es-hoy' if d.hoy }} {{ 'sin-venta' if not d.monto }}" tabindex="0"
+                 style="--p: {{ d.pct }}%;"
+                 data-tip="{{ d.tip }} · S/ {{ '%.2f'|format(d.monto) }}">
+              <div class="vchart__pista">
+                {% if d.monto and not s.denso %}<span class="vchart__monto">{{ '%.0f'|format(d.monto) }}</span>{% endif %}
+                <div class="vchart__barra"></div>
+              </div>
+              <span class="vchart__label">{{ d.label if d.etiquetar else '' }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+{% endmacro %}

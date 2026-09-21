@@ -205,6 +205,16 @@ class Producto:
             conexion.close()
 
     @staticmethod
+    def ultimo_id():
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("SELECT COALESCE(MAX(idProducto), 0) FROM producto")
+                return int(cursor.fetchone()[0])
+        finally:
+            conexion.close()
+
+    @staticmethod
     def obtener_producto_por_id(id):
         conexion = obtener_conexion()
         seleccion = None

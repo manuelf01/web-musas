@@ -3,6 +3,9 @@ from controllers.admin import admin
 from model.CategoriaProducto import CategoriaProducto
 from model.Producto import Producto
 from subidas import guardar_imagen, guardar_desde_url
+from avisos import ok_deshacer, error_en_formulario
+import os
+import re
 
 categoria_producto = Blueprint("categoria", __name__, url_prefix='/categorias')
 
@@ -12,6 +15,10 @@ def _imagen_del_form():
     if archivo and archivo.filename:
         ruta = guardar_imagen(archivo, "categorias")
         return ruta, (None if ruta else "La imagen no es válida (JPG, PNG o WEBP, máx. 5 MB).")
+    previa = (request.form.get("imagen_ruta") or "").strip()
+    if previa and re.fullmatch(r"categorias/[\w.\-]+", previa) and \
+            os.path.isfile(os.path.join("static", "img", *previa.split("/"))):
+        return previa, None
     enlace = (request.form.get("imagen_url") or "").strip()
     if enlace:
         ruta = guardar_desde_url(enlace, "categorias")
@@ -60,29 +67,42 @@ def editar(id):
 def guardar():
     imagen, err = _imagen_del_form()
     if err:
-        flash(err, "error")
+        error_en_formulario(err, "crear", request.form, obligatorios=("nombreCategoria",))
         return redirect(url_for("admin.categoria.home"))
     err = CategoriaProducto.insertar_categoria(
         request.form.get("nombreCategoria"), request.form.get("descripcion"), imagen)
-    flash(err or "Categoría creada.", "error" if err else "ok")
+    if err:
+        error_en_formulario(err, "crear", request.form, obligatorios=("nombreCategoria",))
+    else:
+        ok_deshacer("Categoría creada.", url_for("admin.categoria.estado"),
+                    {"idCategoria": CategoriaProducto.ultimo_id(), "activar": 0, "volver": "activas"})
     return redirect(url_for('admin.categoria.home'))
 
 
 @categoria_producto.route("/actualizar", methods=["POST"])
 def actualizar():
+    id_cat = request.form.get("idCategoria")
+    antes = next((c for c in CategoriaProducto.obtener_categorias() if str(c[0]) == str(id_cat)), None)
     imagen, err = _imagen_del_form()
     if err:
-        flash(err, "error")
+        error_en_formulario(err, "editar", request.form, id_cat, ("nombreCategoria",))
         return redirect(url_for("admin.categoria.home"))
     err = CategoriaProducto.actualizar_categoria(
         request.form.get("nombreCategoria"), request.form.get("descripcion"),
         request.form.get("idCategoria"), imagen)
     if err:
-        flash(err, "error")
+        error_en_formulario(err, "editar", request.form, id_cat, ("nombreCategoria",))
     else:
-        CategoriaProducto.cambiar_estado(
-            request.form.get("idCategoria"), request.form.get("activo", "1") == "1")
-        flash("Categoría actualizada." + (" Imagen cambiada." if imagen else ""), "ok")
+        CategoriaProducto.cambiar_estado(id_cat, request.form.get("activo", "1") == "1")
+        mensaje = "Categoría actualizada." + (" Imagen cambiada." if imagen else "")
+        if antes:
+            ok_deshacer(mensaje, url_for("admin.categoria.actualizar"), {
+                "idCategoria": id_cat, "nombreCategoria": antes[1], "descripcion": antes[2] or "",
+                "activo": 1 if (len(antes) <= 4 or antes[4]) else 0,
+                "imagen_ruta": antes[3] if (imagen and antes[3]) else "",
+            })
+        else:
+            flash(mensaje, "ok")
     return redirect(url_for("admin.categoria.home"))
 
 
@@ -90,9 +110,12 @@ def actualizar():
 def estado():
     activar = request.form.get("activar") == "1"
     CategoriaProducto.cambiar_estado(request.form["idCategoria"], activar)
-    flash("Categoría reactivada." if activar
-          else "Categoría eliminada de la carta (sus productos dejan de mostrarse).", "ok")
-    return redirect(url_for("admin.categoria.home", estado=request.form.get("volver", "activas")))
+    volver = request.form.get("volver", "activas")
+    ok_deshacer("Categoría reactivada." if activar
+                else "Categoría eliminada de la carta (sus productos dejan de mostrarse).",
+                url_for("admin.categoria.estado"),
+                {"idCategoria": request.form["idCategoria"], "activar": 0 if activar else 1, "volver": volver})
+    return redirect(url_for("admin.categoria.home", estado=volver))
 
 
 @categoria_producto.route("/eliminar", methods=["POST"])

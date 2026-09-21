@@ -314,6 +314,7 @@ def comprar_producto(id):
         logueado=bool(session.get("cliente.auth")),
         producto=producto,
         cremas=cremas,
+        admite_cremas=producto["nombreCategoria"] in CATEGORIAS_CON_CREMAS,
         editar_indice=request.args.get("editar", type=int),
     )
 

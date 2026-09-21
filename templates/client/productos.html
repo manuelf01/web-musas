@@ -1,5 +1,6 @@
 {% extends "client/base.html" %}
 {% block title %}{{ categoria }} · Carta — {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Carta', url_for('cliente.carta'), 'bi-card-list'), (categoria, None)] %}
 {% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}
 
 {% block content %}
@@ -9,15 +10,6 @@
 {% endwith %}
 
 <div class="musa-shell carta-wrap">
-  <!-- Breadcrumb -->
-  <nav class="carta-breadcrumb" aria-label="Ruta">
-    <a href="{{ url_for('cliente.home') }}">Inicio</a>
-    <span>/</span>
-    <a href="{{ url_for('cliente.carta') }}">Carta</a>
-    <span>/</span>
-    <span class="actual">{{ categoria }}</span>
-  </nav>
-
   <!-- Encabezado -->
   <div class="carta-head">
     <div class="carta-head__titulo">

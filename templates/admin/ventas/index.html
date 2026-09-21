@@ -1,8 +1,14 @@
 {% extends "admin/base.html" %}
+{% from 'admin/ventas/_grafico.html' import grafico %}
 {% block title %}Ventas · Backoffice {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Ventas y caja', None, 'bi-cash-stack'), ('Ventas' ~ (' · Anuladas' if filtros.estado == 'anulado' else ''), None)] %}
 {% block nav_ventas %}is-active{% endblock %}
 
 {% block content %}
+{% set hoy_anio = hoy[:4] | int %}
+{% set hoy_mes = hoy[5:7] | int %}
+{% set base = {'q': filtros.q, 'tipo': filtros.tipo, 'medio': filtros.medio, 'estado': filtros.estado, 'desde': filtros.desde, 'hasta': filtros.hasta, 'dia': dia} %}
+
 <div class="adm-list-head">
   <div class="adm-head" style="margin-bottom: 0;">
     <div>
@@ -38,115 +44,132 @@
   </div>
 </div>
 
+{# ------------------------- Ventas en el tiempo ------------------------- #}
 <section class="adm-card">
   <div class="adm-card__head">
-    <div><h2><span style="color: var(--musa-brasa);">●</span> Ventas por día</h2><p>Últimos {{ periodo_dias }} días</p></div>
-    <form method="get" class="adm-filtros">
-      <input type="hidden" name="q" value="{{ filtros.q }}" />
-      <input type="hidden" name="tipo" value="{{ filtros.tipo }}" />
-      <input type="hidden" name="medio" value="{{ filtros.medio }}" />
-      <select name="periodo" class="musa-input" onchange="this.form.submit()">
-        <option value="semana" {{ 'selected' if filtros.periodo == 'semana' }}>Semana</option>
-        <option value="mes" {{ 'selected' if filtros.periodo == 'mes' }}>Mes</option>
-        <option value="anio" {{ 'selected' if filtros.periodo == 'anio' }}>Año</option>
-      </select>
-    </form>
-    <span class="adm-chip-total">Total: <strong>S/ {{ '%.2f'|format(grafico | sum(attribute='monto')) }}</strong></span>
+    <div>
+      <h2><span style="color: var(--musa-brasa);">●</span> {{ serie.subtitulo }}</h2>
+      <p>{{ serie.titulo }}</p>
+    </div>
+    <span class="adm-chip-total">Total: <strong>S/ {{ '%.2f'|format(serie.total) }}</strong></span>
   </div>
-  <div class="adm-chart">
-    {% for d in grafico %}
-      <div class="adm-chart__col">
-        <span class="adm-chart__monto">S/ {{ '%.0f'|format(d.monto) }}</span>
-        <div class="adm-chart__barra {{ 'es-hoy' if d.hoy }}" style="height: {{ [d.pct, 3] | max }}%;"></div>
-        <span class="adm-chart__label {{ 'es-hoy' if d.hoy }}">{{ d.label }}</span>
+
+  <form method="get" class="vfiltros" id="vent-periodo">
+    {% for k, v in base.items() if v %}<input type="hidden" name="{{ k }}" value="{{ v }}" />{% endfor %}
+    <div class="vseg" role="radiogroup" aria-label="Vista del gráfico">
+      {% for clave, texto in [('semana', 'Últimos 7 días'), ('mes', 'Por mes'), ('anio', 'Por año')] %}
+        <label class="{{ 'is-active' if vista == clave }}">
+          <input type="radio" name="vista" value="{{ clave }}" {{ 'checked' if vista == clave }} onchange="this.form.submit()" />{{ texto }}
+        </label>
+      {% endfor %}
+    </div>
+
+    {% if vista == 'mes' %}
+      {% set pm = mes - 1 if mes > 1 else 12 %}{% set pa = anio if mes > 1 else anio - 1 %}
+      {% set nm = mes + 1 if mes < 12 else 1 %}{% set na = anio if mes < 12 else anio + 1 %}
+      <div class="vnav">
+        {% if pa >= anios | min %}
+          <a class="vnav__flecha" aria-label="Mes anterior" href="{{ url_for('admin.ventas.home', vista='mes', anio=pa, mes=pm, **base) }}"><i class="bi bi-chevron-left"></i></a>
+        {% else %}<span class="vnav__flecha is-off"><i class="bi bi-chevron-left"></i></span>{% endif %}
+        <select name="mes" class="musa-input" aria-label="Mes" onchange="this.form.submit()">
+          {% for m in meses %}<option value="{{ loop.index }}" {{ 'selected' if loop.index == mes }}>{{ m }}</option>{% endfor %}
+        </select>
+        <select name="anio" class="musa-input" aria-label="Año" onchange="this.form.submit()">
+          {% for a in anios %}<option value="{{ a }}" {{ 'selected' if a == anio }}>{{ a }}</option>{% endfor %}
+        </select>
+        {% if (na, nm) <= (hoy_anio, hoy_mes) %}
+          <a class="vnav__flecha" aria-label="Mes siguiente" href="{{ url_for('admin.ventas.home', vista='mes', anio=na, mes=nm, **base) }}"><i class="bi bi-chevron-right"></i></a>
+        {% else %}<span class="vnav__flecha is-off"><i class="bi bi-chevron-right"></i></span>{% endif %}
       </div>
-    {% endfor %}
-  </div>
+    {% elif vista == 'anio' %}
+      <div class="vnav">
+        {% if anio - 1 >= anios | min %}
+          <a class="vnav__flecha" aria-label="Año anterior" href="{{ url_for('admin.ventas.home', vista='anio', anio=anio - 1, **base) }}"><i class="bi bi-chevron-left"></i></a>
+        {% else %}<span class="vnav__flecha is-off"><i class="bi bi-chevron-left"></i></span>{% endif %}
+        <select name="anio" class="musa-input" aria-label="Año" onchange="this.form.submit()">
+          {% for a in anios %}<option value="{{ a }}" {{ 'selected' if a == anio }}>{{ a }}</option>{% endfor %}
+        </select>
+        {% if anio + 1 <= hoy_anio %}
+          <a class="vnav__flecha" aria-label="Año siguiente" href="{{ url_for('admin.ventas.home', vista='anio', anio=anio + 1, **base) }}"><i class="bi bi-chevron-right"></i></a>
+        {% else %}<span class="vnav__flecha is-off"><i class="bi bi-chevron-right"></i></span>{% endif %}
+      </div>
+    {% endif %}
+  </form>
+
+  {{ grafico(serie, 'Ventas cobradas ' ~ serie.titulo) }}
 </section>
 
-<section class="adm-card" style="margin-top:24px;">
-  <div class="adm-card__head"><div><h2>Ventas de hoy por hora</h2><p>Permite identificar las horas con mayor venta cobrada</p></div></div>
-  <div class="adm-chart">
-    {% for h in grafico_horas %}
-      <div class="adm-chart__col">
-        <span class="adm-chart__monto">S/ {{ '%.0f'|format(h.monto) }}</span>
-        <div class="adm-chart__barra" style="height: {{ [h.pct, 3] | max }}%;"></div>
-        <span class="adm-chart__label">{{ h.label }}</span>
-      </div>
-    {% endfor %}
+{# ------------------------- Ventas por hora ------------------------- #}
+<section class="adm-card" style="margin-top: 24px;">
+  <div class="adm-card__head">
+    <div>
+      <h2><span style="color: var(--musa-brasa);">●</span> Ventas por hora</h2>
+      <p>{{ serie_horas.titulo }} · identifica las horas con mayor venta cobrada</p>
+    </div>
+    <span class="adm-chip-total">Total: <strong>S/ {{ '%.2f'|format(serie_horas.total) }}</strong></span>
   </div>
+
+  <form method="get" class="vfiltros" id="vent-dia">
+    {% for k, v in base.items() if v and k != 'dia' %}<input type="hidden" name="{{ k }}" value="{{ v }}" />{% endfor %}
+    <input type="hidden" name="vista" value="{{ vista }}" /><input type="hidden" name="anio" value="{{ anio }}" /><input type="hidden" name="mes" value="{{ mes }}" />
+    <div class="vseg" role="group" aria-label="Día">
+      <label class="{{ 'is-active' if dia == hoy }}"><a href="{{ url_for('admin.ventas.home', vista=vista, anio=anio, mes=mes, **dict(base, dia=hoy)) }}">Hoy</a></label>
+      <label><a href="{{ url_for('admin.ventas.home', vista=vista, anio=anio, mes=mes, **dict(base, dia=ayer)) }}">Ayer</a></label>
+    </div>
+    <label class="vfecha">
+      <i class="bi bi-calendar3"></i>
+      <input type="date" name="dia" value="{{ dia }}" max="{{ hoy }}" class="musa-input" aria-label="Elegir día" onchange="this.form.submit()" />
+    </label>
+  </form>
+
+  {{ grafico(serie_horas, 'Ventas cobradas por hora, ' ~ serie_horas.titulo) }}
 </section>
 
+{# ------------------------- Comprobantes ------------------------- #}
 <section class="adm-card" style="margin-top: 24px;">
   <div class="adm-card__head">
     <div><h2>Comprobantes</h2><p>Boletas y facturas internas emitidas al entregar el pedido</p></div>
   </div>
 
-  <form method="get" class="ped-toolbar" style="margin-bottom:18px;">
-    <div class="ped-buscar"><i class="bi bi-search"></i><input type="search" name="q" value="{{ filtros.q }}" placeholder="Número, cliente o DNI/RUC" /></div>
-    <select name="tipo" class="musa-input">
-      <option value="">Todos los comprobantes</option>
-      <option value="boleta" {{ 'selected' if filtros.tipo == 'boleta' }}>Boletas</option>
-      <option value="factura" {{ 'selected' if filtros.tipo == 'factura' }}>Facturas</option>
+  <form method="get" class="vbuscador" id="vent-filtros" action="{{ url_for('admin.ventas.home') }}"
+        data-url-sugerencias="{{ url_for('admin.ventas.sugerencias') }}" data-loader-skip>
+    {% for k, v in {'vista': vista, 'anio': anio, 'mes': mes, 'dia': dia}.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}" />{% endfor %}
+    <div class="adm-search vbuscador__q">
+      <i class="bi bi-search"></i>
+      <input type="search" name="q" value="{{ filtros.q }}" list="vent-sug" autocomplete="off"
+             placeholder="Número, cliente o DNI/RUC — filtra mientras escribes" aria-label="Buscar comprobantes" />
+      <datalist id="vent-sug"></datalist>
+    </div>
+    <select name="tipo" class="musa-input" aria-label="Tipo de comprobante">
+      <option value="">Boletas y facturas</option>
+      <option value="boleta" {{ 'selected' if filtros.tipo == 'boleta' }}>Solo boletas</option>
+      <option value="factura" {{ 'selected' if filtros.tipo == 'factura' }}>Solo facturas</option>
     </select>
-    <select name="medio" class="musa-input">
+    <select name="medio" class="musa-input" aria-label="Forma de pago">
       <option value="">Todos los pagos</option>
       {% for m in ['Efectivo','Tarjeta','Yape','Plin'] %}<option value="{{ m }}" {{ 'selected' if filtros.medio == m }}>{{ m }}</option>{% endfor %}
     </select>
-    <input type="hidden" name="periodo" value="{{ filtros.periodo }}" />
-    <button class="btn-contorno" type="submit">Filtrar</button>
+    <select name="estado" class="musa-input" aria-label="Estado de la venta">
+      <option value="">Vigentes y anuladas</option>
+      <option value="vigente" {{ 'selected' if filtros.estado == 'vigente' }}>Solo vigentes</option>
+      <option value="anulado" {{ 'selected' if filtros.estado == 'anulado' }}>Solo anuladas</option>
+    </select>
+    <label class="vfecha" title="Desde">
+      <span>Desde</span><input type="date" name="desde" value="{{ filtros.desde }}" max="{{ hoy }}" class="musa-input" />
+    </label>
+    <label class="vfecha" title="Hasta">
+      <span>Hasta</span><input type="date" name="hasta" value="{{ filtros.hasta }}" max="{{ hoy }}" class="musa-input" />
+    </label>
+    <a class="btn-contorno vbuscador__limpiar" href="{{ url_for('admin.ventas.home', vista=vista, anio=anio, mes=mes, dia=dia) }}" data-limpiar data-loader-skip
+       {{ 'hidden' if not (filtros.q or filtros.tipo or filtros.medio or filtros.desde or filtros.hasta or filtros.estado) }}>
+      <i class="bi bi-x-lg"></i> Limpiar
+    </a>
   </form>
 
-  {% if comprobantes %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
-        <thead>
-          <tr>
-            <th>Comprobante</th><th>Cliente</th><th>Forma de pago</th>
-            <th class="num">Subtotal</th><th class="num">IGV (18%)</th><th class="num">Total</th><th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for c in comprobantes %}
-            <tr>
-              <td>
-                <strong style="font-family: 'Space Grotesk', sans-serif;">{{ c.numero }}</strong><br />
-                <span style="color: var(--musa-texto-suave); font-size: 12px;">{{ c.fecha }} · {{ c.hora }}</span>
-              </td>
-              <td>
-                <div class="adm-prod-cel">
-                  <span class="adm-thumb adm-avatar--sm" style="font-size:11px; color: var(--musa-brasa); font-family:'Space Grotesk',sans-serif; width:34px; height:34px;">{{ c.iniciales }}</span>
-                  <div><strong style="font-size:13px;">{{ c.cliente }}</strong>
-                    <p>{{ 'RUC' if c.tipoComprobante == 'factura' else 'DNI' }} {{ c.dni }}</p></div>
-                </div>
-              </td>
-              <td>
-                <span class="adm-badge-pago {{ 'digital' if c.formaPago != 'Efectivo' else 'efectivo' }}">
-                  <i class="bi {{ 'bi-qr-code' if c.formaPago != 'Efectivo' else 'bi-cash' }}"></i> {{ c.formaPago }}
-                </span>
-              </td>
-              <td class="num">S/ {{ '%.2f'|format(c.subTotal) }}</td>
-              <td class="num">S/ {{ '%.2f'|format(c.igv) }}</td>
-              <td class="num" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(c.montoTotal) }}</td>
-              <td>
-                <a class="adm-btn-sm" href="{{ url_for('admin.ventas.show_detalle', idComprobante=c.idComprobante) }}">
-                  <i class="bi bi-eye"></i> Ver detalle
-                </a>
-                <a class="adm-btn-sm mt-1" data-loader-skip href="{{ url_for('admin.ventas.descargar_pdf', idComprobante=c.idComprobante) }}">
-                  <i class="bi bi-file-earmark-pdf"></i> PDF
-                </a>
-              </td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ total }} comprobantes</p>
-    <div class="adm-pag">{{ pagination.links }}</div>
-  {% else %}
-    <p class="adm-vacio"><i class="bi bi-receipt-cutoff d-block mb-2" style="font-size: 32px;"></i>
-      Todavía no se ha emitido ningún comprobante. Se generan al entregar un pedido con su palabra clave.
-    </p>
-  {% endif %}
+  <div id="vent-resultados" aria-live="polite">{% include 'admin/ventas/_comprobantes.html' %}</div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ventas.js') }}" defer></script>
 {% endblock %}

@@ -88,3 +88,29 @@ def test_no_show_solo_cuando_el_pedido_esta_listo(bd_limpia):
     Pedido.avanzar_preparacion(idp)
     assert Pedido.marcar_no_show(idp) is True
     assert Pedido.resumen_dashboard()["pendientes"] == 0
+
+
+def test_auto_no_show_no_marca_pedidos_de_hoy_despues_de_medianoche(bd_limpia, monkeypatch):
+    """A las 00:20 'ahora - 45 min' cae en el día anterior (23:35): un pedido
+    listo de hoy a las 18:00 NO está vencido."""
+    from datetime import datetime
+    from negocio import HORA_PERU
+    import model.Pedido as mp
+
+    id_pedido, _ = Pedido.crear_pedido_completo(
+        CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
+        "18:00:00", "efectivo", None,
+        [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 21, "cantidad": 1,
+          "precioTotal": 21, "cremas": []}],
+    )
+    Pedido.avanzar_preparacion(id_pedido)
+    Pedido.avanzar_preparacion(id_pedido)
+
+    monkeypatch.setattr(Pedido, "DEMO", False)
+    hoy = datetime.now(HORA_PERU).date()
+    monkeypatch.setattr(mp, "ahora_peru",
+                        lambda: datetime(hoy.year, hoy.month, hoy.day, 0, 20, tzinfo=HORA_PERU))
+    Pedido._auto_no_show()
+
+    estado = [p for p in Pedido.historial_cliente(CLIENTE_ID) if p["idPedido"] == id_pedido][0]["estado"]
+    assert estado == "listo"

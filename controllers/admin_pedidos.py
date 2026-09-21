@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, g, request, redirect, url_for, flash, jsonify
 from model.Comprobante import Comprobante
 from model.Pedido import Pedido
+from avisos import ok_deshacer
 
 pedidos = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
@@ -66,12 +67,27 @@ def preparar():
     id_pedido = request.form.get("idPedido")
     estado = request.form.get("estado", "pendiente")
     nuevo = Pedido.avanzar_preparacion(id_pedido)
+    deshacer = (url_for("admin.pedidos.retroceder"), {"idPedido": id_pedido, "estado": estado})
     if nuevo == "preparando":
-        flash(f"Pedido N° {id_pedido} en preparación. El cliente ya no puede cancelarlo.", "ok")
+        ok_deshacer(f"Pedido N° {id_pedido} en preparación. El cliente ya no puede cancelarlo.", *deshacer)
     elif nuevo == "listo":
-        flash(f"Pedido N° {id_pedido} marcado como listo para recojo.", "ok")
+        ok_deshacer(f"Pedido N° {id_pedido} marcado como listo para recojo.", *deshacer)
     else:
         flash(f"No se pudo avanzar el pedido N° {id_pedido}.", "error")
+    return redirect(url_for("admin.pedidos.home", estado=estado))
+
+
+@pedidos.route("/retroceder", methods=["POST"])
+def retroceder():
+    id_pedido = request.form.get("idPedido")
+    estado = request.form.get("estado", "pendiente")
+    nuevo = Pedido.retroceder_preparacion(id_pedido)
+    if nuevo == "recibido":
+        flash(f"Pedido N° {id_pedido} volvió a «recibido». El cliente puede cancelarlo otra vez.", "ok")
+    elif nuevo == "preparando":
+        flash(f"Pedido N° {id_pedido} volvió a «en preparación».", "ok")
+    else:
+        flash(f"No se pudo deshacer el avance del pedido N° {id_pedido}.", "error")
     return redirect(url_for("admin.pedidos.home", estado=estado))
 
 
@@ -79,14 +95,24 @@ def preparar():
 def confirmar():
     id_pedido = request.form.get("idPedido")
     key = (request.form.get("key") or "").strip()
-    medio_pago = (request.form.get("medio_pago") or "").strip().lower()
-    tipo_comprobante = (request.form.get("tipo_comprobante") or "").strip().lower()
+    opcion = (request.form.get("tipo_comprobante") or "").strip().lower()
     documento = (request.form.get("documento") or "").strip()
     razon_social = (request.form.get("razon_social") or "").strip()
     estado = request.form.get("estado", "todos")
+    # boleta_simple = sin documento; boleta_dni = pide DNI; factura = pide RUC.
+    tipo_comprobante = {"boleta_simple": "boleta", "boleta_dni": "boleta",
+                        "boleta": "boleta", "factura": "factura"}.get(opcion, "")
+    if opcion == "boleta_simple":
+        documento = razon_social = ""
+    elif opcion == "boleta_dni" and not documento:
+        flash("Para la boleta con DNI ingresa los 8 dígitos, o elige «Boleta simple».", "error")
+        return redirect(url_for("admin.pedidos.home", estado=estado))
+    elif opcion == "factura" and not documento:
+        flash("Para la factura ingresa el RUC de 11 dígitos y la razón social.", "error")
+        return redirect(url_for("admin.pedidos.home", estado=estado))
 
     resultado = Pedido.marcar_recogido(
-        id_pedido, key, medio_pago, g.user["idUsuario"],
+        id_pedido, key, None, g.user["idUsuario"],
         tipo_comprobante, documento, razon_social,
     )
     if resultado == "ok":
@@ -94,11 +120,12 @@ def confirmar():
         id_comprobante = Comprobante.id_por_pedido(id_pedido)
         return redirect(url_for("admin.ventas.show_detalle", idComprobante=id_comprobante))
     elif resultado == "clave_mal":
-        flash(f"La palabra clave no coincide con el pedido N° {id_pedido}.", "error")
+        flash(f"Palabra clave incorrecta para el pedido N° {id_pedido}. Verifica los 4 dígitos con el cliente e inténtalo de nuevo.", "error")
+        return redirect(url_for("admin.pedidos.home", estado=estado, clave_error=id_pedido))
     elif resultado == "no_listo":
         flash(f"El pedido N° {id_pedido} debe marcarse como listo antes de entregarlo.", "error")
     elif resultado == "pago_invalido":
-        flash("Selecciona el medio de pago recibido en caja.", "error")
+        flash("El pedido no tiene un medio de pago válido.", "error")
     elif resultado == "dni_invalido":
         flash("Para la boleta ingresa un DNI válido de 8 dígitos.", "error")
     elif resultado == "ruc_invalido":

@@ -1,17 +1,10 @@
 {% extends "client/base.html" %}
 {% block title %}Carrito de compras · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Carrito', None, 'bi-bag')] %}
 {% block tab_carrito %}active{% endblock %}
 
 {% block content %}
 <div class="cx-wrap" id="carrito-pagina">
-  <nav class="carta-breadcrumb" aria-label="Ruta">
-    <a href="{{ url_for('cliente.home') }}">Inicio</a>
-    <span>/</span>
-    <a href="{{ url_for('cliente.carta') }}">Carta</a>
-    <span>/</span>
-    <span class="actual">Carrito de compras</span>
-  </nav>
-
   <!-- Carrito con productos -->
   <div id="carrito-lleno" hidden>
     <div class="cx-head">

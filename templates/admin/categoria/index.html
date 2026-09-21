@@ -1,5 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}Categorías · Backoffice {{ nombre_negocio }}{% endblock %}
+{% set _est = {'baja': 'Categorías · De baja', 'todas': 'Categorías · Todas'} %}
+{% set migas = [('Gestión', None, 'bi-egg-fried'), (_est.get(estado, 'Categorías'), None)] %}
 {% block nav_categorias %}is-active{% endblock %}
 
 {% set emojis = {

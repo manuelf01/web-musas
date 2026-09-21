@@ -102,7 +102,12 @@ class Pedido:
         if Pedido.DEMO:
             return
         ahora = ahora_peru()
-        corte = (ahora - timedelta(minutes=Pedido.GRACIA_NOSHOW_MIN)).strftime("%H:%M:%S")
+        limite = ahora - timedelta(minutes=Pedido.GRACIA_NOSHOW_MIN)
+        # Justo después de medianoche el límite cae en el día anterior: comparar
+        # solo la hora ("23:51") marcaría como vencidos TODOS los pedidos de hoy.
+        if limite.date() < ahora.date():
+            return
+        corte = limite.strftime("%H:%M:%S")
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
@@ -472,6 +477,33 @@ class Pedido:
             conexion.close()
 
     @staticmethod
+    def retroceder_preparacion(id_pedido):
+        """Deshace un avance de cocina: listo -> preparando -> recibido.
+        Devuelve el nuevo estado o None si no aplica."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "SELECT estadoPrep FROM registroPedido WHERE idPedido = %s AND " + _ACTIVO,
+                    (id_pedido,),
+                )
+                fila = cursor.fetchone()
+                if fila is None or fila[0] <= PREP_RECIBIDO:
+                    return None
+                nuevo = fila[0] - 1
+                cursor.execute(
+                    "UPDATE registroPedido SET estadoPrep = %s "
+                    "WHERE idPedido = %s AND estadoPrep = %s AND " + _ACTIVO,
+                    (nuevo, id_pedido, fila[0]),
+                )
+                if cursor.rowcount != 1:
+                    return None
+            conexion.commit()
+            return _PREP_LABEL[nuevo]
+        finally:
+            conexion.close()
+
+    @staticmethod
     def cancelar_pedido(id_pedido, id_usuario=None, dni=None, saltar_dueno=False):
         """Cancela un pedido: libera el cupo y devuelve el stock.
         `saltar_dueno=True` cuando el llamador ya verificó la propiedad (admin).
@@ -667,12 +699,16 @@ class Pedido:
                 razon_social = str(razon_social or "").strip()[:200]
                 if tipo_comprobante not in ("boleta", "factura"):
                     return "comprobante_invalido"
-                if tipo_comprobante == "boleta" and (len(documento) != 8 or not documento.isdigit()):
-                    return "dni_invalido"
-                if tipo_comprobante == "factura" and (len(documento) != 11 or not documento.isdigit()):
-                    return "ruc_invalido"
-                if tipo_comprobante == "factura" and not razon_social:
-                    return "razon_social_requerida"
+                # El DNI/RUC es opcional (el cliente decide si lo da); si viene, se valida.
+                if documento:
+                    largo = 8 if tipo_comprobante == "boleta" else 11
+                    if len(documento) != largo or not documento.isdigit():
+                        return "dni_invalido" if tipo_comprobante == "boleta" else "ruc_invalido"
+                    if tipo_comprobante == "factura" and not razon_social:
+                        return "razon_social_requerida"
+                else:
+                    documento = None
+                    razon_social = ""
                 # Update guardado: solo pasa si sigue activo y la clave coincide.
                 cursor.execute(
                     "UPDATE registroPedido SET estadoRecojo = 1, dniNoRegistrado = %s, "
@@ -724,7 +760,7 @@ class Pedido:
 
             cursor.execute(
                 "SELECT COALESCE(SUM(montoTotal), 0), COALESCE(MAX(montoTotal), 0) "
-                "FROM comprobante WHERE fechaComprobante = %s",
+                "FROM comprobante WHERE anulado = 0 AND fechaComprobante = %s",
                 (ahora_peru().date(),),
             )
             ventas_hoy, venta_maxima = cursor.fetchone()
@@ -767,7 +803,7 @@ class Pedido:
                 "FROM detalleOrden dor "
                 "INNER JOIN comprobante c ON c.idPedido = dor.idPedido "
                 "LEFT JOIN producto p ON p.idProducto = dor.idProducto "
-                "WHERE c.fechaComprobante = %s "
+                "WHERE c.anulado = 0 AND c.fechaComprobante = %s "
                 "GROUP BY dor.idProducto, p.nombre, p.precio, p.imagen "
                 "ORDER BY uds DESC LIMIT 5",
                 (ahora_peru().date(),)
@@ -784,7 +820,7 @@ class Pedido:
 
             cursor.execute(
                 "SELECT HOUR(horaComprobante), COALESCE(SUM(montoTotal), 0) "
-                "FROM comprobante WHERE fechaComprobante = %s "
+                "FROM comprobante WHERE anulado = 0 AND fechaComprobante = %s "
                 "GROUP BY HOUR(horaComprobante) ORDER BY 1",
                 (ahora_peru().date(),),
             )

@@ -1,4 +1,8 @@
-from flask import Blueprint, render_template, session, g, redirect, url_for
+from datetime import datetime, timedelta
+
+from flask import Blueprint, render_template, session, g, redirect, url_for, request
+from model.Comprobante import Comprobante
+from negocio import ahora_peru
 from model.Producto import Producto
 from model.Pedido import Pedido
 
@@ -8,7 +12,17 @@ admin = Blueprint('admin', __name__, url_prefix='/admin')
 @admin.route("/")
 def home():
     resumen = Pedido.resumen_dashboard()
-    return render_template("admin/dashboard.html", usuario=g.user, resumen=resumen)
+    hoy = ahora_peru().date()
+    try:
+        dia = datetime.strptime(request.args.get("dia", ""), "%Y-%m-%d").date()
+    except ValueError:
+        dia = hoy
+    if dia > hoy:
+        dia = hoy
+    return render_template(
+        "admin/dashboard.html", usuario=g.user, resumen=resumen,
+        serie_horas=Comprobante.serie_por_hora(dia), dia=dia.isoformat(),
+        hoy=hoy.isoformat(), ayer=(hoy - timedelta(days=1)).isoformat())
 
 
 @admin.before_request

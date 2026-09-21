@@ -100,23 +100,31 @@
   // suspendido hasta la primera interacción; el listener anterior lo habilita.
   if (sonidoActivo) activarSonido(false);
 
-  // Boleta: DNI de 8 dígitos. Factura: RUC de 11 y razón social.
+  // Boleta simple: sin documento. Boleta con DNI: 8 dígitos.
+  // Factura: RUC de 11 dígitos y razón social.
   document.addEventListener("change", function (ev) {
     if (!ev.target.matches('select[name="tipo_comprobante"]')) return;
     var form = ev.target.closest("form");
     if (!form) return;
-    var factura = ev.target.value === "factura";
+    var tipo = ev.target.value;
+    var pideDoc = tipo !== "boleta_simple";
+    var factura = tipo === "factura";
+    var docWrap = form.querySelector("[data-doc-wrap]");
     var doc = form.querySelector('input[name="documento"]');
     var razonWrap = form.querySelector("[data-razon-social]");
     var razon = form.querySelector('input[name="razon_social"]');
+    if (docWrap) docWrap.hidden = !pideDoc;
     if (doc) {
+      doc.disabled = !pideDoc;
+      doc.required = pideDoc;
       doc.maxLength = factura ? 11 : 8;
       doc.pattern = factura ? "[0-9]{11}" : "[0-9]{8}";
       doc.placeholder = factura ? "RUC (11 dígitos)" : "DNI (8 dígitos)";
       doc.value = "";
+      if (pideDoc) doc.focus();
     }
     if (razonWrap) razonWrap.hidden = !factura;
-    if (razon) razon.required = factura;
+    if (razon) { razon.disabled = !factura; razon.required = factura; razon.value = ""; }
   });
 
   // ---------------------------------------------------------------

@@ -106,6 +106,7 @@
           imagen: root.dataset.imagen || null,
           cantidad: unidades,
           cremas: cremasSeleccionadas(),
+          admiteCremas: root.dataset.admiteCremas === "1",
         };
       if (modoEditar) {
         window.MusasCarrito.reemplazar(editarIndice, item);

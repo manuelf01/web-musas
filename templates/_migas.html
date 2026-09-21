@@ -1,0 +1,35 @@
+{#- Ruta de navegación (migas). Cada pantalla declara arriba, fuera de los bloques:
+      {% set migas = [('Carta', url_for('cliente.carta')), ('Hamburguesas', None)] %}
+    La raíz (Inicio / Panel) la pone la plantilla base. El último elemento es la
+    pantalla actual; los anteriores con URL son enlaces. Un tercer valor opcional
+    es un ícono de Bootstrap Icons. -#}
+{% if migas %}
+<nav class="migas {{ migas_clase }}" aria-label="Ruta de navegación">
+  <ol class="migas__lista">
+    <li class="migas__item migas__raiz">
+      <a href="{{ migas_raiz.url }}" class="migas__enlace" title="Ir a {{ migas_raiz.texto }}">
+        <span class="migas__icono"><i class="bi {{ migas_raiz.icono }}"></i></span>
+        <span class="migas__texto">{{ migas_raiz.texto }}</span>
+      </a>
+    </li>
+    {% for m in migas %}
+      {% set ultimo = loop.last %}
+      {% if loop.length > 2 and loop.index == loop.length - 1 %}
+        <li class="migas__mas" aria-hidden="true"><i class="bi bi-chevron-right migas__sep"></i><span>…</span></li>
+      {% endif %}
+      <li class="migas__item {{ 'migas__item--actual' if ultimo }} {{ 'migas__item--oculto' if loop.length > 2 and loop.index < loop.length - 1 }}">
+        <i class="bi bi-chevron-right migas__sep" aria-hidden="true"></i>
+        {% if ultimo %}
+          <span class="migas__actual" aria-current="page" title="{{ m[0] }}">
+            {% if m[2] %}<i class="bi {{ m[2] }}"></i>{% endif %}<span class="migas__txt">{{ m[0] }}</span></span>
+        {% elif m[1] %}
+          <a href="{{ m[1] }}" class="migas__enlace"><span class="migas__texto">
+            {% if m[2] %}<i class="bi {{ m[2] }}"></i> {% endif %}{{ m[0] }}</span></a>
+        {% else %}
+          <span class="migas__pasivo">{% if m[2] %}<i class="bi {{ m[2] }}"></i> {% endif %}{{ m[0] }}</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}

@@ -163,6 +163,11 @@ CREATE TABLE `comprobante` (
   `medioPago`         varchar(20)  NOT NULL DEFAULT 'No registrado',
   `idCajero`          int(11)      DEFAULT NULL,
   `datosEmision`      longtext     DEFAULT NULL,
+  `anulado`           tinyint(1)   NOT NULL DEFAULT 0,
+  `motivoAnulacion`   varchar(255) DEFAULT NULL,
+  `fechaAnulacion`    datetime     DEFAULT NULL,
+  `idAnulador`        int(11)      DEFAULT NULL,
+  `stockDevuelto`     tinyint(1)   NOT NULL DEFAULT 0,
   PRIMARY KEY (`idComprobante`),
   KEY `FKcomprobant749904` (`idUsuario`),
   UNIQUE KEY `uq_comprobante_pedido` (`idPedido`),
@@ -171,7 +176,8 @@ CREATE TABLE `comprobante` (
   KEY `fk_comprobante_cajero` (`idCajero`),
   CONSTRAINT `FKcomprobant506863` FOREIGN KEY (`idPedido`)  REFERENCES `registroPedido` (`idPedido`),
   CONSTRAINT `FKcomprobant749904` FOREIGN KEY (`idUsuario`) REFERENCES `usuario` (`idUsuario`),
-  CONSTRAINT `fk_comprobante_cajero` FOREIGN KEY (`idCajero`) REFERENCES `usuario` (`idUsuario`)
+  CONSTRAINT `fk_comprobante_cajero` FOREIGN KEY (`idCajero`) REFERENCES `usuario` (`idUsuario`),
+  CONSTRAINT `fk_comprobante_anulador` FOREIGN KEY (`idAnulador`) REFERENCES `usuario` (`idUsuario`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE `detalleComprobante` (

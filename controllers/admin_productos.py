@@ -4,6 +4,9 @@ from controllers.admin import admin
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
 from subidas import guardar_imagen, guardar_desde_url
+from avisos import ok_deshacer, error_en_formulario
+import os
+import re
 
 productos = Blueprint("productos", __name__, url_prefix='/productos')
 
@@ -17,6 +20,10 @@ def _imagen_del_form(prefijo_ruta):
         if not ruta:
             return None, "La imagen no es válida (usa JPG, PNG o WEBP, máx. 5 MB)."
         return ruta, None
+    previa = (request.form.get("imagen_ruta") or "").strip()
+    if previa and re.fullmatch(r"productos/[\w.\-]+", previa) and \
+            os.path.isfile(os.path.join("static", "img", *previa.split("/"))):
+        return previa, None
     enlace = (request.form.get("imagen_url") or "").strip()
     if enlace:
         ruta = guardar_desde_url(enlace, prefijo_ruta)
@@ -87,34 +94,50 @@ def editar(id):
 
 @productos.route("/guardar_producto", methods=["POST"])
 def guardar():
+    obligatorios = ("categorias", "nombre", "descripcion", "precio", "existencias")
     imagen, err = _imagen_del_form("productos")
     if err:
-        flash(err, "error")
+        error_en_formulario(err, "crear", request.form, obligatorios=obligatorios)
         return redirect(url_for("admin.productos.home"))
     error = Producto.insertar_producto(
         request.form.get("nombre"), request.form.get("descripcion"), request.form.get("precio"),
         request.form.get("existencias"), request.form.get("categorias"), imagen,
     )
-    flash(error or "Producto agregado a la carta.", "error" if error else "ok")
+    if error:
+        error_en_formulario(error, "crear", request.form, obligatorios=obligatorios)
+    else:
+        ok_deshacer("Producto agregado a la carta.", url_for("admin.productos.estado"),
+                    {"id": Producto.ultimo_id(), "activar": 0, "volver": "activos"})
     return redirect(url_for("admin.productos.home"))
 
 
 @productos.route("/actualizar_producto", methods=["POST"])
 def actualizar():
     id = request.form["idProducto"]
+    obligatorios = ("categorias", "nombre", "descripcion", "precio", "existencias")
+    antes = Producto.obtener_producto_por_id(id)
     imagen, err = _imagen_del_form("productos")
     if err:
-        flash(err, "error")
+        error_en_formulario(err, "editar", request.form, id, obligatorios)
         return redirect(url_for("admin.productos.home"))
     error = Producto.actualizar_producto(
         request.form.get("nombre"), request.form.get("descripcion"), request.form.get("precio"),
         request.form.get("existencias"), id, request.form.get("categorias"), imagen,
     )
     if error:
-        flash(error, "error")
+        error_en_formulario(error, "editar", request.form, id, obligatorios)
     else:
         Producto.cambiar_estado(id, request.form.get("activo", "1") == "1")
-        flash("Producto actualizado." + (" Imagen cambiada." if imagen else ""), "ok")
+        mensaje = "Producto actualizado." + (" Imagen cambiada." if imagen else "")
+        if antes:
+            ok_deshacer(mensaje, url_for("admin.productos.actualizar"), {
+                "idProducto": id, "nombre": antes["nombre"], "descripcion": antes["descripcion"],
+                "precio": antes["precio"], "existencias": antes["existencias"],
+                "categorias": antes["idCategoria"], "activo": 1 if antes["activo"] else 0,
+                "imagen_ruta": antes["imagen"] if imagen else "",
+            })
+        else:
+            flash(mensaje, "ok")
     return redirect(url_for("admin.productos.home"))
 
 
@@ -123,8 +146,11 @@ def estado():
     id = request.form["id"]
     activar = request.form.get("activar") == "1"
     Producto.cambiar_estado(id, activar)
-    flash("Producto reactivado." if activar else "Producto eliminado de la carta.", "ok")
-    return redirect(url_for("admin.productos.home", estado=request.form.get("volver", "activos")))
+    volver = request.form.get("volver", "activos")
+    ok_deshacer("Producto reactivado." if activar else "Producto eliminado de la carta.",
+                url_for("admin.productos.estado"),
+                {"id": id, "activar": 0 if activar else 1, "volver": volver})
+    return redirect(url_for("admin.productos.home", estado=volver))
 
 
 @productos.route("/eliminar_producto", methods=["POST"])

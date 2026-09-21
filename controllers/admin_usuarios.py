@@ -3,6 +3,7 @@ import re
 from flask import Blueprint, render_template, redirect, request, url_for, g, flash
 from model.Usuario import Usuario, ROLES, ETIQUETA_ROL
 from seguridad import password_valida
+from avisos import ok_deshacer, error_en_formulario
 
 usuarios = Blueprint('usuarios', __name__, url_prefix='/usuarios')
 
@@ -50,6 +51,23 @@ def form_editar(id):
     return redirect(url_for("admin.usuarios.home"))
 
 
+def _validar_datos(rol, dni, nombres, apellidos, correo, telefono):
+    """Reglas de los datos de una cuenta (crear o editar). None si todo está bien."""
+    if rol not in ROLES:
+        return "Elige un rol válido."
+    if rol in ("superusuario", "administrador") and not RE_DNI.match(dni):
+        return "Las cuentas del panel requieren un DNI de 8 dígitos."
+    if dni and not RE_DNI.match(dni):
+        return "Si ingresas un DNI, debe tener 8 dígitos."
+    if not nombres or not apellidos:
+        return "Completa nombres y apellidos."
+    if not RE_CORREO.match(correo):
+        return "Ingresa un correo válido."
+    if not RE_TEL.match(telefono):
+        return "El teléfono debe tener 9 dígitos."
+    return None
+
+
 @usuarios.route("/guardar", methods=["POST"])
 def guardar():
     dni = (request.form.get("dni") or "").strip()
@@ -60,34 +78,31 @@ def guardar():
     contra = request.form.get("contraseña") or ""
     rol = request.form.get("rol") or "usuario"
 
-    error = None
-    if rol not in ROLES:
-        error = "Elige un rol válido."
-    elif rol in ("superusuario", "administrador") and not RE_DNI.match(dni):
-        error = "Las cuentas del panel requieren un DNI de 8 dígitos."
-    elif dni and not RE_DNI.match(dni):
-        error = "Si ingresas un DNI, debe tener 8 dígitos."
-    elif not nombres or not apellidos:
-        error = "Completa nombres y apellidos."
-    elif not RE_CORREO.match(correo):
-        error = "Ingresa un correo válido."
-    elif not RE_TEL.match(telefono):
-        error = "El teléfono debe tener 9 dígitos."
-    else:
+    error = _validar_datos(rol, dni, nombres, apellidos, correo, telefono)
+    if error is None:
         error = password_valida(contra)
 
     if error is None:
         error = Usuario.insertar_usuario(dni or None, nombres, apellidos, correo, telefono, contra, None, rol=rol)
 
-    flash(error or f"Cuenta creada ({ETIQUETA_ROL[rol]}).", "error" if error else "ok")
+    if error:
+        error_en_formulario(error, "crear", request.form,
+                            obligatorios=("nombres", "apellidos", "correo", "telefono"))
+    else:
+        nuevo = Usuario.id_por_correo(correo)
+        mensaje = f"Cuenta creada ({ETIQUETA_ROL[rol]})."
+        if nuevo:
+            ok_deshacer(mensaje, url_for("admin.usuarios.estado"), {"id": nuevo, "activar": 0})
+        else:
+            flash(mensaje, "ok")
     return redirect(url_for("admin.usuarios.home"))
 
 
 @usuarios.route("/actualizar", methods=["POST"])
 def actualizar():
-    """Desde Gestión de usuarios SOLO se puede cambiar el ROL. Los datos
-    personales (correo, teléfono, contraseña) los edita cada persona en su
-    propio perfil — el administrador no los toca."""
+    """El administrador corrige los datos de la cuenta (DNI, nombres, apellidos,
+    correo, teléfono), cambia su rol y la da de alta/baja. La contraseña NO se
+    toca: solo la cambia cada persona en su perfil."""
     id = request.form["id"]
     objetivo = Usuario.obtener_dict(id)
     if objetivo is None:
@@ -98,10 +113,29 @@ def actualizar():
         return redirect(url_for("admin.usuarios.home"))
 
     rol = request.form.get("rol") or objetivo["rol"]
-    err = Usuario.cambiar_rol(id, rol)
+    dni = (request.form.get("dni") or "").strip()
+    nombres = (request.form.get("nombres") or "").strip()
+    apellidos = (request.form.get("apellidos") or "").strip()
+    correo = (request.form.get("correo") or "").strip()
+    telefono = (request.form.get("telefono") or "").strip()
+
+    err = _validar_datos(rol, dni, nombres, apellidos, correo, telefono)
+    if err is None and rol == "superusuario":
+        err = "Para dar rol de superusuario, crea la cuenta desde «Agregar usuario»."
+    if err is None:
+        err = Usuario.actualizar_datos(id, dni, nombres, apellidos, correo, telefono)
+    if err is None:
+        err = Usuario.cambiar_rol(id, rol)
     if err is None and str(g.user.get("idUsuario")) != str(id):
         Usuario.cambiar_estado(id, request.form.get("activo", "1") == "1")
-    flash(err or f"Rol actualizado a «{ETIQUETA_ROL.get(rol, rol)}».", "error" if err else "ok")
+    if err:
+        error_en_formulario(err, "editar", request.form, id)
+    else:
+        ok_deshacer("Cuenta actualizada.", url_for("admin.usuarios.actualizar"), {
+            "id": id, "rol": objetivo["rol"], "activo": 1 if objetivo["activo"] else 0,
+            "dni": objetivo["dni"] or "", "nombres": objetivo["nombres"],
+            "apellidos": objetivo["apellidos"] or "", "correo": objetivo["correo"],
+            "telefono": objetivo["telefono"] or ""})
     return redirect(url_for("admin.usuarios.home"))
 
 
@@ -118,5 +152,6 @@ def estado():
         flash("No puedes dar de baja tu propia cuenta.", "error")
     else:
         Usuario.cambiar_estado(id, activar)
-        flash("Cuenta reactivada." if activar else "Cuenta dada de baja (ya no puede iniciar sesión).", "ok")
+        ok_deshacer("Cuenta reactivada." if activar else "Cuenta dada de baja (ya no puede iniciar sesión).",
+                    url_for("admin.usuarios.estado"), {"id": id, "activar": 0 if activar else 1})
     return redirect(url_for("admin.usuarios.home"))

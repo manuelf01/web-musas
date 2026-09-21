@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% block title %}Pagos · Backoffice {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Ventas y caja', None, 'bi-cash-stack'), ('Pagos', None, 'bi-wallet2')] %}
+{% block nav_pagos %}is-active{% endblock %}
+
+{% block content %}
+<div class="adm-list-head">
+  <div class="adm-head" style="margin-bottom: 0;">
+    <div>
+      <h1>Pagos <span class="adm-count-pill">Cobros en caja</span></h1>
+      <p class="adm-sub">Cada pago se registra al «Cobrar y entregar» un pedido: medio, monto, cajero y hora.
+        Aquí los consultas y cuadras la caja por medio de pago.</p>
+    </div>
+    <a class="btn-brasa" href="{{ url_for('admin.pedidos.home', estado='listo') }}"><i class="bi bi-cash-stack"></i> Cobrar pedidos listos</a>
+  </div>
+</div>
+
+<div class="vpresets" role="group" aria-label="Período">
+  {% set activo = 'hoy' if (filtros.desde == hoy and filtros.hasta == hoy) else 'ayer' if (filtros.desde == ayer and filtros.hasta == ayer) else '7' if (filtros.desde == hace7 and filtros.hasta == hoy) else 'mes' if (filtros.desde == inicio_mes and filtros.hasta == hoy) else 'todo' if (not filtros.desde and not filtros.hasta) else '' %}
+  <a class="{{ 'is-active' if activo == 'hoy' }}" href="{{ url_for('admin.pagos.home') }}">Hoy</a>
+  <a class="{{ 'is-active' if activo == 'ayer' }}" href="{{ url_for('admin.pagos.home', desde=ayer, hasta=ayer) }}">Ayer</a>
+  <a class="{{ 'is-active' if activo == '7' }}" href="{{ url_for('admin.pagos.home', desde=hace7, hasta=hoy) }}">Últimos 7 días</a>
+  <a class="{{ 'is-active' if activo == 'mes' }}" href="{{ url_for('admin.pagos.home', desde=inicio_mes, hasta=hoy) }}">Este mes</a>
+  <a class="{{ 'is-active' if activo == 'todo' }}" href="{{ url_for('admin.pagos.home', desde='', hasta='') }}">Todo</a>
+</div>
+
+<section class="adm-card">
+  <form method="get" class="vbuscador" id="vent-filtros" action="{{ url_for('admin.pagos.home') }}"
+        data-url-sugerencias="{{ url_for('admin.ventas.sugerencias') }}" data-fechas-abiertas>
+    <div class="adm-search vbuscador__q">
+      <i class="bi bi-search"></i>
+      <input type="search" name="q" value="{{ filtros.q }}" list="vent-sug" autocomplete="off"
+             placeholder="Cliente, pedido o comprobante — filtra al escribir" aria-label="Buscar pagos" />
+      <datalist id="vent-sug"></datalist>
+    </div>
+    <select name="medio" class="musa-input" aria-label="Medio de pago">
+      <option value="">Todos los medios</option>
+      {% for m in medios %}<option value="{{ m }}" {{ 'selected' if filtros.medio == m }}>{{ m }}</option>{% endfor %}
+    </select>
+    <select name="estado" class="musa-input" aria-label="Estado del pago">
+      <option value="">Vigentes y anulados</option>
+      <option value="vigente" {{ 'selected' if filtros.estado == 'vigente' }}>Solo vigentes</option>
+      <option value="anulado" {{ 'selected' if filtros.estado == 'anulado' }}>Solo anulados</option>
+    </select>
+    <label class="vfecha" title="Desde"><span>Desde</span><input type="date" name="desde" value="{{ filtros.desde }}" max="{{ hoy }}" class="musa-input" /></label>
+    <label class="vfecha" title="Hasta"><span>Hasta</span><input type="date" name="hasta" value="{{ filtros.hasta }}" max="{{ hoy }}" class="musa-input" /></label>
+  </form>
+
+  <div id="vent-resultados" aria-live="polite">{% include 'admin/pagos/_lista.html' %}</div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/ventas.js') }}" defer></script>
+{% endblock %}

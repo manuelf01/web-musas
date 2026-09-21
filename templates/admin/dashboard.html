@@ -1,5 +1,7 @@
 {% extends "admin/base.html" %}
+{% from 'admin/ventas/_grafico.html' import grafico %}
 {% block title %}Resumen · Backoffice {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Resumen', None, 'bi-graph-up-arrow')] %}
 {% block nav_resumen %}is-active{% endblock %}
 
 {% block content %}
@@ -112,24 +114,27 @@
   </section>
 </div>
 
-<!-- Ventas 7 días -->
+<!-- Ventas cobradas por hora -->
 <section class="adm-card">
   <div class="adm-card__head">
     <div>
-      <h2>Ventas cobradas hoy</h2>
+      <h2>Ventas cobradas · {{ serie_horas.titulo | lower }}</h2>
       <p>Monto por hora real de entrega</p>
     </div>
-    <span class="adm-chip-total">Total de hoy: <strong>S/ {{ '%.2f'|format(resumen.total_semana) }}</strong></span>
+    <span class="adm-chip-total">Total: <strong>S/ {{ '%.2f'|format(serie_horas.total) }}</strong></span>
   </div>
 
-  <div class="adm-chart">
-    {% for d in resumen.ventas_semana %}
-      <div class="adm-chart__col">
-        <span class="adm-chart__monto">S/ {{ d.monto|round|int }}</span>
-        <div class="adm-chart__barra {% if d.hoy %}es-hoy{% endif %}" style="height: {{ [d.pct, 4]|max }}%;"></div>
-        <span class="adm-chart__label {% if d.hoy %}es-hoy{% endif %}">{{ d.label }}</span>
-      </div>
-    {% endfor %}
-  </div>
+  <form method="get" class="vfiltros">
+    <div class="vseg" role="group" aria-label="Día">
+      <label class="{{ 'is-active' if dia == hoy }}"><a href="{{ url_for('admin.home', dia=hoy) }}">Hoy</a></label>
+      <label class="{{ 'is-active' if dia == ayer }}"><a href="{{ url_for('admin.home', dia=ayer) }}">Ayer</a></label>
+    </div>
+    <label class="vfecha">
+      <i class="bi bi-calendar3"></i>
+      <input type="date" name="dia" value="{{ dia }}" max="{{ hoy }}" class="musa-input" aria-label="Elegir día" onchange="this.form.submit()" />
+    </label>
+  </form>
+
+  {{ grafico(serie_horas, 'Ventas cobradas por hora, ' ~ serie_horas.titulo) }}
 </section>
 {% endblock %}

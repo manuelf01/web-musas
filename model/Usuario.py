@@ -172,6 +172,31 @@ class Usuario:
         return None
 
     @staticmethod
+    def actualizar_datos(id, dni, nombres, apellidos, correo, telefono):
+        """El administrador corrige los datos de una cuenta (la contraseña no se toca).
+        Devuelve None o un texto de error."""
+        if Usuario.obtener_dict(id) is None:
+            return "La cuenta no existe."
+        correo = (correo or "").strip().lower()
+        dni = (dni or "").strip() or None
+        if Usuario.existe_correo(correo, excepto_id=id):
+            return "Ese correo electrónico ya está en uso por otra cuenta."
+        if dni and Usuario.existe_dni(dni, excepto_id=id):
+            return "Ese DNI ya está en uso por otra cuenta."
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE usuario SET DNI=%s, nombres=%s, apellidos=%s, correo=%s, numTelf=%s "
+                    "WHERE idUsuario=%s",
+                    (dni, nombres, apellidos, correo, telefono, id),
+                )
+            conexion.commit()
+        finally:
+            conexion.close()
+        return None
+
+    @staticmethod
     def actualizar_perfil(id, nombres, apellidos, correo, dni, telefono, contra):
         """El propio usuario corrige sus datos."""
         actual = Usuario.obtener_dict(id)
@@ -260,6 +285,17 @@ class Usuario:
             total = cursor.fetchone()[0]
         conexion.close()
         return total > 0
+
+    @staticmethod
+    def id_por_correo(correo):
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("SELECT idUsuario FROM usuario WHERE LOWER(correo) = LOWER(%s)", (correo,))
+                fila = cursor.fetchone()
+                return fila[0] if fila else None
+        finally:
+            conexion.close()
 
     @staticmethod
     def existe_correo(correo, excepto_id=None):

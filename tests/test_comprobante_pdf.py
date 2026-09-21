@@ -53,6 +53,15 @@ def test_caja_exige_dni_para_boleta_y_ruc_para_factura(bd_limpia):
     assert comprobante["horaEntrega"] == comprobante["hora"]
 
 
+def test_dni_y_ruc_son_opcionales(bd_limpia):
+    id_pedido, key = _pedido_listo()
+    assert Pedido.marcar_recogido(id_pedido, key, None, 1, "boleta", "") == "ok"
+    comprobante = Comprobante.detalle(Comprobante.id_por_pedido(id_pedido))
+    assert comprobante["documento"] == ""
+    id_pedido2, key2 = _pedido_listo()
+    assert Pedido.marcar_recogido(id_pedido2, key2, None, 1, "factura", "") == "ok"
+
+
 def test_snapshot_conserva_pago_lineas_y_cremas(bd_limpia):
     id_pedido, key = _pedido_listo()
     assert Pedido.marcar_recogido(id_pedido, key, "yape", 1, "boleta", "12345679") == "ok"
@@ -95,3 +104,31 @@ def test_cliente_no_puede_ver_comprobante_ajeno(bd_limpia, cliente_client):
         otro["idUsuario"] = 1
         sesion["cliente.auth"] = otro
     assert cliente_client.get(f"/mis-pedidos/{id_pedido}/comprobante").status_code == 404
+
+
+def _confirmar(admin_client, id_pedido, key, **extra):
+    datos = {"_csrf": "token-de-prueba", "idPedido": id_pedido, "key": key, "estado": "listo"}
+    datos.update(extra)
+    return admin_client.post("/admin/pedidos/confirmar", data=datos, follow_redirects=True)
+
+
+def test_tres_opciones_de_comprobante_en_caja(bd_limpia, admin_client, csrf):
+    # Boleta con DNI sin escribir el DNI: se rechaza y no se entrega.
+    id1, key1 = _pedido_listo()
+    r = _confirmar(admin_client, id1, key1, tipo_comprobante="boleta_dni")
+    assert "8 dígitos" in r.get_data(as_text=True) and Comprobante.id_por_pedido(id1) is None
+    # Boleta con DNI válido.
+    _confirmar(admin_client, id1, key1, tipo_comprobante="boleta_dni", documento="12345678")
+    assert Comprobante.detalle(Comprobante.id_por_pedido(id1))["documento"] == "12345678"
+    # Boleta simple: sin documento aunque llegue uno.
+    id2, key2 = _pedido_listo()
+    _confirmar(admin_client, id2, key2, tipo_comprobante="boleta_simple", documento="99999999")
+    c2 = Comprobante.detalle(Comprobante.id_por_pedido(id2))
+    assert c2["documento"] == "" and c2["numero"].startswith("B001-")
+    # Factura: exige RUC y razón social.
+    id3, key3 = _pedido_listo()
+    r = _confirmar(admin_client, id3, key3, tipo_comprobante="factura")
+    assert "RUC" in r.get_data(as_text=True) and Comprobante.id_por_pedido(id3) is None
+    _confirmar(admin_client, id3, key3, tipo_comprobante="factura",
+               documento="20123456789", razon_social="Cliente SAC")
+    assert Comprobante.detalle(Comprobante.id_por_pedido(id3))["numero"].startswith("F001-")
