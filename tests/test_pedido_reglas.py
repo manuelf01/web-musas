@@ -13,7 +13,7 @@ UNA_LINEA = [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
 
 def _crear(hora="19:00:00", items=None):
     return Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "C", "999", hora, False, False, None, items or UNA_LINEA)
+        CLIENTE_ID, "cliente@correo.com", "C", "999", hora, "efectivo", None, items or UNA_LINEA)
 
 
 def test_limite_de_pedidos_activos_por_persona(bd_limpia):
@@ -78,3 +78,13 @@ def test_historial_marca_cancelable_solo_recibido(bd_limpia):
     h = {p["idPedido"]: p for p in Pedido.historial_cliente(CLIENTE_ID)}
     assert h[idp]["cancelable"] is False
     assert h[idp]["estado"] == "preparando"
+
+
+def test_no_show_solo_cuando_el_pedido_esta_listo(bd_limpia):
+    idp, _ = _crear()
+    assert Pedido.marcar_no_show(idp) is False
+    Pedido.avanzar_preparacion(idp)
+    assert Pedido.marcar_no_show(idp) is False
+    Pedido.avanzar_preparacion(idp)
+    assert Pedido.marcar_no_show(idp) is True
+    assert Pedido.resumen_dashboard()["pendientes"] == 0

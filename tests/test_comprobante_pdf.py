@@ -21,8 +21,8 @@ ITEMS = [{
 
 def _pedido_listo():
     id_pedido, key = Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "Cliente Prueba", "999888777",
-        "20:00:00", True, True, "Sin cebolla", ITEMS,
+        CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
+        "20:00:00", "yape", "Sin cebolla", ITEMS,
     )
     assert Pedido.avanzar_preparacion(id_pedido) == "preparando"
     assert Pedido.avanzar_preparacion(id_pedido) == "listo"
@@ -31,8 +31,8 @@ def _pedido_listo():
 
 def test_entrega_exige_pedido_listo_y_medio_valido(bd_limpia):
     id_pedido, key = Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "Cliente Prueba", "999888777",
-        "20:00:00", True, False, None, ITEMS,
+        CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
+        "20:00:00", "efectivo", None, ITEMS,
     )
     assert Pedido.marcar_recogido(id_pedido, key, "efectivo", 1) == "no_listo"
     Pedido.avanzar_preparacion(id_pedido)
@@ -41,9 +41,21 @@ def test_entrega_exige_pedido_listo_y_medio_valido(bd_limpia):
     assert Comprobante.id_por_pedido(id_pedido) is None
 
 
+def test_caja_exige_dni_para_boleta_y_ruc_para_factura(bd_limpia):
+    id_pedido, key = _pedido_listo()
+    assert Pedido.marcar_recogido(id_pedido, key, "yape", 1, "boleta", "123") == "dni_invalido"
+    assert Pedido.marcar_recogido(id_pedido, key, "yape", 1, "factura", "20123456789") == "razon_social_requerida"
+    assert Pedido.marcar_recogido(
+        id_pedido, key, "yape", 1, "factura", "20123456789", "Cliente SAC") == "ok"
+    comprobante = Comprobante.detalle(Comprobante.id_por_pedido(id_pedido))
+    assert comprobante["tipoComprobante"] == "factura"
+    assert comprobante["documento"] == "20123456789"
+    assert comprobante["horaEntrega"] == comprobante["hora"]
+
+
 def test_snapshot_conserva_pago_lineas_y_cremas(bd_limpia):
     id_pedido, key = _pedido_listo()
-    assert Pedido.marcar_recogido(id_pedido, key, "yape", 1) == "ok"
+    assert Pedido.marcar_recogido(id_pedido, key, "yape", 1, "boleta", "12345679") == "ok"
     id_comprobante = Comprobante.id_por_pedido(id_pedido)
     comprobante = Comprobante.detalle(id_comprobante)
 
@@ -56,7 +68,7 @@ def test_snapshot_conserva_pago_lineas_y_cremas(bd_limpia):
 
 def test_cliente_y_caja_descargan_el_mismo_pdf(bd_limpia, cliente_client, admin_client):
     id_pedido, key = _pedido_listo()
-    assert Pedido.marcar_recogido(id_pedido, key, "tarjeta", 1) == "ok"
+    assert Pedido.marcar_recogido(id_pedido, key, "tarjeta", 1, "boleta", "12345679") == "ok"
     id_comprobante = Comprobante.id_por_pedido(id_pedido)
 
     vista_cliente = cliente_client.get(f"/mis-pedidos/{id_pedido}/comprobante")
@@ -77,7 +89,7 @@ def test_cliente_y_caja_descargan_el_mismo_pdf(bd_limpia, cliente_client, admin_
 
 def test_cliente_no_puede_ver_comprobante_ajeno(bd_limpia, cliente_client):
     id_pedido, key = _pedido_listo()
-    assert Pedido.marcar_recogido(id_pedido, key, "efectivo", 1) == "ok"
+    assert Pedido.marcar_recogido(id_pedido, key, "efectivo", 1, "boleta", "12345679") == "ok"
     with cliente_client.session_transaction() as sesion:
         otro = dict(sesion["cliente.auth"])
         otro["idUsuario"] = 1

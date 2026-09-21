@@ -4,7 +4,7 @@
 {% block flash %}{% endblock %}
 
 {% block content %}
-{% set d = form if form else (sesion if sesion else None) %}
+{% set d = sesion if sesion else None %}
 <div class="cx-wrap">
   <nav class="carta-breadcrumb" aria-label="Ruta">
     <a href="{{ url_for('cliente.home') }}">Inicio</a>
@@ -64,34 +64,33 @@
           {% if sesion %}
             <div class="musa-alert musa-alert--ok d-flex gap-2 mb-3">
               <i class="bi bi-person-check-fill mt-1"></i>
-              <div class="small">Datos de tu cuenta. Puedes editarlos si recoge otra persona.</div>
+              <div class="small">Usaremos los datos verificados de tu cuenta para identificar y contactar a quien recoge.</div>
             </div>
           {% endif %}
 
           <div class="row g-3">
-            <div class="col-sm-4 musa-field">
-              <label for="dni" class="musa-field-label">DNI</label>
-              <input type="text" inputmode="numeric" maxlength="8" pattern="[0-9]{8}"
-                     class="musa-input" id="dni" name="dni" placeholder="8 dígitos" required
-                     value="{{ d.dni if d else '' }}" />
+            <div class="col-12 musa-field">
+              <label for="correo" class="musa-field-label">Correo electrónico</label>
+              <input type="email" class="musa-input" id="correo" value="{{ d.correo if d else '' }}" readonly />
             </div>
             <div class="col-sm-4 musa-field">
               <label for="nombres" class="musa-field-label">Nombres</label>
               <input type="text" class="musa-input" id="nombres" name="nombres" placeholder="Ej. Rodrigo" required
-                     value="{{ d.nombres if d else '' }}" />
+                     value="{{ d.nombres if d else '' }}" readonly />
             </div>
             <div class="col-sm-4 musa-field">
               <label for="apellidos" class="musa-field-label">Apellidos</label>
               <input type="text" class="musa-input" id="apellidos" name="apellidos" placeholder="Ej. Carranza" required
-                     value="{{ d.apellidos if d else '' }}" />
+                     value="{{ d.apellidos if d else '' }}" readonly />
             </div>
             <div class="col-12 musa-field">
               <label for="telefono" class="musa-field-label">Teléfono de contacto / WhatsApp</label>
               <input type="tel" inputmode="numeric" maxlength="9" pattern="[0-9]{9}"
                      class="musa-input" id="telefono" name="telefono" placeholder="987 654 321" required
-                     value="{{ d.telefono if d else '' }}" />
+                     value="{{ d.telefono if d else '' }}" readonly />
             </div>
           </div>
+          <p class="musa-field-hint mt-2 mb-0">Si algún dato cambió, actualízalo desde <a href="{{ url_for('cliente.mi_cuenta') }}">Mi cuenta</a> antes de confirmar.</p>
 
           <div class="mt-3 musa-field">
             <label class="musa-field-label">
@@ -134,41 +133,46 @@
           </div>
         </div>
 
-        <!-- Comprobante y pago -->
+        <!-- Forma de pago -->
         <div class="ck-card">
-          <h2><span class="ck-num">2</span> Comprobante y forma de pago</h2>
-
-          <label class="ck-opcion">
-            <i class="bi bi-receipt"></i>
-            <div>
-              <strong>Emitir boleta de venta interna</strong>
-              <span>Se genera al pagar y recoger el pedido</span>
-            </div>
-            <input type="checkbox" name="boleta" value="1" {{ 'checked' if form and form.boleta }} />
-          </label>
+          <h2><span class="ck-num">2</span> Forma de pago</h2>
+          <div class="musa-alert d-flex gap-2 mb-3">
+            <i class="bi bi-receipt mt-1"></i>
+            <div class="small">Al entregar el pedido, caja te preguntará si necesitas boleta o factura y solicitará el DNI o RUC correspondiente.</div>
+          </div>
 
           <p class="musa-field-label mt-3 mb-2">Forma de pago</p>
           <p class="musa-field-hint mb-2">El pago siempre es al recoger en el local. Elige cómo prefieres pagar:</p>
           <label class="ck-opcion">
-            <i class="bi bi-qr-code"></i>
-            <div>
-              <strong>Yape / Plin al recoger</strong>
-              <span>Escaneas y pagas en caja al momento de recoger</span>
-            </div>
-            <input type="radio" name="pago" value="digital" {{ 'checked' if not (form and form.pago == 'tienda') }} />
-          </label>
-          <div class="ck-yape" id="ck-yape-info">
-            <strong>Yape / Plin a {{ nombre_negocio }}:</strong> 987 654 321<br />
-            <span style="color: var(--musa-texto-suave);">También puedes pagar en caja con este número.</span>
-          </div>
-          <label class="ck-opcion">
             <i class="bi bi-cash-coin"></i>
             <div>
-              <strong>Efectivo o tarjeta al recoger</strong>
-              <span>Pagas en caja del local</span>
+              <strong>Efectivo</strong>
+              <span>Pagas en caja al recoger</span>
             </div>
-            <input type="radio" name="pago" value="tienda" {{ 'checked' if form and form.pago == 'tienda' }} />
+            <input type="radio" name="pago" value="efectivo" {{ 'checked' if not form or form.pago == 'efectivo' }} />
           </label>
+          <label class="ck-opcion">
+            <i class="bi bi-credit-card"></i>
+            <div>
+              <strong>Tarjeta</strong>
+              <span>Pagas con tarjeta en caja</span>
+            </div>
+            <input type="radio" name="pago" value="tarjeta" {{ 'checked' if form and form.pago == 'tarjeta' }} />
+          </label>
+          <label class="ck-opcion">
+            <i class="bi bi-phone"></i>
+            <div><strong>Yape</strong><span>Pagas al recoger usando el número o QR</span></div>
+            <input type="radio" name="pago" value="yape" {{ 'checked' if form and form.pago == 'yape' }} />
+          </label>
+          <label class="ck-opcion">
+            <i class="bi bi-qr-code"></i>
+            <div><strong>Plin</strong><span>Pagas al recoger usando el número o QR</span></div>
+            <input type="radio" name="pago" value="plin" {{ 'checked' if form and form.pago == 'plin' }} />
+          </label>
+          <div class="ck-yape" id="ck-yape-info" hidden>
+            {% if pago_digital.numero %}<strong>{{ pago_digital.titular }}:</strong> {{ pago_digital.numero }}<br />{% endif %}
+            <span style="color: var(--musa-texto-suave);">El número y el QR también aparecerán al confirmar el pedido.</span>
+          </div>
 
           <div class="musa-field mt-3">
             <label for="notas" class="musa-field-label">Instrucciones para cocina (opcional)</label>
@@ -195,7 +199,7 @@
         </button>
         <p class="small text-center mt-3 mb-0" style="color: var(--musa-texto-suave);">
           <i class="bi bi-shield-check" style="color: var(--musa-exito);"></i>
-          Te avisaremos por WhatsApp cuando esté listo para recoger.
+          Usaremos tu celular si necesitamos contactarte por alguna demora.
         </p>
       </aside>
     </form>

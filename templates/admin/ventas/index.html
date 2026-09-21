@@ -7,7 +7,7 @@
   <div class="adm-head" style="margin-bottom: 0;">
     <div>
       <h1>Ventas
-        <span class="adm-count-pill">Últimos 7 días</span>
+        <span class="adm-count-pill">Ventas cobradas</span>
       </h1>
       <p class="adm-sub">Ingresos, métricas transaccionales y comprobantes emitidos.</p>
     </div>
@@ -33,14 +33,24 @@
     <div class="adm-vent-kpi__top">
       <span class="adm-vent-kpi__ico"><i class="bi bi-ticket-detailed"></i></span>
     </div>
-    <span class="adm-vent-kpi__label">Ticket promedio</span>
-    <div class="adm-vent-kpi__valor">S/ {{ '%.2f'|format(kpis.ticket) }}</div>
+    <span class="adm-vent-kpi__label">Venta más alta</span>
+    <div class="adm-vent-kpi__valor">S/ {{ '%.2f'|format(kpis.maxima) }}</div>
   </div>
 </div>
 
 <section class="adm-card">
   <div class="adm-card__head">
-    <div><h2><span style="color: var(--musa-brasa);">●</span> Ventas por día</h2><p>Últimos 7 días</p></div>
+    <div><h2><span style="color: var(--musa-brasa);">●</span> Ventas por día</h2><p>Últimos {{ periodo_dias }} días</p></div>
+    <form method="get" class="adm-filtros">
+      <input type="hidden" name="q" value="{{ filtros.q }}" />
+      <input type="hidden" name="tipo" value="{{ filtros.tipo }}" />
+      <input type="hidden" name="medio" value="{{ filtros.medio }}" />
+      <select name="periodo" class="musa-input" onchange="this.form.submit()">
+        <option value="semana" {{ 'selected' if filtros.periodo == 'semana' }}>Semana</option>
+        <option value="mes" {{ 'selected' if filtros.periodo == 'mes' }}>Mes</option>
+        <option value="anio" {{ 'selected' if filtros.periodo == 'anio' }}>Año</option>
+      </select>
+    </form>
     <span class="adm-chip-total">Total: <strong>S/ {{ '%.2f'|format(grafico | sum(attribute='monto')) }}</strong></span>
   </div>
   <div class="adm-chart">
@@ -54,10 +64,38 @@
   </div>
 </section>
 
+<section class="adm-card" style="margin-top:24px;">
+  <div class="adm-card__head"><div><h2>Ventas de hoy por hora</h2><p>Permite identificar las horas con mayor venta cobrada</p></div></div>
+  <div class="adm-chart">
+    {% for h in grafico_horas %}
+      <div class="adm-chart__col">
+        <span class="adm-chart__monto">S/ {{ '%.0f'|format(h.monto) }}</span>
+        <div class="adm-chart__barra" style="height: {{ [h.pct, 3] | max }}%;"></div>
+        <span class="adm-chart__label">{{ h.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
 <section class="adm-card" style="margin-top: 24px;">
   <div class="adm-card__head">
-    <div><h2>Comprobantes</h2><p>Boletas y notas de venta emitidas al entregar el pedido</p></div>
+    <div><h2>Comprobantes</h2><p>Boletas y facturas internas emitidas al entregar el pedido</p></div>
   </div>
+
+  <form method="get" class="ped-toolbar" style="margin-bottom:18px;">
+    <div class="ped-buscar"><i class="bi bi-search"></i><input type="search" name="q" value="{{ filtros.q }}" placeholder="Número, cliente o DNI/RUC" /></div>
+    <select name="tipo" class="musa-input">
+      <option value="">Todos los comprobantes</option>
+      <option value="boleta" {{ 'selected' if filtros.tipo == 'boleta' }}>Boletas</option>
+      <option value="factura" {{ 'selected' if filtros.tipo == 'factura' }}>Facturas</option>
+    </select>
+    <select name="medio" class="musa-input">
+      <option value="">Todos los pagos</option>
+      {% for m in ['Efectivo','Tarjeta','Yape','Plin'] %}<option value="{{ m }}" {{ 'selected' if filtros.medio == m }}>{{ m }}</option>{% endfor %}
+    </select>
+    <input type="hidden" name="periodo" value="{{ filtros.periodo }}" />
+    <button class="btn-contorno" type="submit">Filtrar</button>
+  </form>
 
   {% if comprobantes %}
     <div class="adm-tabla-wrap">
@@ -79,7 +117,7 @@
                 <div class="adm-prod-cel">
                   <span class="adm-thumb adm-avatar--sm" style="font-size:11px; color: var(--musa-brasa); font-family:'Space Grotesk',sans-serif; width:34px; height:34px;">{{ c.iniciales }}</span>
                   <div><strong style="font-size:13px;">{{ c.cliente }}</strong>
-                    <p>DNI {{ c.dni }}</p></div>
+                    <p>{{ 'RUC' if c.tipoComprobante == 'factura' else 'DNI' }} {{ c.dni }}</p></div>
                 </div>
               </td>
               <td>

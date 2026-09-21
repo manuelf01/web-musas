@@ -80,6 +80,8 @@ def actualizar():
     if err:
         flash(err, "error")
     else:
+        CategoriaProducto.cambiar_estado(
+            request.form.get("idCategoria"), request.form.get("activo", "1") == "1")
         flash("Categoría actualizada." + (" Imagen cambiada." if imagen else ""), "ok")
     return redirect(url_for("admin.categoria.home"))
 
@@ -89,7 +91,7 @@ def estado():
     activar = request.form.get("activar") == "1"
     CategoriaProducto.cambiar_estado(request.form["idCategoria"], activar)
     flash("Categoría reactivada." if activar
-          else "Categoría dada de baja (sus productos dejan de verse en la carta).", "ok")
+          else "Categoría eliminada de la carta (sus productos dejan de mostrarse).", "ok")
     return redirect(url_for("admin.categoria.home", estado=request.form.get("volver", "activas")))
 
 

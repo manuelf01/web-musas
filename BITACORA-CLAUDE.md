@@ -1049,3 +1049,15 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - Creado logo vectorial propio en `static/img/marca/v1/` y aplicado en navegación, panel, registro, favicon y PDF. Se incluyen fuentes Inter/Space Grotesk con licencia OFL para conservar tildes y ñ en el documento.
 - Esquema nuevo integrado en `sql.sql`; bases existentes usan `migrations/012_comprobantes_pdf.sql`, validada sobre una copia temporal de la base local. La base real no se modificó.
 - Validación: 129 pruebas aprobadas, incluidas reglas de cobro, snapshot, permisos de cliente, PDF de cliente/caja y extracción de texto. PDF renderizado e inspeccionado en una página A4.
+
+## 2026-09-20 - Flujo cliente por correo, caja y reportes de ventas
+- El registro de clientes ya no solicita DNI. Los clientes ingresan con correo y contraseña; las cuentas administrativas siguen usando DNI y captcha. Correo, nombre y celular se leen de la cuenta y quedan bloqueados en el checkout.
+- El carrito permite editar cantidad y cremas de una línea existente desde el detalle del producto, reemplazando la línea original al guardar.
+- El comprador elige exactamente efectivo, tarjeta, Yape o Plin. La confirmación muestra número, titular y QR cuando están configurados con `MUSAS_PAGO_NUMERO`, `MUSAS_PAGO_TITULAR` y `MUSAS_PAGO_QR`; no se publican datos ficticios.
+- Caja solicita el tipo de comprobante al entregar: boleta requiere DNI de 8 dígitos y factura requiere RUC de 11 dígitos más razón social. El medio elegido por el cliente aparece preseleccionado. El comprobante conserva la hora real de entrega y la hora programada por separado.
+- Un pedido solo puede marcarse como «no recogió» después de quedar listo. El dashboard y Ventas calculan importes únicamente desde comprobantes emitidos al entregar.
+- Dashboard: KPIs, productos, gráfico horario y pedidos recientes corresponden al día actual; se retiró el estado de la lista reciente. Ventas incorpora filtros de comprobantes, venta máxima, períodos semana/mes/año y distribución horaria del día.
+- Productos, categorías y usuarios permiten cambiar activo/inactivo al editar. Productos y categorías muestran la acción «Eliminar» como baja lógica; los usuarios solo admiten dar de baja o reactivar y se retiró la ruta de borrado.
+- Sábado cierra a las 23:00 por indicación del usuario. Se mejoraron los mensajes de horario del checkout y los datos de pago digital en la confirmación.
+- Migración `013_clientes_correo_y_caja.sql` integrada en `sql.sql` y aplicada a la base local `db_musuas`.
+- Validación: suite completa aprobada, 138 pruebas; compilación Python, verificación de plantillas/rutas y smoke HTTP local (`/`, `/login`, `/registro`, `/estado-local`) correctos.

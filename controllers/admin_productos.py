@@ -113,6 +113,7 @@ def actualizar():
     if error:
         flash(error, "error")
     else:
+        Producto.cambiar_estado(id, request.form.get("activo", "1") == "1")
         flash("Producto actualizado." + (" Imagen cambiada." if imagen else ""), "ok")
     return redirect(url_for("admin.productos.home"))
 
@@ -122,7 +123,7 @@ def estado():
     id = request.form["id"]
     activar = request.form.get("activar") == "1"
     Producto.cambiar_estado(id, activar)
-    flash("Producto reactivado." if activar else "Producto dado de baja (ya no aparece en la carta).", "ok")
+    flash("Producto reactivado." if activar else "Producto eliminado de la carta.", "ok")
     return redirect(url_for("admin.productos.home", estado=request.form.get("volver", "activos")))
 
 

@@ -61,9 +61,7 @@ def _datos_sesion(fila):
 
 # ----------------------------------------------------------------------
 # LOGIN UNIFICADO
-#   Una sola puerta. Se valida DNI + contraseña.
-#   - Si el DNI es de un administrador  -> además exige el captcha, va a /admin
-#   - Si es un cliente                  -> entra directo a la tienda
+#   Una sola puerta: correo para clientes, DNI para personal del panel.
 # ----------------------------------------------------------------------
 def _destino_post_login(defecto):
     """Ruta interna a la que volver tras el login (?next=...), si es segura."""
@@ -80,12 +78,11 @@ def login():
         return redirect(url_for("cliente.auth.login"))
 
     if request.method == "POST":
-        dni = (request.form.get("usuario") or "").strip()
+        identificador = (request.form.get("usuario") or "").strip()
         contraseña = request.form.get("contraseña") or ""
 
         def _rerender():
-            # Muestra el captcha solo si el DNI es de un administrador.
-            es_admin = bool(RE_DNI.match(dni)) and Autenticacion.dni_es_admin(dni)
+            es_admin = Autenticacion.identificador_es_admin(identificador)
             return render_template(
                 "client/login.html",
                 form=request.form.to_dict(),
@@ -97,14 +94,14 @@ def login():
             flash("Demasiados intentos fallidos. Espera unos minutos antes de volver a intentar.", "error")
             return _rerender()
 
-        if not RE_DNI.match(dni):
-            flash("El DNI debe tener 8 dígitos.", "error")
+        if not (RE_DNI.match(identificador) or RE_CORREO.match(identificador)):
+            flash("Ingresa tu correo electrónico o el DNI de administrador.", "error")
             return _rerender()
         if not contraseña:
             flash("Ingresa tu contraseña.", "error")
             return _rerender()
 
-        resultado = Autenticacion.login_unificado(dni, contraseña)
+        resultado = Autenticacion.login_unificado(identificador, contraseña)
         if isinstance(resultado, str):
             _registrar_fallo_login()
             flash(resultado, "error")
@@ -149,9 +146,9 @@ def login_captcha():
 
 @auth.route("/login/tipo-dni")
 def login_tipo_dni():
-    """Dice si un DNI corresponde a un administrador (para mostrar el captcha)."""
-    dni = (request.args.get("dni") or "").strip()
-    es_admin = bool(RE_DNI.match(dni)) and Autenticacion.dni_es_admin(dni)
+    """Dice si el identificador pertenece al panel (para mostrar el captcha)."""
+    identificador = (request.args.get("identificador") or request.args.get("dni") or "").strip()
+    es_admin = Autenticacion.identificador_es_admin(identificador) if identificador else False
     return {"admin": es_admin}
 
 
@@ -164,7 +161,6 @@ def registro():
         return redirect(url_for("cliente.auth.login"))
 
     if request.method == "POST":
-        dni = (request.form.get("dni") or "").strip()
         nombres = (request.form.get("nombres") or "").strip()
         apellidos = (request.form.get("apellidos") or "").strip()
         correo = (request.form.get("correo") or "").strip()
@@ -172,9 +168,7 @@ def registro():
         contraseña = request.form.get("contraseña") or ""
 
         error = None
-        if not RE_DNI.match(dni):
-            error = "El DNI debe tener 8 dígitos."
-        elif not nombres or not apellidos:
+        if not nombres or not apellidos:
             error = "Completa tus nombres y apellidos."
         elif not RE_CORREO.match(correo):
             error = "Ingresa un correo electrónico válido."
@@ -184,7 +178,7 @@ def registro():
             error = password_valida(contraseña)
 
         if error is None:
-            error = Autenticacion.registro(dni, nombres, apellidos, correo, telefono, contraseña)
+            error = Autenticacion.registro(nombres, apellidos, correo, telefono, contraseña)
 
         if error is None:
             flash("¡Cuenta creada! Ya puedes iniciar sesión.", "ok")

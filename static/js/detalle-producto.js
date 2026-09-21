@@ -11,6 +11,23 @@
   var verCarrito = document.getElementById("dp-ver-carrito");
   var qty = 1;
   var enCarrito = false; // ya se agregó esta combinación
+  var editarIndice = root.dataset.editarIndice === "" ? null : Number(root.dataset.editarIndice);
+  var modoEditar = Number.isInteger(editarIndice) && editarIndice >= 0;
+
+  if (modoEditar) {
+    var lineaEditar = window.MusasCarrito.leer()[editarIndice];
+    if (!lineaEditar || Number(lineaEditar.idProducto) !== Number(root.dataset.id)) {
+      modoEditar = false;
+    } else {
+      qty = Math.max(1, Number(lineaEditar.cantidad) || 1);
+      var idsEditar = (lineaEditar.cremas || []).map(function (c) {
+        return Number(c.idProducto);
+      });
+      document.querySelectorAll(".crema-check").forEach(function (c) {
+        c.checked = idsEditar.indexOf(Number(c.value)) !== -1;
+      });
+    }
+  }
 
   function cremasSeleccionadas() {
     return Array.prototype.map.call(
@@ -46,7 +63,7 @@
       if (span) {
         span.textContent = enCarrito
           ? "Agregado al carrito"
-          : "Agregar al carrito — S/ " + t;
+          : (modoEditar ? "Guardar cambios — S/ " + t : "Agregar al carrito — S/ " + t);
       }
     });
     if (verCarrito) verCarrito.hidden = !enCarrito;
@@ -82,15 +99,21 @@
     b.addEventListener("click", function () {
       if (enCarrito) return;
       var unidades = qty;
-      window.MusasCarrito.agregarConAnim(
-        {
+      var item = {
           idProducto: Number(root.dataset.id),
           nombre: root.dataset.nombre,
           precio: base,
           imagen: root.dataset.imagen || null,
           cantidad: unidades,
           cremas: cremasSeleccionadas(),
-        },
+        };
+      if (modoEditar) {
+        window.MusasCarrito.reemplazar(editarIndice, item);
+        window.location.href = carritoUrl;
+        return;
+      }
+      window.MusasCarrito.agregarConAnim(
+        item,
         b,
         {
           href: carritoUrl,

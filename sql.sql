@@ -1,7 +1,7 @@
 -- =====================================================================
 --  Las Musas — Base de datos completa (crear desde cero)
 -- =====================================================================
---  Este archivo YA incluye todos los cambios de migrations/001..010.
+--  Este archivo YA incluye todos los cambios de migrations/001..013.
 --  Para levantar el proyecto desde cero:
 --    1. Abre phpMyAdmin (XAMPP) → pestaña "SQL"
 --    2. Copia y pega TODO este archivo y ejecútalo.
@@ -10,7 +10,7 @@
 --  Cuentas de ejemplo (contraseña de todas: Musas2026)
 --    DNI 12345678  → superusuario  (acceso total al panel + gestión de usuarios)
 --    DNI 87654321  → administrador (panel sin la sección Usuarios)
---    DNI 12345679  → usuario       (cliente de la tienda)
+--    cliente@correo.com → usuario  (cliente de la tienda; inicia por correo)
 --
 --  MariaDB 10.4 (XAMPP). Charset utf8mb4 en todo (la columna `contraseña`
 --  lleva ñ y el hash pbkdf2 ocupa ~102 chars).
@@ -39,7 +39,7 @@ DROP TABLE IF EXISTS `usuario`;
 -- ---------------------------------------------------------------------
 CREATE TABLE `usuario` (
   `idUsuario`   int(11)      NOT NULL AUTO_INCREMENT,
-  `dni`         char(8)      NOT NULL,
+  `dni`         char(8)      DEFAULT NULL,
   `nombres`     varchar(100) NOT NULL,
   `apellidos`   varchar(100) NOT NULL,
   `correo`      varchar(200) NOT NULL,
@@ -49,7 +49,8 @@ CREATE TABLE `usuario` (
   `noShows`     smallint(6)  NOT NULL DEFAULT 0,-- veces que no recogió su pedido
   `rol`         varchar(20)  NOT NULL DEFAULT 'usuario',
   `activo`      tinyint(1)   NOT NULL DEFAULT 1,
-  PRIMARY KEY (`idUsuario`)
+  PRIMARY KEY (`idUsuario`),
+  UNIQUE KEY `uq_usuario_correo` (`correo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ---------------------------------------------------------------------
@@ -95,23 +96,25 @@ CREATE TABLE `producto` (
 --    noShow       0/1  = el cliente no vino a recogerlo
 --    estadoPrep   0/1/2 = recibido / en preparación / listo para recojo
 --    keyPedido    = palabra clave de 4 dígitos que el cliente da al recoger
---    billeteraDigital 1 = Yape/Plin, 0 = paga en tienda
---    dniNoRegistrado / nombres / numeroTelefono = datos de quien recoge
---      (pueden diferir de la cuenta: puede recoger otra persona)
+--    medioPagoElegido = efectivo / tarjeta / yape / plin
+--    correoRecojo / nombres / numeroTelefono = snapshot de la cuenta
+--    dniNoRegistrado se solicita en caja al emitir boleta o factura
 -- ---------------------------------------------------------------------
 CREATE TABLE `registroPedido` (
   `idPedido`         int(11)     NOT NULL AUTO_INCREMENT,
   `idUsuario`        int(11)     DEFAULT NULL,
-  `dniNoRegistrado`  char(8)     NOT NULL,
+  `dniNoRegistrado`  varchar(11) DEFAULT NULL,
   `nombres`          varchar(120) DEFAULT NULL,
+  `correoRecojo`     varchar(200) DEFAULT NULL,
   `numeroTelefono`   char(9)     NOT NULL,
   `estadoRecojo`     tinyint(1)  NOT NULL DEFAULT 0,
   `cancelado`        tinyint(1)  NOT NULL DEFAULT 0,
   `noShow`           tinyint(1)  NOT NULL DEFAULT 0,
   `horaRecojo`       time        NOT NULL,
   `fechaPedido`      date        NOT NULL DEFAULT (CURRENT_DATE),
-  `estadoBoleta`     tinyint(1)  NOT NULL,
+  `estadoBoleta`     tinyint(1)  NOT NULL DEFAULT 0,
   `billeteraDigital` tinyint(1)  NOT NULL,
+  `medioPagoElegido` varchar(20) NOT NULL DEFAULT 'efectivo',
   `keyPedido`        smallint(6) NOT NULL,
   `notas`            varchar(255) DEFAULT NULL,
   `estadoPrep`       tinyint(4)  NOT NULL DEFAULT 0,
@@ -141,15 +144,16 @@ CREATE TABLE `detalleOrden` (
 
 -- ---------------------------------------------------------------------
 --  comprobante / detalleComprobante  — venta emitida al ENTREGAR el
---  pedido (Pedido._emitir_comprobante). numeroComprobante = "B001-000000NN"
---  si el cliente pidió boleta, o "NV01-..." (nota de venta) si no.
---  dniNoRegistrado va como CHAR(8) para no perder el 0 inicial del DNI.
+--  pedido (Pedido._emitir_comprobante). numeroComprobante usa B001 para
+--  boleta y F001 para factura. El documento admite DNI (8) o RUC (11).
 -- ---------------------------------------------------------------------
 CREATE TABLE `comprobante` (
   `idComprobante`     int(11)      NOT NULL AUTO_INCREMENT,
   `idPedido`          int(11)      NOT NULL,
   `idUsuario`         int(11)      DEFAULT NULL,
-  `dniNoRegistrado`   char(8)      NOT NULL,
+  `dniNoRegistrado`   varchar(11)  DEFAULT NULL,
+  `tipoComprobante`   varchar(10)  NOT NULL DEFAULT 'boleta',
+  `razonSocial`       varchar(200) DEFAULT NULL,
   `fechaComprobante`  date         NOT NULL,
   `horaComprobante`   time         NOT NULL,
   `subTotal`          decimal(12,2) NOT NULL,

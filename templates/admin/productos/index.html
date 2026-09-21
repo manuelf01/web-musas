@@ -63,7 +63,8 @@
                   <button type="button" class="adm-btn-sm" data-panel-abrir data-modo="editar"
                     data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-descripcion="{{ p.descripcion }}"
                     data-precio="{{ p.precio or 0 }}" data-existencias="{{ p.existencias }}"
-                    data-categoria="{{ p.idCategoria }}" data-imagen="{{ p.imagen or '' }}">
+                    data-categoria="{{ p.idCategoria }}" data-imagen="{{ p.imagen or '' }}"
+                    data-activo="{{ 1 if p.activo else 0 }}">
                     <i class="bi bi-pencil"></i> Editar
                   </button>
                   <form action="{{ url_for('admin.productos.estado') }}" method="POST">
@@ -74,9 +75,9 @@
                     {% if p.activo %}
                       <button class="adm-btn-sm adm-btn-sm--danger"
                         data-confirm="«{{ p.nombre }}» dejará de aparecer en la carta y en el inicio. Podrás reactivarlo cuando quieras."
-                        data-confirm-titulo="Dar de baja el producto"
-                        data-confirm-ok="Sí, dar de baja" data-confirm-tono="peligro">
-                        <i class="bi bi-slash-circle"></i> Dar de baja</button>
+                        data-confirm-titulo="Eliminar de la carta"
+                        data-confirm-ok="Sí, eliminar" data-confirm-tono="peligro">
+                        <i class="bi bi-trash"></i> Eliminar</button>
                     {% else %}
                       <button class="adm-btn-sm"
                         data-confirm="«{{ p.nombre }}» volverá a la carta (si tiene stock disponible)."
@@ -151,6 +152,13 @@
           <input class="musa-input" id="pp-existencias" name="existencias" inputmode="numeric" placeholder="25" required />
         </div>
       </div>
+      <div class="musa-field mt-3">
+        <label class="musa-field-label" for="pp-activo">Estado</label>
+        <select class="musa-input" id="pp-activo" name="activo">
+          <option value="1">Activo · visible en la carta</option>
+          <option value="0">Inactivo · eliminado de la carta</option>
+        </select>
+      </div>
     </div>
     <div class="adm-panel__foot">
       <button type="submit" class="btn-brasa" id="pp-submit"
@@ -199,6 +207,7 @@
         document.getElementById("pp-precio").value = b.dataset.precio;
         document.getElementById("pp-existencias").value = b.dataset.existencias;
         document.getElementById("pp-categoria").value = b.dataset.categoria;
+        document.getElementById("pp-activo").value = b.dataset.activo;
         if (b.dataset.imagen) mostrarPreview("/static/img/" + b.dataset.imagen);
       } else {
         titulo.textContent = "Agregar producto";
@@ -208,6 +217,7 @@
         submit.dataset.confirmTitulo = "Agregar producto";
         submit.dataset.confirmOk = "Guardar";
         document.getElementById("pp-id").value = "";
+        document.getElementById("pp-activo").value = "1";
       }
       abrir();
     });

@@ -11,12 +11,20 @@ from negocio import HORA_PERU, SEDE, estado_local
     ('00:00:00', False), ('17:59:59', False), ('18:00:00', True),
     ('22:00:00', True), ('23:29:59', True), ('23:30:00', False), ('23:59:59', False),
 ])
-@pytest.mark.parametrize('dia', [7, 8, 9, 10, 11, 12])
+@pytest.mark.parametrize('dia', [7, 8, 9, 10, 11])
 def test_limites_horario_peru(dia, hora, abierto):
     ahora = datetime.fromisoformat(f'2026-09-{dia:02d}T' + hora).replace(tzinfo=HORA_PERU)
     estado = estado_local(ahora)
     assert estado['abierto'] is abierto
     assert estado['cambia_en'] > 0
+
+
+@pytest.mark.parametrize('hora,abierto', [
+    ('17:59:59', False), ('18:00:00', True), ('22:59:59', True), ('23:00:00', False),
+])
+def test_sabado_cierra_a_las_23(hora, abierto):
+    ahora = datetime.fromisoformat('2026-09-12T' + hora).replace(tzinfo=HORA_PERU)
+    assert estado_local(ahora)['abierto'] is abierto
 
 
 def test_horario_no_depende_del_reloj_del_servidor_ni_modo_demo(monkeypatch):
@@ -68,7 +76,7 @@ def test_domingo(hora, abierto):
 
 
 @pytest.mark.parametrize('fecha,espera', [
-    ('2026-09-12T23:30:00-05:00', 9.5),
+    ('2026-09-12T23:00:00-05:00', 10),
     ('2026-09-13T23:00:00-05:00', 19),
     ('2026-09-14T00:00:00-05:00', 18),
 ])
@@ -77,7 +85,7 @@ def test_transiciones_fin_de_semana(fecha, espera):
 
 
 @pytest.mark.parametrize('dia,primera,ultima,total', [
-    (12, '18:00', '23:00', 11), (13, '09:00', '22:30', 28),
+    (12, '18:00', '22:30', 10), (13, '09:00', '22:30', 28),
 ])
 def test_franjas_respetan_horario_semanal(monkeypatch, bd_limpia, dia, primera, ultima, total):
     import importlib

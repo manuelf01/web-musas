@@ -47,16 +47,30 @@ class Autenticacion:
         return total > 0
 
     @staticmethod
-    def login_unificado(dni, contraseña):
+    def identificador_es_admin(identificador):
+        """Indica si el DNI/correo corresponde a una cuenta de panel."""
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                "SELECT COUNT(*) FROM usuario WHERE (dni = %s OR LOWER(correo) = LOWER(%s)) "
+                "AND (rol IN ('superusuario','administrador') OR tipoUsuario = 0)",
+                (identificador, identificador),
+            )
+            total = cursor.fetchone()[0]
+        conexion.close()
+        return total > 0
+
+    @staticmethod
+    def login_unificado(identificador, contraseña):
         """
         Devuelve (fila_usuario, tipo) con tipo 'admin' o 'cliente',
         o un string con el mensaje de error.
         fila_usuario = idUsuario, dni, nombres, apellidos, correo, numTelf,
                        contraseña, tipoUsuario, rol, activo
         """
-        filas = Usuario.login_por_dni(dni)
+        filas = Usuario.login_por_identificador(identificador)
         if not filas:
-            return "No encontramos una cuenta con ese DNI."
+            return "No encontramos una cuenta con ese correo o DNI."
 
         for fila in filas:
             if Autenticacion.verificar_password(fila[6], contraseña):
@@ -96,13 +110,11 @@ class Autenticacion:
         return error
 
     @staticmethod
-    def registro(dni, nombres, apellidos, correo, numTelf, contraseña):
-        if not dni or not nombres or not apellidos or not correo or not numTelf or not contraseña:
+    def registro(nombres, apellidos, correo, numTelf, contraseña):
+        if not nombres or not apellidos or not correo or not numTelf or not contraseña:
             return "Campos obligatorios"
-        if Usuario.existe_dni(dni):
-            return "Ese DNI ya tiene una cuenta. Inicia sesión."
         # insertar_usuario hace el hash de la contraseña.
-        return Usuario.insertar_usuario(dni, nombres, apellidos, correo, numTelf, contraseña, True)
+        return Usuario.insertar_usuario(None, nombres, apellidos, correo, numTelf, contraseña, True)
 
     @staticmethod
     def sesionRegistrada(blueprint_name, dni):

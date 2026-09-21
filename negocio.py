@@ -1,5 +1,6 @@
 """Datos de la sede y horario público, independiente del modo demo de pedidos."""
 
+import os
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
@@ -24,16 +25,32 @@ SEDE = {
     "nombre": "Sede Chiclayo",
     "direccion": "Av. José Balta Sur 006, Chiclayo 14008, Perú",
     "referencia": "La Paperia, cerca del Hotel Colibrí",
-    "horario": "Lunes a sábado · 6:00 p.m. – 11:30 p.m. | Domingo · 9:00 a.m. – 11:00 p.m.",
+    "horario": "Lunes a viernes · 6:00 p.m. – 11:30 p.m. | Sábado · 6:00 p.m. – 11:00 p.m. | Domingo · 9:00 a.m. – 11:00 p.m.",
 }
 _direccion_mapa = quote("La Paperia, " + SEDE["direccion"])
 SEDE["mapa_url"] = "https://www.google.com/maps?q=" + _direccion_mapa
 SEDE["mapa_embed"] = SEDE["mapa_url"] + "&z=17&output=embed"
 
+_pago_qr = os.environ.get("MUSAS_PAGO_QR", "").strip().replace("\\", "/")
+_pago_qr_externo = _pago_qr.lower().startswith("https://")
+if _pago_qr.startswith("static/"):
+    _pago_qr = _pago_qr[len("static/"):]
+
+PAGO_DIGITAL = {
+    "numero": os.environ.get("MUSAS_PAGO_NUMERO", "").strip(),
+    "titular": os.environ.get("MUSAS_PAGO_TITULAR", NOMBRE_NEGOCIO).strip(),
+    "qr": _pago_qr,
+    "qr_externo": _pago_qr_externo,
+}
+
 
 def horario_dia(fecha):
     """Minutos desde medianoche según el horario de OlaClick (/info)."""
-    return (9 * 60, 23 * 60) if fecha.weekday() == 6 else (18 * 60, 23 * 60 + 30)
+    if fecha.weekday() == 6:
+        return 9 * 60, 23 * 60
+    if fecha.weekday() == 5:
+        return 18 * 60, 23 * 60
+    return 18 * 60, 23 * 60 + 30
 
 
 def _limites_dia(ahora):

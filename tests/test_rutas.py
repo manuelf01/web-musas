@@ -41,7 +41,7 @@ def test_pulso_de_cocina(admin_client, bd_limpia):
     assert d["pendientes"] == []
     f0 = d["firma"]
     Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "C", "999", "19:00:00", False, False, None,
+        CLIENTE_ID, "cliente@correo.com", "C", "999", "19:00:00", "efectivo", None,
         [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
           "cantidad": 1, "precioTotal": 18, "cremas": []}])
     d2 = admin_client.get("/admin/pedidos/pulso").get_json()
@@ -51,7 +51,7 @@ def test_pulso_de_cocina(admin_client, bd_limpia):
 
 def test_seguimiento_estado_del_cliente(cliente_client, bd_limpia):
     idp, _ = Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "C", "999", "19:00:00", False, False, None,
+        CLIENTE_ID, "cliente@correo.com", "C", "999", "19:00:00", "efectivo", None,
         [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
           "cantidad": 1, "precioTotal": 18, "cremas": []}])
     d = cliente_client.get("/mis-pedidos/estado").get_json()
@@ -65,3 +65,10 @@ def test_seguimiento_estado_del_cliente(cliente_client, bd_limpia):
 def test_sugeridos_endpoint(client, bd_limpia):
     d = client.get("/carrito/sugeridos?ids=2").get_json()
     assert "sugeridos" in d and len(d["sugeridos"]) <= 4
+
+
+def test_checkout_muestra_datos_de_cuenta_solo_lectura(cliente_client, bd_limpia):
+    html = cliente_client.get("/compra").get_data(as_text=True)
+    assert 'id="correo"' in html and "cliente@correo.com" in html
+    assert 'id="correo"' in html and "readonly" in html
+    assert 'name="dni"' not in html

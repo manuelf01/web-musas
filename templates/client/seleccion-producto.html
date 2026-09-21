@@ -15,6 +15,7 @@
      data-nombre="{{ producto.nombre }}"
      data-precio="{{ producto.precio or 0 }}"
      data-imagen="{{ producto.imagen or '' }}"
+     data-editar-indice="{{ editar_indice if editar_indice is not none else '' }}"
      data-carrito-url="{{ url_for('cliente.pag_carrito') }}">
 
   <!-- Breadcrumb -->

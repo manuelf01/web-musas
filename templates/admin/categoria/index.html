@@ -55,7 +55,8 @@
       <p>{{ (c[2] or "Sin descripción.") | truncate(90) }}</p>
       <div class="adm-cat-card__foot">
         <button type="button" class="adm-btn-sm" data-cat-abrir data-modo="editar"
-          data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}" data-imagen="{{ c[3] or '' }}">
+          data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}" data-imagen="{{ c[3] or '' }}"
+          data-activo="{{ 1 if activa else 0 }}">
           <i class="bi bi-pencil"></i> Editar
         </button>
         <form action="{{ url_for('admin.categoria.estado') }}" method="POST">
@@ -66,9 +67,9 @@
           {% if activa %}
             <button class="adm-btn-sm adm-btn-sm--danger"
               data-confirm="La categoría «{{ c[1] }}» y sus {{ totales.get(c[0], 0) }} producto(s) dejarán de mostrarse en la carta y el inicio."
-              data-confirm-titulo="Dar de baja la categoría"
-              data-confirm-ok="Sí, dar de baja" data-confirm-tono="peligro">
-              <i class="bi bi-slash-circle"></i> Dar de baja</button>
+              data-confirm-titulo="Eliminar de la carta"
+              data-confirm-ok="Sí, eliminar" data-confirm-tono="peligro">
+              <i class="bi bi-trash"></i> Eliminar</button>
           {% else %}
             <button class="adm-btn-sm"
               data-confirm="«{{ c[1] }}» y sus productos activos volverán a la carta."
@@ -121,6 +122,13 @@
           <input class="musa-input" id="mc-url" name="imagen_url" type="url"
                  placeholder="https://… (enlace directo a la imagen)" />
         </div>
+        <div class="musa-field mt-3">
+          <label class="musa-field-label" for="mc-activo">Estado</label>
+          <select class="musa-input" id="mc-activo" name="activo">
+            <option value="1">Activa · visible en la carta</option>
+            <option value="0">Inactiva · eliminada de la carta</option>
+          </select>
+        </div>
       </div>
       <div class="adm-modal__foot">
         <button type="button" class="btn-contorno" data-cat-cerrar>Cancelar</button>
@@ -166,6 +174,7 @@
         document.getElementById("mc-id").value = b.dataset.id;
         document.getElementById("mc-nombre").value = b.dataset.nombre;
         document.getElementById("mc-descripcion").value = b.dataset.descripcion;
+        document.getElementById("mc-activo").value = b.dataset.activo;
         if (b.dataset.imagen) mostrar("/static/img/" + b.dataset.imagen);
       } else {
         titulo.textContent = "Nueva categoría";
@@ -175,6 +184,7 @@
         submit.dataset.confirmTitulo = "Nueva categoría";
         submit.dataset.confirmOk = "Guardar";
         document.getElementById("mc-id").value = "";
+        document.getElementById("mc-activo").value = "1";
       }
       abrir();
     });

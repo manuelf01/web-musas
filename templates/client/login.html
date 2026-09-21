@@ -103,21 +103,18 @@
         <input type="hidden" name="next" value="{{ next or '' }}" />
         <div class="musa-field">
           <label for="usuario" class="musa-field-label">
-            Documento de Identidad (DNI)
-            <span class="musa-field-hint">8 dígitos</span>
+            Correo electrónico o DNI administrativo
+            <span class="musa-field-hint">Clientes: usa tu correo</span>
           </label>
           <div class="musa-input-icon">
             <i class="bi bi-person-vcard"></i>
             <input
               type="text"
-              inputmode="numeric"
-              maxlength="8"
-              pattern="[0-9]{8}"
               class="musa-input"
               id="usuario"
               name="usuario"
-              placeholder="Ej. 74829103"
-              autocomplete="off"
+              placeholder="tu@correo.com"
+              autocomplete="username"
               value="{{ form.usuario if form else '' }}"
               required
             />
@@ -224,8 +221,7 @@
 <script>
   // (mostrar/ocultar contraseña lo maneja ui-comun.js)
 
-  // DNI solo dígitos
-  var dni = document.getElementById("usuario");
+  var identificador = document.getElementById("usuario");
   var bloque = document.getElementById("bloque-captcha");
   var img = document.getElementById("captcha-img");
   var eyebrow = document.getElementById("eyebrow");
@@ -244,16 +240,15 @@
   }
 
   var timer = null;
-  dni.addEventListener("input", function () {
-    this.value = this.value.replace(/[^0-9]/g, "");
+  identificador.addEventListener("input", function () {
     clearTimeout(timer);
-    var valor = this.value;
-    if (valor.length !== 8) {
+    var valor = this.value.trim();
+    if (!valor || (!valor.includes("@") && valor.length !== 8)) {
       mostrarCaptcha(false);
       return;
     }
     timer = setTimeout(function () {
-      fetch("{{ url_for('cliente.auth.login_tipo_dni') }}?dni=" + valor)
+      fetch("{{ url_for('cliente.auth.login_tipo_dni') }}?identificador=" + encodeURIComponent(valor))
         .then(function (r) { return r.json(); })
         .then(function (d) { mostrarCaptcha(!!d.admin); })
         .catch(function () { mostrarCaptcha(false); });
@@ -262,7 +257,7 @@
 
   document.getElementById("captcha-refresh").addEventListener("click", cargarCaptcha);
 
-  // El servidor decide si el DNI es de administrador y hay que mostrar el captcha.
+  // El servidor decide si la cuenta es de panel y debe mostrar el captcha.
   {% if mostrar_captcha %}
     mostrarCaptcha(true);
   {% endif %}

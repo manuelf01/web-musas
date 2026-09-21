@@ -21,8 +21,9 @@ cerca del Hotel Colibrí; el usuario confirmó que es el mismo negocio.
 Los datos compartidos
 de la sede y los enlaces del mapa se definen en `negocio.py` (`SEDE`).
 El aviso público de abierto/cerrado usa la hora de Perú (UTC-5): abierto
-lunes a sábado de 18:00 a 23:30 y domingo de 09:00 a 23:00 (cierre exclusivo),
-según https://las-musas-burger.ola.click/info. Es independiente
+lunes a viernes de 18:00 a 23:30, sábado de 18:00 a 23:00 y domingo de
+09:00 a 23:00 (cierre exclusivo). El sábado sigue la indicación del usuario;
+el resto se contrastó con https://las-musas-burger.ola.click/info. Es independiente
 de `MUSAS_DEMO` y de las variables de prueba del checkout. Se renderiza en
 servidor y `static/js/estado-local.js` lo actualiza mediante `/estado-local`.
 Las franjas de recojo comparten `negocio.horario_dia`, en intervalos de 30
@@ -35,14 +36,15 @@ minutos antes del cierre y con 20 minutos de anticipación para preparación.
 - La confirmación del pedido es la **palabra clave** (`registroPedido.keyPedido`,
   un número de 4 dígitos). El cliente la muestra en el mostrador y con eso se le
   entrega el pedido.
-- El comprobante (boleta / nota de venta) se emite **al entregar** el pedido,
+- El comprobante (boleta o factura interna) se emite **al entregar** el pedido,
   no al hacerlo (porque el pago es al recojo).
 - Para entregar, el pedido debe estar **listo** y caja registra el medio recibido:
-  efectivo, tarjeta, Yape o Plin. Cliente y caja consultan el mismo comprobante y
+  efectivo, tarjeta, Yape o Plin, y solicita DNI para boleta o RUC y razón social
+  para factura. Cliente y caja consultan el mismo comprobante y
   descargan el mismo PDF; es un documento interno, sin integración SUNAT.
 
 **NO implementar** (aparecen en los diseños de Stitch pero no van): delivery,
-cupones, programa de puntos / "Club Nocturno", factura con RUC / SUNAT / QR,
+cupones, programa de puntos / "Club Nocturno", integración SUNAT / QR fiscal,
 "término de la carne", slug / ícono / color de categorías.
 
 ---
@@ -88,11 +90,11 @@ pytest -q
 
 **Cuentas de ejemplo** (creadas por `sql.sql`, contraseña de todas: `Musas2026`):
 
-| DNI | Rol | Acceso |
+| Identificador | Rol | Acceso |
 |---|---|---|
 | `12345678` | superusuario | Todo el panel + **Gestión de usuarios** |
 | `87654321` | administrador | Panel sin la sección Usuarios |
-| `12345679` | usuario | Tienda (cliente) |
+| `cliente@correo.com` | usuario | Tienda (cliente) |
 
 `sql.sql` es la **única** forma de crear la BD (datos de ejemplo incluidos). No
 hay backups versionados: cada quien maneja su base local.
@@ -108,6 +110,10 @@ hay backups versionados: cada quien maneja su base local.
   (para probar a cualquier hora). **Nunca en producción.**
 - `MUSAS_HORA_APERTURA` / `MUSAS_HORA_CIERRE` (enteros 0-24) cambian el horario de
   recojo sin tocar código (si no se definen, se usa el horario semanal).
+- `MUSAS_PAGO_NUMERO`, `MUSAS_PAGO_TITULAR` y `MUSAS_PAGO_QR` configuran los
+  datos reales mostrados al confirmar un pedido por Yape o Plin. El QR puede ser
+  una ruta `static/...` o una URL HTTPS; no hay valores bancarios ficticios.
+- `MUSAS_COOKIE_SECURE=0` permite probar por HTTP local con debug desactivado.
 
 ---
 
@@ -127,7 +133,7 @@ services/comprobante_pdf.py  # PDF A4 compartido por cliente y caja
 controllers/
   cliente.py           # TIENDA: home, carta, /productos/<cat>, detalle,
                         #  carrito, /compra (checkout), mis-pedidos, /mi-cuenta
-  autenticacion.py     # login unificado (DNI+clave, +captcha si es panel), registro, logout
+  autenticacion.py     # cliente por correo; panel por DNI + captcha; registro, logout
   admin.py             # blueprint /admin + before_request (exige login; Usuarios = solo superusuario)
   admin_pedidos.py     # CRUD de PEDIDOS + confirmar recojo + avanzar preparación
   admin_productos.py   # CRUD de PRODUCTOS (panel deslizante, imagen archivo/URL, dar de baja)
@@ -174,6 +180,8 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   `actualizar_categoria` devuelven `None` (ok) o **texto de error** — el
   controlador lo pasa al flash. No lanzan excepciones ante datos malos
   (precio negativo/texto, categoría inexistente, nombre vacío).
+- **Clientes por correo.** El registro pide nombres, apellidos, correo, celular y
+  contraseña; no pide DNI. El DNI o RUC solo se captura en caja al entregar.
 - **Pedidos solo de usuarios registrados.** `/carrito` y `/compra` exigen
   `session["cliente.auth"]`; si no hay, redirigen a `/login?next=…`. El detalle
   de producto muestra "Inicia sesión para pedir" en vez del botón de agregar.
@@ -197,7 +205,7 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   estaba **listo** (`estadoPrep = 2`) y pasaron 45 min de la hora de recojo.
   Se salta con `MUSAS_DEMO=1`.
 - **Comprobante**: se emite en `Pedido.marcar_recogido` (al entregar). Número
-  `B001-000000NN` si pidió boleta, `NV01-...` si no. Exige estado listo y
+  `B001-000000NN` para boleta o `F001-000000NN` para factura. Exige estado listo y
   conserva medio de pago, cajero, líneas/adicionales y snapshot JSON. Las rutas
   del cliente comprueban `comprobante.idUsuario` antes de mostrar o descargar.
 - **Pantalla de cocina en vivo**: `GET /admin/pedidos/pulso` devuelve
@@ -237,25 +245,25 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   API `window.MusasCarrito`). El servidor **re-cotiza todo contra la BD** al
   hacer checkout (`Producto.precios_por_ids`) — nunca confía en los precios del
   cliente. Al cerrar sesión se limpia el carrito.
-- **keyPedido / idPedido / idDetalleOrden** los asigna la app (`MAX(...)+1`), no
-  son AUTO_INCREMENT.
+- **keyPedido** se genera en la app y se comprueba contra pedidos activos.
+  `idPedido` e `idDetalleOrden` son `AUTO_INCREMENT` desde la migración 011.
 
 ---
 
 ## 5. Base de datos (resumen)
 
-`db_musuas`, InnoDB, utf8mb4. 8 tablas (todos los cambios de `migrations/001..011`
+`db_musuas`, InnoDB, utf8mb4. 8 tablas (todos los cambios de `migrations/001..013`
 ya están en `sql.sql`):
 
 | Tabla | Rol |
 |---|---|
-| `usuario` | cuentas. `rol`, `activo`, `tipoUsuario` (0 panel / 1 cliente), `noShows` |
+| `usuario` | cuentas. correo único, DNI opcional para clientes, `rol`, `activo`, `tipoUsuario`, `noShows` |
 | `categoriaProducto` | secciones de la carta. `activo`. "Cremas" no se muestra en la carta pública |
 | `producto` | ítems de la carta + las cremas (según `idCategoria`). `activo`, `imagen`, `destacado`, `nota`, `precio FLOAT`, `existencias` |
-| `registroPedido` | cabecera del pedido. `estadoRecojo`, `cancelado`, `noShow`, `estadoPrep`, `keyPedido`, `billeteraDigital`, `estadoBoleta`, datos de quien recoge |
+| `registroPedido` | cabecera. estados, clave, correo/teléfono y medio de pago elegido |
 | `detalleOrden` | líneas del pedido (snapshot de nombre/precio) |
 | `detalleCremas` | cremas elegidas por línea |
-| `comprobante` / `detalleComprobante` | venta emitida al entregar. `dniNoRegistrado CHAR(8)` |
+| `comprobante` / `detalleComprobante` | venta al entregar; boleta con DNI o factura con RUC/razón social |
 
 - FK: `producto→categoriaProducto`, `registroPedido→usuario` (nullable),
   `detalleOrden→(producto, registroPedido)`, `detalleCremas→(producto, detalleOrden)`,
@@ -291,8 +299,8 @@ Todo esto está hecho y probado E2E en `Ramirez`:
   categoría, detalle de producto + cremas, carrito, checkout con franjas de
   recojo y cupo, confirmación con palabra clave, "mis pedidos" (historial +
   repetir + cancelar), "mi cuenta" (editar datos propios).
-- **Login unificado**: una puerta, DNI + contraseña; si el DNI es de panel además
-  pide captcha y va a `/admin`; si es cliente va a la tienda. Throttle anti
+- **Login unificado**: una puerta; clientes ingresan con correo y panel con DNI.
+  Las cuentas del panel además resuelven captcha y van a `/admin`. Throttle anti
   fuerza-bruta en memoria. Cuenta dada de baja no entra.
 - **Panel**: dashboard con KPIs y gráfico; CRUD de pedidos con estados
   (recibido / en cocina / listo / recogido) + confirmar con clave + no-show +
@@ -336,3 +344,4 @@ falta**: `sql.sql` ya las incluye.
 | 010 | `usuario.rol`/`activo`, `producto.activo`, `categoriaProducto.activo` |
 | 011 | `registroPedido.idPedido` y `detalleOrden.idDetalleOrden` a **AUTO_INCREMENT** (antes `MAX(id)+1` en la app → colisión con dos pedidos a la vez) |
 | 012 | Importes a `DECIMAL`, comprobante único por pedido, medio de pago/cajero/snapshot, líneas configuradas y soporte PDF. |
+| 013 | Clientes sin DNI, correo único, snapshot de correo/medio elegido y boleta/factura capturada en caja con DNI o RUC. |

@@ -27,7 +27,7 @@ def home():
         lista = [u for u in lista if not u["activo"]]
     if q:
         lista = [u for u in lista if q in u["nombreCompleto"].lower()
-                 or q in u["dni"] or q in (u["correo"] or "").lower()]
+                 or q in (u["dni"] or "") or q in (u["correo"] or "").lower()]
 
     return render_template(
         "admin/usuarios/index.html",
@@ -35,7 +35,7 @@ def home():
         conteos=Usuario.contar_por_rol(),
         roles=[(r, ETIQUETA_ROL[r]) for r in ROLES],
         sugerencias=sorted({u["nombreCompleto"] for u in todos}
-                           | {u["dni"] for u in todos}),
+                           | {u["dni"] for u in todos if u["dni"]}),
         usuario=g.user,
     )
 
@@ -63,8 +63,10 @@ def guardar():
     error = None
     if rol not in ROLES:
         error = "Elige un rol válido."
-    elif not RE_DNI.match(dni):
-        error = "El DNI debe tener 8 dígitos."
+    elif rol in ("superusuario", "administrador") and not RE_DNI.match(dni):
+        error = "Las cuentas del panel requieren un DNI de 8 dígitos."
+    elif dni and not RE_DNI.match(dni):
+        error = "Si ingresas un DNI, debe tener 8 dígitos."
     elif not nombres or not apellidos:
         error = "Completa nombres y apellidos."
     elif not RE_CORREO.match(correo):
@@ -75,7 +77,7 @@ def guardar():
         error = password_valida(contra)
 
     if error is None:
-        error = Usuario.insertar_usuario(dni, nombres, apellidos, correo, telefono, contra, None, rol=rol)
+        error = Usuario.insertar_usuario(dni or None, nombres, apellidos, correo, telefono, contra, None, rol=rol)
 
     flash(error or f"Cuenta creada ({ETIQUETA_ROL[rol]}).", "error" if error else "ok")
     return redirect(url_for("admin.usuarios.home"))
@@ -97,6 +99,8 @@ def actualizar():
 
     rol = request.form.get("rol") or objetivo["rol"]
     err = Usuario.cambiar_rol(id, rol)
+    if err is None and str(g.user.get("idUsuario")) != str(id):
+        Usuario.cambiar_estado(id, request.form.get("activo", "1") == "1")
     flash(err or f"Rol actualizado a «{ETIQUETA_ROL.get(rol, rol)}».", "error" if err else "ok")
     return redirect(url_for("admin.usuarios.home"))
 
@@ -115,22 +119,4 @@ def estado():
     else:
         Usuario.cambiar_estado(id, activar)
         flash("Cuenta reactivada." if activar else "Cuenta dada de baja (ya no puede iniciar sesión).", "ok")
-    return redirect(url_for("admin.usuarios.home"))
-
-
-@usuarios.route("/eliminar", methods=["POST"])
-def eliminar():
-    id = request.form["id"]
-    objetivo = Usuario.obtener_dict(id)
-    if objetivo and objetivo["esSuper"]:
-        flash("No puedes eliminar a un superusuario.", "error")
-        return redirect(url_for("admin.usuarios.home"))
-    if g.user and str(g.user.get("idUsuario")) == str(id):
-        flash("No puedes eliminar tu propia cuenta.", "error")
-        return redirect(url_for("admin.usuarios.home"))
-    try:
-        Usuario.eliminar_usuario_id(id)
-        flash("Cuenta eliminada.", "ok")
-    except Exception:
-        flash("No se puede eliminar: la cuenta tiene pedidos o comprobantes. Usa «Dar de baja».", "error")
     return redirect(url_for("admin.usuarios.home"))

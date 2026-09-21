@@ -51,7 +51,7 @@
     <input type="hidden" name="estado" value="{{ estado }}" />
     <i class="bi bi-search"></i>
     <input type="search" name="q" id="ped-buscar" value="{{ q }}" list="ped-sug"
-           data-filtro-vivo="#ped-lista" placeholder="Escribe para filtrar por cliente, DNI o N° de pedido…" autocomplete="off" />
+           data-filtro-vivo="#ped-lista" placeholder="Filtra por cliente, correo, documento o N° de pedido…" autocomplete="off" />
     <datalist id="ped-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </form>
   <div class="adm-filtros" id="ped-chips">
@@ -74,12 +74,12 @@
   {% if pendientes %}
     <div class="ped-grid">
       {% for p in pendientes %}
-        <article class="ped-card" data-pedido-id="{{ p.idPedido }}" data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.dni }} {{ p.idPedido }}">
+        <article class="ped-card" data-pedido-id="{{ p.idPedido }}" data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.correo }} {{ p.dni }} {{ p.idPedido }}">
           <div class="ped-card__head">
             <span class="adm-avatar">{{ p.iniciales }}</span>
             <div class="ped-card__cliente">
               <strong>{{ p.cliente }} <span class="ped-card__id">Pedido #{{ p.idPedido }}</span></strong>
-              <span>DNI {{ p.dni }} · {{ p.telefono }}</span>
+              <span>{{ p.correo }} · {{ p.telefono }}</span>
               {% if p.noShows %}
                 <span class="ped-aviso"><i class="bi bi-exclamation-triangle-fill"></i> {{ p.noShows }} pedido(s) no recogido(s) antes</span>
               {% endif %}
@@ -105,9 +105,8 @@
           <div class="ped-card__resumen">
             <strong>Total: S/ {{ '%.2f'|format(p.total) }}</strong>
             <span>
-              {% if p.digital %}<i class="bi bi-qr-code"></i> Cobra por Yape / Plin
-              {% else %}<i class="bi bi-cash-coin"></i> Cobra en caja{% endif %}
-              {% if p.boleta %} · pide boleta{% endif %}
+              <i class="bi {{ 'bi-qr-code' if p.medioPago in ('yape','plin') else 'bi-cash-coin' }}"></i>
+              Pago elegido: {{ p.medioPago|capitalize }}
             </span>
           </div>
 
@@ -138,12 +137,22 @@
             <label>Palabra clave del cliente</label>
             <p class="ped-confirmar__hint">Verifica la clave y registra cómo pagó antes de entregar.</p>
             <select name="medio_pago" required aria-label="Medio de pago recibido">
-              <option value="">Medio de pago</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="tarjeta">Tarjeta</option>
-              <option value="yape">Yape</option>
-              <option value="plin">Plin</option>
+              <option value="efectivo" {{ 'selected' if p.medioPago == 'efectivo' }}>Efectivo</option>
+              <option value="tarjeta" {{ 'selected' if p.medioPago == 'tarjeta' }}>Tarjeta</option>
+              <option value="yape" {{ 'selected' if p.medioPago == 'yape' }}>Yape</option>
+              <option value="plin" {{ 'selected' if p.medioPago == 'plin' }}>Plin</option>
             </select>
+            <select name="tipo_comprobante" required aria-label="Tipo de comprobante">
+              <option value="boleta">Boleta</option>
+              <option value="factura">Factura</option>
+            </select>
+            <input type="text" name="documento" inputmode="numeric" maxlength="8"
+                   pattern="[0-9]{8}" placeholder="DNI (8 dígitos)" required autocomplete="off"
+                   aria-label="DNI o RUC para el comprobante" />
+            <div data-razon-social hidden>
+              <input type="text" name="razon_social" maxlength="200" placeholder="Razón social"
+                     aria-label="Razón social" />
+            </div>
             <div class="ped-confirmar__row">
               <input type="text" name="key" inputmode="numeric" maxlength="4" pattern="[0-9]{4}"
                      placeholder="0000" required autocomplete="off" aria-label="Palabra clave" />
@@ -156,7 +165,7 @@
           {% endif %}
 
           <div class="ped-secundarias">
-            <form method="post" action="{{ url_for('admin.pedidos.no_show') }}"
+            {% if p.estado == 'listo' %}<form method="post" action="{{ url_for('admin.pedidos.no_show') }}"
                   data-confirm="El pedido #{{ p.idPedido }} se marcará como NO recogido: se devuelve el stock y suma un aviso de no-show al cliente."
                   data-confirm-titulo="Marcar como no recogido"
                   data-confirm-ok="Sí, no recogió" data-confirm-tono="peligro">
@@ -165,6 +174,7 @@
               <input type="hidden" name="estado" value="{{ estado }}" />
               <button type="submit" class="ped-link-btn"><i class="bi bi-person-x"></i> No recogió</button>
             </form>
+            {% endif %}
             <form method="post" action="{{ url_for('admin.pedidos.cancelar') }}"
                   data-confirm="Se cancelará el pedido #{{ p.idPedido }}: se devuelve el stock y se libera el cupo de la franja."
                   data-confirm-titulo="Cancelar pedido"
@@ -196,9 +206,9 @@
         </thead>
         <tbody>
           {% for p in recogidos %}
-            <tr data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.dni }} {{ p.idPedido }}">
+            <tr data-filtro-item data-filtro-texto="{{ p.cliente }} {{ p.correo }} {{ p.dni }} {{ p.idPedido }}">
               <td>#{{ p.idPedido }}</td>
-              <td>{{ p.cliente }}<br /><span class="muted">DNI {{ p.dni }}</span></td>
+              <td>{{ p.cliente }}<br /><span class="muted">Documento {{ p.dni or '—' }}</span></td>
               <td>{{ p.hora }}</td>
               <td class="muted">{{ p.lineas | map(attribute='nombre') | join(', ') | truncate(48) }}</td>
               <td class="num">S/ {{ '%.2f'|format(p.total) }}</td>

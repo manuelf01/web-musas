@@ -21,7 +21,7 @@
   //  Sonido: dos tonos cortos generados con WebAudio.
   // ---------------------------------------------------------------
   var audio = null;
-  var sonidoActivo = false;
+  var sonidoActivo = localStorage.getItem("musas_sonido_cocina") !== "0";
   var btnSonido = document.getElementById("ped-sonido");
 
   function crearAudio() {
@@ -47,10 +47,13 @@
   function activarSonido(conPrueba) {
     crearAudio();
     if (!audio) return;
-    if (audio.state === "suspended") audio.resume();
     sonidoActivo = true;
-    if (conPrueba) pitido();
-    pintarBotonSonido();
+    localStorage.setItem("musas_sonido_cocina", "1");
+    var listo = audio.state === "suspended" ? audio.resume() : Promise.resolve();
+    Promise.resolve(listo).then(function () {
+      pintarBotonSonido();
+      if (conPrueba) pitido();
+    }).catch(pintarBotonSonido);
   }
 
   function pitido() {
@@ -77,6 +80,7 @@
     btnSonido.addEventListener("click", function () {
       if (sonidoActivo && audio && audio.state === "running") {
         sonidoActivo = false; // apagar
+        localStorage.setItem("musas_sonido_cocina", "0");
         pintarBotonSonido();
       } else {
         activarSonido(true);
@@ -87,10 +91,33 @@
   document.addEventListener(
     "pointerdown",
     function () {
-      if (!sonidoActivo) activarSonido(false);
+      if (sonidoActivo) activarSonido(Object.keys(conocidos).length > 0);
     },
     { once: true }
   );
+
+  // Intenta restaurar la preferencia. El navegador puede mantener el audio
+  // suspendido hasta la primera interacción; el listener anterior lo habilita.
+  if (sonidoActivo) activarSonido(false);
+
+  // Boleta: DNI de 8 dígitos. Factura: RUC de 11 y razón social.
+  document.addEventListener("change", function (ev) {
+    if (!ev.target.matches('select[name="tipo_comprobante"]')) return;
+    var form = ev.target.closest("form");
+    if (!form) return;
+    var factura = ev.target.value === "factura";
+    var doc = form.querySelector('input[name="documento"]');
+    var razonWrap = form.querySelector("[data-razon-social]");
+    var razon = form.querySelector('input[name="razon_social"]');
+    if (doc) {
+      doc.maxLength = factura ? 11 : 8;
+      doc.pattern = factura ? "[0-9]{11}" : "[0-9]{8}";
+      doc.placeholder = factura ? "RUC (11 dígitos)" : "DNI (8 dígitos)";
+      doc.value = "";
+    }
+    if (razonWrap) razonWrap.hidden = !factura;
+    if (razon) razon.required = factura;
+  });
 
   // ---------------------------------------------------------------
   //  Aviso visual + título parpadeante

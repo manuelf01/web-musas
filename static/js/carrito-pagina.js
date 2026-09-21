@@ -118,6 +118,12 @@
     top.appendChild(quitar);
     body.appendChild(top);
 
+    var editar = document.createElement("a");
+    editar.className = "adm-btn-sm";
+    editar.href = "/producto/" + encodeURIComponent(it.idProducto) + "?editar=" + idx;
+    editar.innerHTML = '<i class="bi bi-pencil-square"></i> Editar cantidad y cremas';
+    body.appendChild(editar);
+
     if (it.cremas && it.cremas.length) {
       var chips = document.createElement("div");
       chips.className = "cart-item__chips";

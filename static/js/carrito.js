@@ -76,6 +76,22 @@
     guardar([]);
   }
 
+  function reemplazar(indice, item) {
+    var items = leer();
+    indice = Number(indice);
+    if (!Number.isInteger(indice) || indice < 0 || indice >= items.length) return false;
+    items.splice(indice, 1);
+    var existente = items.find(function (linea) { return _mismaLinea(linea, item); });
+    if (existente) {
+      existente.cantidad = Math.max(1, Math.min(99,
+        (Number(existente.cantidad) || 1) + (Number(item.cantidad) || 1)));
+    } else {
+      items.splice(Math.min(indice, items.length), 0, item);
+    }
+    guardar(items);
+    return true;
+  }
+
   function actualizarNav() {
     var n = cantidadTotal();
     var t = total();
@@ -199,6 +215,7 @@
     total: total,
     cantidadTotal: cantidadTotal,
     agregar: agregar,
+    reemplazar: reemplazar,
     agregarConAnim: agregarConAnim,
     vaciar: vaciar,
     actualizarNav: actualizarNav,

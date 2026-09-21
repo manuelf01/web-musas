@@ -25,15 +25,24 @@ python app.py                    # http://127.0.0.1:5000
 ```
 
 Fuera del horario de atención usa `set MUSAS_DEMO=1 && python app.py` para probar
-el checkout.
+el checkout. Para mostrar los datos reales de pago digital en la confirmación:
+
+```bash
+set MUSAS_PAGO_NUMERO=999888777
+set MUSAS_PAGO_TITULAR=Las de Siempre
+set MUSAS_PAGO_QR=static/img/pagos/qr-yape-plin.png
+```
+
+`MUSAS_PAGO_QR` acepta una ruta servida por la aplicación (`static/...`) o una
+URL HTTPS. Si se deja vacío, no se muestra un QR inventado.
 
 ### Cuentas de ejemplo (contraseña de todas: `Musas2026`)
 
-| DNI | Rol |
+| Acceso | Rol |
 |---|---|
-| `12345678` | superusuario (panel completo + gestión de usuarios) |
-| `87654321` | administrador (panel sin usuarios) |
-| `12345679` | usuario (cliente de la tienda) |
+| DNI `12345678` | superusuario (panel completo + gestión de usuarios) |
+| DNI `87654321` | administrador (panel sin usuarios) |
+| correo `cliente@correo.com` | usuario (cliente de la tienda) |
 
 ## Tests
 
@@ -53,8 +62,10 @@ CI en GitHub Actions corre `pytest` en cada push y PR.
   y problemas conocidos.
 - **`migrations/`** — cambios de esquema numerados (ya incluidos en `sql.sql`).
 
-Si actualizas una base existente hasta esta versión, respáldala y aplica
-`migrations/012_comprobantes_pdf.sql` desde phpMyAdmin antes de iniciar Flask.
+Si actualizas una base existente hasta esta versión, respáldala y aplica en
+orden `migrations/012_comprobantes_pdf.sql` y
+`migrations/013_clientes_correo_y_caja.sql` desde phpMyAdmin antes de iniciar
+Flask. Una instalación nueva solo necesita `sql.sql`.
 
 ## Contraseñas
 

@@ -13,19 +13,20 @@ ventas = Blueprint("ventas", __name__, url_prefix="/ventas")
 @ventas.route("/")
 def home():
     q = (request.args.get("q") or "").strip()
+    tipo = (request.args.get("tipo") or "").strip().lower()
+    medio = (request.args.get("medio") or "").strip().capitalize()
+    periodo = (request.args.get("periodo") or "semana").strip().lower()
+    dias = {"semana": 7, "mes": 30, "anio": 365}.get(periodo, 7)
+    if periodo not in ("semana", "mes", "anio"):
+        periodo = "semana"
     per_page = 8
     page = request.args.get(get_page_parameter(), type=int, default=1)
     if page < 1:
         page = 1
 
-    total = Comprobante.obtener_total()
-    comprobantes = Comprobante.listado_paginado(per_page, (page - 1) * per_page)
-    if q:
-        ql = q.lower()
-        comprobantes = [c for c in comprobantes
-                        if ql in c["cliente"].lower()
-                        or ql in str(c["numero"]).lower()
-                        or ql in str(c["dni"] or "")]
+    total = Comprobante.obtener_total(q, tipo, medio)
+    comprobantes = Comprobante.listado_paginado(
+        per_page, (page - 1) * per_page, q, tipo, medio)
 
     pagination = Pagination(page=page, total=total, per_page=per_page,
                             search=bool(q), record_name="comprobantes",
@@ -37,7 +38,10 @@ def home():
         comprobantes=comprobantes,
         pagination=pagination,
         kpis=Comprobante.kpis(),
-        grafico=Comprobante.ventas_por_dia(7),
+        grafico=Comprobante.ventas_por_dia(dias),
+        grafico_horas=Comprobante.ventas_por_hora(),
+        filtros={"q": q, "tipo": tipo, "medio": medio, "periodo": periodo},
+        periodo_dias=dias,
         total=total,
         rango=((page - 1) * per_page + 1 if total else 0,
                min(page * per_page, total)),

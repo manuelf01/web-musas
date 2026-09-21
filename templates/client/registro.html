@@ -93,28 +93,6 @@
 
         <form action="{{ url_for('cliente.auth.registro') }}" method="post" class="d-flex flex-column gap-3">
           {{ campo_csrf() }}
-          <div class="musa-field">
-            <label for="dni" class="musa-field-label">
-              Documento de Identidad (DNI)
-              <span class="musa-field-hint">8 dígitos</span>
-            </label>
-            <div class="musa-input-icon">
-              <i class="bi bi-person-vcard"></i>
-              <input
-                type="text"
-                inputmode="numeric"
-                maxlength="8"
-                pattern="[0-9]{8}"
-                class="musa-input"
-                id="dni"
-                name="dni"
-                placeholder="Ej. 74829103"
-                value="{{ form.dni if form else '' }}"
-                required
-              />
-            </div>
-          </div>
-
           <div class="row g-3">
             <div class="col-sm-6 musa-field">
               <label for="nombres" class="musa-field-label">Nombres</label>
@@ -254,7 +232,7 @@
     });
   })();
 
-  ["dni", "telefono"].forEach(function (id) {
+  ["telefono"].forEach(function (id) {
     var el = document.getElementById(id);
     if (!el) return;
     el.addEventListener("input", function () {

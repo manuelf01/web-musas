@@ -55,8 +55,12 @@ class Usuario:
         err = password_valida(contra)
         if err:
             return err
-        if Usuario.existe_dni(DNI):
+        DNI = (DNI or "").strip() or None
+        correo = (correo or "").strip().lower()
+        if DNI and Usuario.existe_dni(DNI):
             return "Este DNI ya está registrado."
+        if Usuario.existe_correo(correo):
+            return "Ese correo electrónico ya tiene una cuenta."
         contra_hash = generate_password_hash(contra)
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
@@ -173,6 +177,9 @@ class Usuario:
         actual = Usuario.obtener_dict(id)
         if actual is None:
             return "La cuenta no existe."
+        correo = (correo or actual["correo"]).strip().lower()
+        if Usuario.existe_correo(correo, excepto_id=id):
+            return "Ese correo electrónico ya está en uso por otra cuenta."
         if dni and dni != actual["dni"] and Usuario.existe_dni(dni, excepto_id=id):
             return "Ese DNI ya está en uso por otra cuenta."
         sets = ["nombres=%s", "apellidos=%s", "correo=%s", "dni=%s", "numTelf=%s"]
@@ -255,6 +262,22 @@ class Usuario:
         return total > 0
 
     @staticmethod
+    def existe_correo(correo, excepto_id=None):
+        """True si el correo ya pertenece a otra cuenta."""
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            if excepto_id is None:
+                cursor.execute("SELECT COUNT(*) FROM usuario WHERE LOWER(correo) = LOWER(%s)", (correo,))
+            else:
+                cursor.execute(
+                    "SELECT COUNT(*) FROM usuario WHERE LOWER(correo) = LOWER(%s) AND idUsuario <> %s",
+                    (correo, excepto_id),
+                )
+            total = cursor.fetchone()[0]
+        conexion.close()
+        return total > 0
+
+    @staticmethod
     def login_por_dni(dni):
         """Filas con DNI dado, incluyendo rol y activo, para el login."""
         conexion = obtener_conexion()
@@ -264,6 +287,23 @@ class Usuario:
                 "tipoUsuario, rol, activo FROM usuario WHERE dni = %s "
                 "ORDER BY FIELD(rol,'superusuario','administrador','usuario')",
                 (dni,),
+            )
+            filas = cursor.fetchall()
+        conexion.close()
+        return filas
+
+    @staticmethod
+    def login_por_identificador(identificador):
+        """Busca por correo (clientes) o DNI (personal del panel)."""
+        identificador = (identificador or "").strip()
+        conexion = obtener_conexion()
+        with conexion.cursor() as cursor:
+            cursor.execute(
+                "SELECT idUsuario, dni, nombres, apellidos, correo, numTelf, contraseña, "
+                "tipoUsuario, rol, activo FROM usuario "
+                "WHERE LOWER(correo) = LOWER(%s) OR dni = %s "
+                "ORDER BY FIELD(rol,'superusuario','administrador','usuario')",
+                (identificador, identificador),
             )
             filas = cursor.fetchall()
         conexion.close()

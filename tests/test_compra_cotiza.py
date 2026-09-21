@@ -52,12 +52,12 @@ def test_franja_llena_se_rechaza_dentro_de_la_transaccion(bd_limpia, monkeypatch
     monkeypatch.setattr(Pedido, "CUPO_POR_FRANJA", 1)
     linea = [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
               "cantidad": 1, "precioTotal": 18, "cremas": []}]
-    Pedido.crear_pedido_completo(1, "12345678", "A", "999", "19:00:00",
-                                 False, False, None, linea)
+    Pedido.crear_pedido_completo(1, "a@correo.com", "A", "999", "19:00:00",
+                                 "efectivo", None, linea)
     with pytest.raises(FranjaLlena):
-        Pedido.crear_pedido_completo(2, "87654321", "B", "999", "19:00:00",
-                                     False, False, None, linea)
+        Pedido.crear_pedido_completo(2, "b@correo.com", "B", "999", "19:00:00",
+                                     "efectivo", None, linea)
     # otra franja sigue libre
-    idp, _ = Pedido.crear_pedido_completo(2, "87654321", "B", "999", "19:30:00",
-                                          False, False, None, linea)
+    idp, _ = Pedido.crear_pedido_completo(2, "b@correo.com", "B", "999", "19:30:00",
+                                          "efectivo", None, linea)
     assert idp > 0

@@ -29,8 +29,8 @@ ITEMS = [
 def test_crear_pedido_descuenta_stock_y_asigna_ids(bd_limpia):
     s2, s4 = _stock(2), _stock(4)
     idp, key = Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "Cliente Prueba", "999888777",
-        "19:30:00", True, True, "sin cebolla", ITEMS,
+        CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
+        "19:30:00", "yape", "sin cebolla", ITEMS,
     )
     assert isinstance(idp, int) and idp > 0
     assert 1000 <= int(key) <= 9999
@@ -62,15 +62,15 @@ def test_crear_pedido_descuenta_stock_y_asigna_ids(bd_limpia):
 
 def test_ids_de_pedido_son_autoincrement_y_distintos(bd_limpia):
     # dos clientes distintos (para no chocar con el límite de 2 activos por persona)
-    a, _ = Pedido.crear_pedido_completo(1, "12345678", "A", "999", "19:00:00", False, False, None, ITEMS[:1])
-    b, _ = Pedido.crear_pedido_completo(2, "87654321", "B", "999", "19:00:00", False, False, None, ITEMS[:1])
+    a, _ = Pedido.crear_pedido_completo(1, "a@correo.com", "A", "999", "19:00:00", "efectivo", None, ITEMS[:1])
+    b, _ = Pedido.crear_pedido_completo(2, "b@correo.com", "B", "999", "19:00:00", "efectivo", None, ITEMS[:1])
     assert a != b
 
 
 def test_avanzar_preparacion_y_entregar_emite_comprobante(bd_limpia):
     idp, key = Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "Cliente Prueba", "999888777",
-        "20:00:00", True, True, None, ITEMS,
+        CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
+        "20:00:00", "yape", None, ITEMS,
     )
     total_pedido = sum(it["precioTotal"] for it in ITEMS)  # 102
 
@@ -79,7 +79,7 @@ def test_avanzar_preparacion_y_entregar_emite_comprobante(bd_limpia):
     assert Pedido.avanzar_preparacion(idp) is None  # ya está listo
 
     assert Pedido.marcar_recogido(idp, "0000") == "clave_mal"
-    assert Pedido.marcar_recogido(idp, key) == "ok"
+    assert Pedido.marcar_recogido(idp, key, "yape", 1, "boleta", "12345679") == "ok"
     assert Pedido.marcar_recogido(idp, key) == "no_existe"  # no se emite dos veces
 
     con = bd.obtener_conexion()
@@ -96,23 +96,27 @@ def test_avanzar_preparacion_y_entregar_emite_comprobante(bd_limpia):
     assert numero.startswith("B001-")  # pidió boleta
 
 
-def test_comprobante_nota_de_venta_si_no_pide_boleta(bd_limpia):
+def test_comprobante_factura_se_define_al_entregar(bd_limpia):
     idp, key = Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "C", "999", "20:00:00", False, False, None, ITEMS[:1])
+        CLIENTE_ID, "cliente@correo.com", "C", "999", "20:00:00", "efectivo", None, ITEMS[:1])
     Pedido.avanzar_preparacion(idp)
     Pedido.avanzar_preparacion(idp)
-    Pedido.marcar_recogido(idp, key)
+    Pedido.marcar_recogido(idp, key, "efectivo", 1, "factura", "20123456789", "Cliente SAC")
     d = Comprobante.listado_paginado(10, 0)
-    assert d and d[0]["numero"].startswith("NV01-")
+    assert d and d[0]["numero"].startswith("F001-")
 
 
 def test_ventas_kpis_reflejan_la_entrega(bd_limpia):
     idp, key = Pedido.crear_pedido_completo(
-        CLIENTE_ID, "12345679", "C", "999", "20:00:00", True, True, None, ITEMS)
+        CLIENTE_ID, "cliente@correo.com", "C", "999", "20:00:00", "yape", None, ITEMS)
+    assert Pedido.resumen_dashboard()["ventas_hoy"] == 0
     Pedido.avanzar_preparacion(idp)
     Pedido.avanzar_preparacion(idp)
-    Pedido.marcar_recogido(idp, key)
+    Pedido.marcar_recogido(idp, key, "yape", 1, "boleta", "12345679")
     k = Comprobante.kpis()
     assert k["cantidad"] == 1
     assert round(k["total"], 2) == 102.0
-    assert round(k["ticket"], 2) == 102.0
+    assert round(k["maxima"], 2) == 102.0
+    resumen = Pedido.resumen_dashboard()
+    assert resumen["ventas_hoy"] == 102.0
+    assert resumen["venta_maxima"] == 102.0

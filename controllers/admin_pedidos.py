@@ -25,7 +25,8 @@ def home():
     todos = Pedido.pedidos_de_hoy(None)
     if q:
         todos = [p for p in todos if q in p["cliente"].lower()
-                 or q in str(p["idPedido"]) or q in (p["dni"] or "").lower()]
+                 or q in str(p["idPedido"]) or q in (p["dni"] or "").lower()
+                 or q in (p["correo"] or "").lower()]
 
     pendientes = [p for p in todos if not p["recogido"]]
     recogidos = [p for p in todos if p["recogido"]]
@@ -79,9 +80,15 @@ def confirmar():
     id_pedido = request.form.get("idPedido")
     key = (request.form.get("key") or "").strip()
     medio_pago = (request.form.get("medio_pago") or "").strip().lower()
+    tipo_comprobante = (request.form.get("tipo_comprobante") or "").strip().lower()
+    documento = (request.form.get("documento") or "").strip()
+    razon_social = (request.form.get("razon_social") or "").strip()
     estado = request.form.get("estado", "todos")
 
-    resultado = Pedido.marcar_recogido(id_pedido, key, medio_pago, g.user["idUsuario"])
+    resultado = Pedido.marcar_recogido(
+        id_pedido, key, medio_pago, g.user["idUsuario"],
+        tipo_comprobante, documento, razon_social,
+    )
     if resultado == "ok":
         flash(f"Pedido N° {id_pedido} entregado. Comprobante emitido.", "ok")
         id_comprobante = Comprobante.id_por_pedido(id_pedido)
@@ -92,6 +99,14 @@ def confirmar():
         flash(f"El pedido N° {id_pedido} debe marcarse como listo antes de entregarlo.", "error")
     elif resultado == "pago_invalido":
         flash("Selecciona el medio de pago recibido en caja.", "error")
+    elif resultado == "dni_invalido":
+        flash("Para la boleta ingresa un DNI válido de 8 dígitos.", "error")
+    elif resultado == "ruc_invalido":
+        flash("Para la factura ingresa un RUC válido de 11 dígitos.", "error")
+    elif resultado == "razon_social_requerida":
+        flash("Ingresa la razón social para emitir la factura.", "error")
+    elif resultado == "comprobante_invalido":
+        flash("Selecciona boleta o factura.", "error")
     else:
         flash(f"El pedido N° {id_pedido} ya fue recogido, cancelado o no existe.", "error")
 
@@ -105,7 +120,7 @@ def no_show():
     if Pedido.marcar_no_show(id_pedido):
         flash(f"Pedido N° {id_pedido} marcado como «no recogió». Se liberó el cupo y el stock.", "ok")
     else:
-        flash(f"El pedido N° {id_pedido} ya no está pendiente.", "error")
+        flash(f"Solo puedes marcar «No recogió» cuando el pedido esté listo para entregar.", "error")
     return redirect(url_for("admin.pedidos.home", estado=estado))
 
 

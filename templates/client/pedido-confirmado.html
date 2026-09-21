@@ -21,28 +21,27 @@
     </div>
 
     <div class="conf-pago">
-      {% if pedido.billeteraDigital %}
+      {% if pedido.medioPago in ('yape', 'plin') %}
         <i class="bi bi-qr-code"></i>
         <div>
-          <strong>Pagarás con Yape / Plin al recoger.</strong>
-          En caja escaneas y pagas <b>S/ {{ '%.2f'|format(pedido.total) }}</b>
-          (Yape / Plin a <b>987 654 321</b>) al momento de recoger tu pedido.
+          <strong>Pagarás con {{ pedido.medioPago|capitalize }} al recoger.</strong>
+          Paga <b>S/ {{ '%.2f'|format(pedido.total) }}</b> antes de recibir el pedido.
+          {% if pago_digital.numero %}<br />Número: <b>{{ pago_digital.numero }}</b> · {{ pago_digital.titular }}{% endif %}
+          {% if pago_digital.qr %}<div class="mt-2"><img src="{{ pago_digital.qr if pago_digital.qr_externo else url_for('static', filename=pago_digital.qr) }}" alt="QR de pago de {{ pago_digital.titular }}" style="width:180px;max-width:100%;border-radius:12px;" /></div>{% endif %}
+          {% if not pago_digital.numero or not pago_digital.qr %}<br /><small>El personal de caja te mostrará el número y QR verificados.</small>{% endif %}
         </div>
       {% else %}
-        <i class="bi bi-cash-coin"></i>
+        <i class="bi {{ 'bi-credit-card' if pedido.medioPago == 'tarjeta' else 'bi-cash-coin' }}"></i>
         <div>
-          <strong>Pagarás al recoger.</strong>
-          Paga <b>S/ {{ '%.2f'|format(pedido.total) }}</b> en caja al momento de recoger tu pedido
-          (efectivo o tarjeta).
+          <strong>Pagarás con {{ pedido.medioPago|capitalize }} al recoger.</strong>
+          Paga <b>S/ {{ '%.2f'|format(pedido.total) }}</b> en caja al momento de recoger tu pedido.
         </div>
       {% endif %}
     </div>
 
-    {% if pedido.estadoBoleta %}
-      <p class="small" style="color: var(--musa-texto-suave);">
-        <i class="bi bi-receipt"></i> Tu boleta de venta interna se generará cuando pagues y recojas el pedido.
-      </p>
-    {% endif %}
+    <p class="small" style="color: var(--musa-texto-suave);">
+      <i class="bi bi-receipt"></i> Al recoger, indica si deseas boleta o factura y presenta tu DNI o RUC. El comprobante se emitirá después del pago.
+    </p>
 
     <details class="conf-detalle">
       <summary>Ver detalle del pedido</summary>

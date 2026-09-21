@@ -49,7 +49,7 @@
                 <div class="adm-prod-cel">
                   <span class="adm-thumb" style="font-size:13px; font-family:'Space Grotesk',sans-serif; color:var(--musa-brasa);">{{ u.iniciales }}</span>
                   <div><strong>{{ u.nombreCompleto }}{% if yo %} <span style="color:var(--musa-texto-suave); font-weight:400;">(tú)</span>{% endif %}</strong>
-                    <p>DNI {{ u.dni }}{% if u.noShows %} · {{ u.noShows }} no-show(s){% endif %}</p></div>
+                    <p>{% if u.dni %}DNI {{ u.dni }}{% else %}Cliente por correo{% endif %}{% if u.noShows %} · {{ u.noShows }} no-show(s){% endif %}</p></div>
                 </div>
               </td>
               <td>{{ u.correo }}</td>
@@ -69,8 +69,9 @@
                 {% else %}
                   <div class="acciones">
                     <button type="button" class="adm-btn-sm" data-user-abrir data-modo="editar"
-                      data-id="{{ u.idUsuario }}" data-nombre="{{ u.nombreCompleto }}" data-rol="{{ u.rol }}">
-                      <i class="bi bi-person-badge"></i> Cambiar rol
+                      data-id="{{ u.idUsuario }}" data-nombre="{{ u.nombreCompleto }}" data-rol="{{ u.rol }}"
+                      data-activo="{{ 1 if u.activo else 0 }}">
+                      <i class="bi bi-person-badge"></i> Editar
                     </button>
                     {% if not yo %}
                     <form action="{{ url_for('admin.usuarios.estado') }}" method="POST">
@@ -130,9 +131,16 @@
         <i class="bi bi-info-circle"></i> Desde aquí solo se cambia el <b>rol</b>. El correo,
         teléfono y contraseña los edita cada persona en <b>«Mi perfil»</b>.
       </p>
+      <div class="musa-field mt-3" data-solo-editar hidden>
+        <label class="musa-field-label" for="pu-activo">Estado</label>
+        <select class="musa-input" id="pu-activo" name="activo">
+          <option value="1">Activo</option>
+          <option value="0">De baja</option>
+        </select>
+      </div>
 
       <div class="musa-field mt-3" data-solo-crear>
-        <label class="musa-field-label" for="pu-dni">DNI</label>
+        <label class="musa-field-label" for="pu-dni">DNI <span class="musa-field-hint">obligatorio para personal del panel</span></label>
         <input class="musa-input" id="pu-dni" name="dni" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="8 dígitos" />
       </div>
       <div class="row g-3 mt-0" data-solo-crear>
@@ -219,6 +227,7 @@
       if (editar) {
         document.getElementById("pu-id").value = b.dataset.id;
         document.getElementById("pu-rol").value = b.dataset.rol;
+        document.getElementById("pu-activo").value = b.dataset.activo;
       }
       abrir();
     });

@@ -26,13 +26,15 @@ except ImportError:
 # FLASK_DEBUG=1 para desarrollo; en producción se queda apagado (el depurador
 # de Werkzeug permite ejecutar código y NO debe exponerse).
 DEBUG = os.environ.get("FLASK_DEBUG", "1") == "1"
+_cookie_secure_env = os.environ.get("MUSAS_COOKIE_SECURE")
+COOKIE_SECURE = (not DEBUG) if _cookie_secure_env is None else _cookie_secure_env == "1"
 
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=_SECRET_KEY,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=not DEBUG,   # solo por HTTPS en producción
+    SESSION_COOKIE_SECURE=COOKIE_SECURE,
 )
 
 # --- CSRF: token propio de sesión, validado en cada POST del navegador -------

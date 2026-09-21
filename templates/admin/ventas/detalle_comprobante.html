@@ -36,11 +36,12 @@
 
       <dl class="adm-recibo__datos">
         <div><dt>Cliente</dt><dd>{{ c.cliente }}</dd></div>
-        <div><dt>Documento</dt><dd>DNI {{ c.dni }}</dd></div>
+        <div><dt>{{ 'RUC' if c.tipoComprobante == 'factura' else 'DNI' }}</dt><dd>{{ c.documento or '—' }}</dd></div>
+        {% if c.razonSocial %}<div><dt>Razón social</dt><dd>{{ c.razonSocial }}</dd></div>{% endif %}
         <div><dt>Tipo de entrega</dt><dd>Retiro en tienda</dd></div>
         <div><dt>Método de pago</dt><dd>{{ c.formaPago }}</dd></div>
         <div><dt>Teléfono</dt><dd>{{ c.telefono }}</dd></div>
-        <div><dt>Hora de recojo</dt><dd>{{ c.horaRecojo }}</dd></div>
+        <div><dt>Hora real de entrega</dt><dd>{{ c.horaEntrega }}</dd></div>
       </dl>
 
       <table class="adm-recibo__lineas">

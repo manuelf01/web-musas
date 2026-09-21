@@ -156,13 +156,13 @@ def generar_comprobante_pdf(comprobante):
         normal,
     )
     datos = [
-        [Paragraph("CLIENTE", etiqueta), Paragraph("DNI", etiqueta), Paragraph("PEDIDO", etiqueta)],
+        [Paragraph("CLIENTE", etiqueta), Paragraph("RUC" if comprobante.get("tipoComprobante") == "factura" else "DNI", etiqueta), Paragraph("PEDIDO", etiqueta)],
         [Paragraph(_texto(comprobante["cliente"]), normal),
-         Paragraph(_texto(comprobante["dni"] or "—"), normal),
+         Paragraph(_texto(comprobante.get("documento") or comprobante.get("dni") or "—"), normal),
          Paragraph(f"N.° {_texto(comprobante['idPedido'])}", normal)],
-        [Paragraph("TELÉFONO", etiqueta), Paragraph("RECOJO", etiqueta), Paragraph("PAGO", etiqueta)],
+        [Paragraph("TELÉFONO", etiqueta), Paragraph("ENTREGA REAL", etiqueta), Paragraph("PAGO", etiqueta)],
         [Paragraph(_texto(comprobante["telefono"] or "—"), normal),
-         Paragraph(_texto(comprobante["horaRecojo"] or "—"), normal),
+         Paragraph(_texto(comprobante.get("horaEntrega") or comprobante.get("hora") or "—"), normal),
          Paragraph(_texto(comprobante["formaPago"]), normal)],
     ]
     tabla_datos = Table(datos, colWidths=[72 * mm, 48 * mm, 54 * mm])

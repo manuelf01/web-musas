@@ -15,6 +15,7 @@ from model.Usuario import Usuario
 from seguridad import password_valida
 from formato import soles_en_letras
 from services.comprobante_pdf import generar_comprobante_pdf
+from negocio import PAGO_DIGITAL
 cliente = Blueprint('cliente', __name__)
 
 # Categorías cuyo producto admite cremas adicionales.
@@ -241,15 +242,12 @@ def mi_cuenta():
         nombres = (request.form.get("nombres") or "").strip()
         apellidos = (request.form.get("apellidos") or "").strip()
         correo = (request.form.get("correo") or "").strip()
-        dni = (request.form.get("dni") or "").strip()
         telefono = (request.form.get("telefono") or "").strip()
         contra = request.form.get("contraseña") or ""
         contra2 = request.form.get("contraseña2") or ""
 
         error = None
-        if dni and not RE_DNI.match(dni):
-            error = "El DNI debe tener 8 dígitos."
-        elif correo and not RE_CORREO.match(correo):
+        if correo and not RE_CORREO.match(correo):
             error = "Ingresa un correo válido."
         elif telefono and not RE_TEL.match(telefono):
             error = "El teléfono debe tener 9 dígitos."
@@ -258,7 +256,7 @@ def mi_cuenta():
         elif contra:
             error = password_valida(contra)
         if error is None:
-            error = Usuario.actualizar_perfil(user["idUsuario"], nombres, apellidos, correo, dni, telefono, contra)
+            error = Usuario.actualizar_perfil(user["idUsuario"], nombres, apellidos, correo, None, telefono, contra)
 
         if error:
             flash(error, "error")
@@ -316,6 +314,7 @@ def comprar_producto(id):
         logueado=bool(session.get("cliente.auth")),
         producto=producto,
         cremas=cremas,
+        editar_indice=request.args.get("editar", type=int),
     )
 
 @cliente.route("/carrito/sugeridos")
@@ -346,11 +345,13 @@ def pag_compra():
     if request.method == "POST":
         return _procesar_compra(user)
 
+    cuenta = Usuario.obtener_dict(user["idUsuario"])
     return render_template(
         "client/compra.html",
         cliente=_cliente_nombre(),
-        sesion=user,
+        sesion=cuenta or user,
         franjas=Pedido.franjas_recojo(),
+        pago_digital=PAGO_DIGITAL,
     )
 
 
@@ -360,9 +361,10 @@ def _recotizar(user, mensaje):
     return render_template(
         "client/compra.html",
         cliente=_cliente_nombre(),
-        sesion=user,
+        sesion=Usuario.obtener_dict(user["idUsuario"]) or user,
         form=request.form.to_dict(),
         franjas=Pedido.franjas_recojo(),
+        pago_digital=PAGO_DIGITAL,
     )
 
 
@@ -435,35 +437,40 @@ def _procesar_compra(user):
     if not items:
         return _recotizar(user, "Los productos de tu carrito ya no están disponibles. Vuelve a la carta.")
 
-    # --- datos del formulario (editables aunque haya sesión: puede recoger otra persona) ---
-    dni = (request.form.get("dni") or "").strip()
-    nombres = ((request.form.get("nombres") or "") + " " + (request.form.get("apellidos") or "")).strip()
-    telefono = (request.form.get("telefono") or "").strip()
+    # Los datos de contacto proceden de la cuenta y no se confían al navegador.
+    cuenta = Usuario.obtener_dict(user["idUsuario"])
+    if cuenta is None or not cuenta.get("activo"):
+        return _recotizar(user, "No pudimos verificar tu cuenta. Cierra sesión y vuelve a ingresar.")
+    correo = (cuenta.get("correo") or "").strip().lower()
+    nombres = f"{cuenta.get('nombres') or ''} {cuenta.get('apellidos') or ''}".strip()
+    telefono = (cuenta.get("telefono") or "").strip()
     id_usuario = user["idUsuario"]
 
     hora = (request.form.get("hora_recojo") or "").strip()
-    boleta = bool(request.form.get("boleta"))
-    pago_digital = request.form.get("pago") == "digital"
+    medio_pago = (request.form.get("pago") or "").strip().lower()
     notas = (request.form.get("notas") or "").strip()[:255]
 
     error = None
-    if not RE_DNI.match(dni):
-        error = "El DNI debe tener 8 dígitos."
-    elif not nombres:
-        error = "Ingresa el nombre de quien recoge."
+    if not nombres:
+        error = "Tu cuenta no tiene un nombre completo. Actualízalo en Mi cuenta antes de pedir."
+    elif not RE_CORREO.match(correo):
+        error = "Tu cuenta no tiene un correo válido. Actualízalo en Mi cuenta antes de pedir."
     elif not RE_TEL.match(telefono):
-        error = "El teléfono debe tener 9 dígitos."
+        error = "Tu cuenta no tiene un celular válido de 9 dígitos. Actualízalo en Mi cuenta antes de pedir."
     elif not RE_HORA.match(hora):
-        error = "Elige una hora de recojo."
+        error = "Selecciona una de las horas disponibles para recoger tu pedido."
     elif not Pedido.franja_disponible(hora):
-        error = "Esa franja se llenó o ya pasó. Elige otra."
+        error = ("La hora elegida ya pasó o acaba de quedarse sin cupos. "
+                 "Selecciona otra hora disponible; tu carrito seguirá guardado.")
+    elif medio_pago not in ("efectivo", "tarjeta", "yape", "plin"):
+        error = "Elige cómo deseas pagar al recoger: efectivo, tarjeta, Yape o Plin."
 
     if error:
         return _recotizar(user, error)
 
     try:
         id_pedido, key = Pedido.crear_pedido_completo(
-            id_usuario, dni, nombres, telefono, hora, boleta, pago_digital, notas, items
+            id_usuario, correo, nombres, telefono, hora, medio_pago, notas, items
         )
     except StockInsuficiente as e:
         if e.disponible <= 0:
@@ -476,7 +483,11 @@ def _procesar_compra(user):
             "Recoge o cancela alguno antes de hacer otro.",
         )
     except FranjaLlena:
-        return _recotizar(user, "Esa franja se llenó justo ahora. Elige otra hora de recojo.")
+        return _recotizar(
+            user,
+            "La hora que elegiste acaba de completar su cupo. Selecciona otra hora disponible; "
+            "no perderás los productos de tu carrito.",
+        )
 
     # El pedido ya está en la BD: se marca el carrito para vaciarlo en el próximo
     # render pase lo que pase (aunque el cliente no llegue a /pedido-confirmado).
@@ -499,6 +510,7 @@ def pedido_confirmado(id_pedido):
         "client/pedido-confirmado.html",
         cliente=_cliente_nombre(),
         pedido=pedido,
+        pago_digital=PAGO_DIGITAL,
     )
 # @cliente.route("/<tipo>")
 # def verMas(tipo):

@@ -91,7 +91,7 @@ class Pedido:
     CUPO_POR_FRANJA = 8     # pedidos máximos por franja
     ANTICIPACION_MIN = 20   # la cocina necesita este tiempo mínimo
     GRACIA_NOSHOW_MIN = 45  # min. tras la franja para marcar "no recogió"
-    MAX_PEDIDOS_ACTIVOS = 2  # pedidos sin recoger simultáneos por DNI
+    MAX_PEDIDOS_ACTIVOS = 2  # pedidos sin recoger simultáneos por cuenta
 
     @staticmethod
     def _auto_no_show():
@@ -229,23 +229,18 @@ class Pedido:
     #               cremas: [ idCrema, ... ] } ]
     # ------------------------------------------------------------------
     @staticmethod
-    def crear_pedido_completo(idUsuario, dni, nombres, telefono, hora_recojo,
-                              estado_boleta, billetera_digital, notas, items):
+    def crear_pedido_completo(idUsuario, correo, nombres, telefono, hora_recojo,
+                              medio_pago, notas, items):
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
                 # --- 0. Límite de pedidos activos por persona -------------------
-                if idUsuario:
-                    cursor.execute(
-                        f"SELECT COUNT(*) FROM registroPedido WHERE idUsuario = %s AND {_ACTIVO}",
-                        (idUsuario,),
-                    )
-                else:
-                    cursor.execute(
-                        f"SELECT COUNT(*) FROM registroPedido "
-                        f"WHERE dniNoRegistrado = %s AND fechaPedido = %s AND {_ACTIVO}",
-                        (dni, ahora_peru().date()),
-                    )
+                if not idUsuario:
+                    raise ValueError("Los pedidos requieren una cuenta registrada")
+                cursor.execute(
+                    f"SELECT COUNT(*) FROM registroPedido WHERE idUsuario = %s AND {_ACTIVO}",
+                    (idUsuario,),
+                )
                 if cursor.fetchone()[0] >= Pedido.MAX_PEDIDOS_ACTIVOS:
                     raise LimitePedidos()
 
@@ -293,14 +288,13 @@ class Pedido:
                 # así no colisionan cuando entran dos pedidos a la vez.
                 cursor.execute(
                     """INSERT INTO registroPedido
-                       (idUsuario, dniNoRegistrado, nombres, numeroTelefono,
+                       (idUsuario, dniNoRegistrado, nombres, correoRecojo, numeroTelefono,
                         estadoRecojo, horaRecojo, fechaPedido, estadoBoleta,
-                        billeteraDigital, keyPedido, notas)
-                       VALUES (%s, %s, %s, %s, 0, %s, %s, %s, %s, %s, %s)""",
-                    (idUsuario, dni, nombres, telefono, hora_recojo,
-                     ahora_peru().date(),
-                     1 if estado_boleta else 0, 1 if billetera_digital else 0,
-                     key, notas or None),
+                        billeteraDigital, medioPagoElegido, keyPedido, notas)
+                       VALUES (%s, NULL, %s, %s, %s, 0, %s, %s, 0, %s, %s, %s, %s)""",
+                    (idUsuario, nombres, correo, telefono, hora_recojo,
+                     ahora_peru().date(), 1 if medio_pago in ("yape", "plin") else 0,
+                     medio_pago, key, notas or None),
                 )
                 id_pedido = cursor.lastrowid
 
@@ -343,13 +337,14 @@ class Pedido:
     # el módulo de Ventas del panel (tablas comprobante / detalleComprobante).
     # ------------------------------------------------------------------
     @staticmethod
-    def _emitir_comprobante(cursor, id_pedido, medio_pago, id_cajero=None):
+    def _emitir_comprobante(cursor, id_pedido, medio_pago, id_cajero=None,
+                            tipo_comprobante="boleta", documento=None, razon_social=None):
         cursor.execute(
-            "SELECT idUsuario, dniNoRegistrado, estadoBoleta, nombres, numeroTelefono, "
-            "horaRecojo, notas FROM registroPedido WHERE idPedido = %s",
+            "SELECT idUsuario, nombres, correoRecojo, numeroTelefono, horaRecojo, notas "
+            "FROM registroPedido WHERE idPedido = %s",
             (id_pedido,),
         )
-        id_usuario, dni, boleta, cliente, telefono, hora_recojo, notas = cursor.fetchone()
+        id_usuario, cliente, correo, telefono, hora_recojo, notas = cursor.fetchone()
 
         cursor.execute(
             "SELECT idDetalleOrden, idProducto, nombreProducto, precioUnidad, cantidad, precioTotal "
@@ -374,15 +369,17 @@ class Pedido:
         sub_total = dinero(total / dinero("1.18"))
         igv = dinero(total - sub_total)
         ahora = ahora_peru()
-        serie = "B001" if boleta else "NV01"
+        serie = "F001" if tipo_comprobante == "factura" else "B001"
         medio = MEDIOS_PAGO[medio_pago]
 
         cursor.execute(
             """INSERT INTO comprobante
-               (idPedido, idUsuario, dniNoRegistrado, fechaComprobante, horaComprobante,
+               (idPedido, idUsuario, dniNoRegistrado, tipoComprobante, razonSocial,
+                fechaComprobante, horaComprobante,
                 subTotal, montoTotal, igv, numeroComprobante, medioPago, idCajero)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s)""",
-            (id_pedido, id_usuario, dni, ahora.date(), ahora.strftime("%H:%M:%S"),
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s)""",
+            (id_pedido, id_usuario, documento, tipo_comprobante, razon_social or None,
+             ahora.date(), ahora.strftime("%H:%M:%S"),
              sub_total, total, igv, medio, id_cajero),
         )
         id_comp = cursor.lastrowid
@@ -410,10 +407,11 @@ class Pedido:
             })
 
         snapshot = {
-            "version": 1,
+            "version": 2,
             "numero": numero,
-            "tipoDoc": "BOLETA DE VENTA INTERNA" if boleta else "NOTA DE VENTA",
-            "boleta": bool(boleta),
+            "tipoDoc": "FACTURA DE VENTA INTERNA" if tipo_comprobante == "factura" else "BOLETA DE VENTA INTERNA",
+            "tipoComprobante": tipo_comprobante,
+            "boleta": tipo_comprobante == "boleta",
             "fecha": ahora.strftime("%d/%m/%Y"),
             "hora": ahora.strftime("%H:%M"),
             "negocio": {
@@ -423,9 +421,14 @@ class Pedido:
             },
             "idPedido": int(id_pedido),
             "cliente": cliente or "Cliente",
-            "dni": dni or "",
+            "documento": documento or "",
+            "dni": documento or "",
+            "razonSocial": razon_social or "",
+            "correo": correo or "",
             "telefono": telefono or "",
-            "horaRecojo": Pedido._hhmm(hora_recojo),
+            "horaProgramada": Pedido._hhmm(hora_recojo),
+            "horaEntrega": ahora.strftime("%H:%M"),
+            "horaRecojo": ahora.strftime("%H:%M"),
             "notas": notas or "",
             "medioPago": medio,
             "idCajero": id_cajero,
@@ -515,11 +518,11 @@ class Pedido:
         try:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT idUsuario FROM registroPedido WHERE idPedido = %s AND " + _ACTIVO,
+                    "SELECT idUsuario, estadoPrep FROM registroPedido WHERE idPedido = %s AND " + _ACTIVO,
                     (id_pedido,),
                 )
                 fila = cursor.fetchone()
-                if fila is None:
+                if fila is None or int(fila[1] or 0) < PREP_LISTO:
                     return False
                 cursor.execute(
                     "UPDATE registroPedido SET noShow = 1 WHERE idPedido = %s AND " + _ACTIVO,
@@ -555,7 +558,8 @@ class Pedido:
             cursor.execute(
                 "SELECT rp.idPedido, rp.dniNoRegistrado, rp.nombres, rp.numeroTelefono, "
                 "rp.estadoRecojo, rp.horaRecojo, rp.estadoBoleta, rp.billeteraDigital, "
-                "rp.keyPedido, rp.notas, COALESCE(u.noShows, 0), rp.estadoPrep "
+                "rp.keyPedido, rp.notas, COALESCE(u.noShows, 0), rp.estadoPrep, "
+                "rp.correoRecojo, rp.medioPagoElegido "
                 "FROM registroPedido rp LEFT JOIN usuario u ON u.idUsuario = rp.idUsuario "
                 f"WHERE rp.fechaPedido = %s{cond} "
                 "ORDER BY rp.estadoRecojo, rp.estadoPrep DESC, rp.horaRecojo, rp.idPedido",
@@ -612,6 +616,7 @@ class Pedido:
                 "cliente": nombre,
                 "iniciales": "".join(x[0] for x in nombre.split()[:2]).upper() or "?",
                 "dni": (c[1][:4] + "****") if c[1] else "",
+                "correo": c[12] or "",
                 "telefono": c[3],
                 "recogido": bool(c[4]),
                 "prep": prep,
@@ -620,6 +625,7 @@ class Pedido:
                 "hora": hora,
                 "boleta": bool(c[6]),
                 "digital": bool(c[7]),
+                "medioPago": (c[13] or ("yape" if c[7] else "efectivo")).lower(),
                 "keyPedido": c[8],
                 "notas": c[9],
                 "noShows": int(c[10] or 0),
@@ -629,8 +635,9 @@ class Pedido:
         return salida
 
     @staticmethod
-    def marcar_recogido(id_pedido, key, medio_pago=None, id_cajero=None):
-        """'ok' | 'clave_mal' | 'no_listo' | 'pago_invalido' | 'no_existe'.
+    def marcar_recogido(id_pedido, key, medio_pago=None, id_cajero=None,
+                        tipo_comprobante="boleta", documento=None, razon_social=None):
+        """Confirma cobro/entrega y emite el comprobante con DNI o RUC.
         Al entregar se emite el comprobante (la venta se cobra en este momento)
         y queda visible en el módulo de Ventas del panel."""
         key = str(key).strip()
@@ -638,7 +645,8 @@ class Pedido:
         try:
             with conexion.cursor() as cursor:
                 cursor.execute(
-                    "SELECT keyPedido, estadoRecojo, cancelado, noShow, estadoPrep, billeteraDigital "
+                    "SELECT keyPedido, estadoRecojo, cancelado, noShow, estadoPrep, "
+                    "billeteraDigital, medioPagoElegido, dniNoRegistrado "
                     "FROM registroPedido WHERE idPedido = %s FOR UPDATE",
                     (id_pedido,),
                 )
@@ -650,19 +658,35 @@ class Pedido:
                 if int(fila[4] or 0) < PREP_LISTO:
                     return "no_listo"
                 if medio_pago is None:
-                    medio_pago = "yape" if fila[5] else "efectivo"
+                    medio_pago = fila[6] or ("yape" if fila[5] else "efectivo")
                 medio_pago = str(medio_pago).strip().lower()
                 if medio_pago not in MEDIOS_PAGO:
                     return "pago_invalido"
+                tipo_comprobante = str(tipo_comprobante or "").strip().lower()
+                documento = str(documento or fila[7] or "").strip()
+                razon_social = str(razon_social or "").strip()[:200]
+                if tipo_comprobante not in ("boleta", "factura"):
+                    return "comprobante_invalido"
+                if tipo_comprobante == "boleta" and (len(documento) != 8 or not documento.isdigit()):
+                    return "dni_invalido"
+                if tipo_comprobante == "factura" and (len(documento) != 11 or not documento.isdigit()):
+                    return "ruc_invalido"
+                if tipo_comprobante == "factura" and not razon_social:
+                    return "razon_social_requerida"
                 # Update guardado: solo pasa si sigue activo y la clave coincide.
                 cursor.execute(
-                    "UPDATE registroPedido SET estadoRecojo = 1 "
+                    "UPDATE registroPedido SET estadoRecojo = 1, dniNoRegistrado = %s, "
+                    "estadoBoleta = %s, medioPagoElegido = %s "
                     "WHERE idPedido = %s AND " + _ACTIVO + " AND estadoPrep >= %s AND keyPedido = %s",
-                    (id_pedido, PREP_LISTO, key),
+                    (documento, 1 if tipo_comprobante == "boleta" else 0, medio_pago,
+                     id_pedido, PREP_LISTO, key),
                 )
                 if cursor.rowcount != 1:
                     return "no_existe"
-                Pedido._emitir_comprobante(cursor, id_pedido, medio_pago, id_cajero)
+                Pedido._emitir_comprobante(
+                    cursor, id_pedido, medio_pago, id_cajero,
+                    tipo_comprobante, documento, razon_social,
+                )
             conexion.commit()
             return "ok"
         finally:
@@ -688,7 +712,8 @@ class Pedido:
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
-                "SELECT COUNT(*), COALESCE(SUM(estadoRecojo = 0), 0), COALESCE(SUM(noShow = 1), 0) "
+                "SELECT COUNT(*), COALESCE(SUM(estadoRecojo = 0 AND noShow = 0), 0), "
+                "COALESCE(SUM(noShow = 1), 0) "
                 "FROM registroPedido WHERE fechaPedido = %s AND cancelado = 0",
                 (ahora_peru().date(),),
             )
@@ -698,18 +723,19 @@ class Pedido:
             no_shows_hoy = int(no_shows_hoy or 0)
 
             cursor.execute(
-                "SELECT COALESCE(SUM(dor.precioTotal), 0) FROM detalleOrden dor "
-                "INNER JOIN registroPedido r ON r.idPedido = dor.idPedido "
-                "WHERE r.fechaPedido = %s AND r.cancelado = 0 AND r.noShow = 0",
+                "SELECT COALESCE(SUM(montoTotal), 0), COALESCE(MAX(montoTotal), 0) "
+                "FROM comprobante WHERE fechaComprobante = %s",
                 (ahora_peru().date(),),
             )
-            ventas_hoy = float(cursor.fetchone()[0] or 0)
-            ticket = ventas_hoy / n_hoy if n_hoy else 0.0
+            ventas_hoy, venta_maxima = cursor.fetchone()
+            ventas_hoy = float(ventas_hoy or 0)
+            venta_maxima = float(venta_maxima or 0)
 
             cursor.execute(
                 "SELECT idPedido, dniNoRegistrado, nombres, horaRecojo, estadoRecojo "
-                "FROM registroPedido WHERE cancelado = 0 AND noShow = 0 "
+                "FROM registroPedido WHERE fechaPedido = %s AND cancelado = 0 AND noShow = 0 "
                 "ORDER BY idPedido DESC LIMIT 6"
+                , (ahora_peru().date(),)
             )
             cabeceras = cursor.fetchall()
             recientes = []
@@ -739,11 +765,12 @@ class Pedido:
             cursor.execute(
                 "SELECT p.nombre, p.precio, p.imagen, SUM(dor.cantidad) AS uds "
                 "FROM detalleOrden dor "
-                "INNER JOIN registroPedido r ON r.idPedido = dor.idPedido "
+                "INNER JOIN comprobante c ON c.idPedido = dor.idPedido "
                 "LEFT JOIN producto p ON p.idProducto = dor.idProducto "
-                "WHERE r.fechaPedido >= CURDATE() - INTERVAL 7 DAY AND r.cancelado = 0 AND r.noShow = 0 "
+                "WHERE c.fechaComprobante = %s "
                 "GROUP BY dor.idProducto, p.nombre, p.precio, p.imagen "
-                "ORDER BY uds DESC LIMIT 5"
+                "ORDER BY uds DESC LIMIT 5",
+                (ahora_peru().date(),)
             )
             top_raw = cursor.fetchall()
             max_uds = max((int(t[3]) for t in top_raw), default=1) or 1
@@ -756,25 +783,17 @@ class Pedido:
             } for t in top_raw]
 
             cursor.execute(
-                "SELECT r.fechaPedido, COALESCE(SUM(dor.precioTotal), 0) "
-                "FROM registroPedido r "
-                "LEFT JOIN detalleOrden dor ON dor.idPedido = r.idPedido "
-                "WHERE r.fechaPedido >= CURDATE() - INTERVAL 6 DAY AND r.cancelado = 0 AND r.noShow = 0 "
-                "GROUP BY r.fechaPedido"
+                "SELECT HOUR(horaComprobante), COALESCE(SUM(montoTotal), 0) "
+                "FROM comprobante WHERE fechaComprobante = %s "
+                "GROUP BY HOUR(horaComprobante) ORDER BY 1",
+                (ahora_peru().date(),),
             )
-            por_dia = {str(row[0]): float(row[1] or 0) for row in cursor.fetchall()}
+            por_hora = {int(row[0]): float(row[1] or 0) for row in cursor.fetchall()}
         conexion.close()
 
         hoy = ahora_peru().date()
-        semanas_dias = ["lun", "mar", "mié", "jue", "vie", "sáb", "dom"]
-        dias = []
-        for i in range(6, -1, -1):
-            d = hoy - timedelta(days=i)
-            dias.append({
-                "label": f"{semanas_dias[d.weekday()]} {d.day}",
-                "monto": por_dia.get(str(d), 0.0),
-                "hoy": i == 0,
-            })
+        dias = [{"label": f"{h:02d}:00", "monto": por_hora.get(h, 0.0), "hoy": True}
+                for h in range(9, 24)]
         max_dia = max((x["monto"] for x in dias), default=1) or 1
         for x in dias:
             x["pct"] = round(x["monto"] / max_dia * 100) if max_dia else 0
@@ -784,7 +803,7 @@ class Pedido:
             "pendientes": pendientes,
             "no_shows_hoy": no_shows_hoy,
             "ventas_hoy": round(ventas_hoy, 2),
-            "ticket": round(ticket, 2),
+            "venta_maxima": round(venta_maxima, 2),
             "recientes": recientes,
             "top": top,
             "ventas_semana": dias,
@@ -883,7 +902,8 @@ class Pedido:
             cursor.execute(
                 "SELECT idPedido, idUsuario, dniNoRegistrado, nombres, numeroTelefono, "
                 "estadoRecojo, cancelado, noShow, horaRecojo, estadoBoleta, billeteraDigital, "
-                "keyPedido, notas, estadoPrep FROM registroPedido WHERE idPedido = %s",
+                "keyPedido, notas, estadoPrep, correoRecojo, medioPagoElegido "
+                "FROM registroPedido WHERE idPedido = %s",
                 (id_pedido,),
             )
             p = cursor.fetchone()
@@ -934,6 +954,8 @@ class Pedido:
             "billeteraDigital": p[10],
             "keyPedido": p[11],
             "notas": p[12],
+            "correo": p[14] or "",
+            "medioPago": (p[15] or ("yape" if p[10] else "efectivo")).lower(),
             "lineas": items,
             "total": sum(i["precioTotal"] for i in items),
         }
