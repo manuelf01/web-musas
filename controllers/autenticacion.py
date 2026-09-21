@@ -124,11 +124,13 @@ def login():
             _limpiar_fallos_login()
             session.pop("cliente.auth", None)
             session["admin.auth"] = _datos_sesion(fila)
+            flash("Inicio de sesión exitoso.", "ok")
             return redirect(url_for("admin.home"))
 
         _limpiar_fallos_login()
         session.pop("admin.auth", None)
         session["cliente.auth"] = _datos_sesion(fila)
+        flash("Inicio de sesión exitoso.", "ok")
         return redirect(_destino_post_login(url_for("cliente.home")))
 
     return render_template("client/login.html", next=request.args.get("next", ""))

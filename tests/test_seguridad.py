@@ -63,3 +63,19 @@ def test_cliente_se_registra_y_entra_con_correo_sin_dni(client, csrf, bd_limpia)
     assert respuesta.status_code in (301, 302)
     with client.session_transaction() as sesion:
         assert sesion["cliente.auth"]["correo"] == "ana@example.com"
+        assert ("ok", "Inicio de sesión exitoso.") in sesion.get("_flashes", [])
+
+
+def test_admin_recibe_aviso_verde_al_iniciar_sesion(client, csrf, bd_limpia):
+    with client.session_transaction() as sesion:
+        sesion["captcha_login"] = "ABC123"
+
+    respuesta = client.post("/login", data={
+        "_csrf": csrf, "usuario": "12345678", "contraseña": "Musas2026",
+        "captcha": "ABC123",
+    })
+
+    assert respuesta.status_code in (301, 302)
+    with client.session_transaction() as sesion:
+        assert sesion["admin.auth"]["dni"] == "12345678"
+        assert ("ok", "Inicio de sesión exitoso.") in sesion.get("_flashes", [])
