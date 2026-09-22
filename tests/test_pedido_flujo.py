@@ -17,12 +17,12 @@ def _stock(id_prod):
 
 
 ITEMS = [
-    # Smash (id 2, S/18) x2  + 2 cremas (id 16 S/1, id 19 S/2) -> pu = 21, total = 42
-    {"idProducto": 2, "nombre": "Smash Las Musas", "precioUnidad": 21,
-     "cantidad": 2, "precioTotal": 42, "cremas": [16, 19]},
-    # Clásica (id 4, S/20) x3 -> total 60
-    {"idProducto": 4, "nombre": "Clásica Parrillera", "precioUnidad": 20,
-     "cantidad": 3, "precioTotal": 60, "cremas": []},
+    # Simple de Carne (id 2, S/8.50) x2 + Queso (id 57, S/2) + Tocino (id 58, S/2) -> pu = 12.50, total = 25
+    {"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 12.5,
+     "cantidad": 2, "precioTotal": 25, "cremas": [57, 58]},
+    # Simple de Filete de Pollo (id 4, S/8.50) x3 -> total 25.50
+    {"idProducto": 4, "nombre": "Simple de Filete de Pollo", "precioUnidad": 8.5,
+     "cantidad": 3, "precioTotal": 25.5, "cremas": []},
 ]
 
 
@@ -72,7 +72,7 @@ def test_avanzar_preparacion_y_entregar_emite_comprobante(bd_limpia):
         CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
         "20:00:00", "yape", None, ITEMS,
     )
-    total_pedido = sum(it["precioTotal"] for it in ITEMS)  # 102
+    total_pedido = sum(it["precioTotal"] for it in ITEMS)  # 50.5
 
     assert Pedido.avanzar_preparacion(idp) == "preparando"
     assert Pedido.avanzar_preparacion(idp) == "listo"
@@ -115,8 +115,8 @@ def test_ventas_kpis_reflejan_la_entrega(bd_limpia):
     Pedido.marcar_recogido(idp, key, "yape", 1, "boleta", "12345679")
     k = Comprobante.kpis()
     assert k["cantidad"] == 1
-    assert round(k["total"], 2) == 102.0
-    assert round(k["maxima"], 2) == 102.0
+    assert round(k["total"], 2) == 50.5
+    assert round(k["maxima"], 2) == 50.5
     resumen = Pedido.resumen_dashboard()
-    assert resumen["ventas_hoy"] == 102.0
-    assert resumen["venta_maxima"] == 102.0
+    assert resumen["ventas_hoy"] == 50.5
+    assert resumen["venta_maxima"] == 50.5

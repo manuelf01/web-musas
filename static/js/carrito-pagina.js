@@ -18,10 +18,17 @@
   }
 
   var PH_ICO = {
-    Bebidas: "bi-cup-straw", Postres: "bi-cake2-fill", Combos: "bi-bag-heart-fill",
-    Salchipapas: "bi-fire", Hamburguesas: "bi-fire", Piqueos: "bi-egg-fried",
-    Acompañamientos: "bi-basket-fill",
+    Bebidas: "bi-cup-straw", Combos: "bi-bag-heart-fill", "Platos Especiales": "bi-egg-fried",
+    "Hamburguesas Simples": "bi-fire", "Hamburguesas Royal": "bi-fire",
+    "Hamburguesas Mixtas": "bi-fire", "Hamburguesas Hawaianas": "bi-fire",
+    "Hamburguesas a lo Pobre": "bi-fire", "Hamburguesas Especiales": "bi-fire",
+    "Maxi Burgers": "bi-fire",
   };
+  var CATEGORIAS_HAMBURGUESA = [
+    "Hamburguesas Simples", "Hamburguesas Royal", "Hamburguesas Mixtas",
+    "Hamburguesas Hawaianas", "Hamburguesas a lo Pobre",
+    "Hamburguesas Especiales", "Maxi Burgers",
+  ];
 
   function tarjetaSugerida(s) {
     var card = document.createElement("div");
@@ -42,7 +49,7 @@
         {
           idProducto: s.idProducto, nombre: s.nombre, precio: s.precio,
           imagen: s.imagen || null, cantidad: 1, cremas: [],
-          admiteCremas: s.categoria === "Hamburguesas" || s.categoria === "Salchipapas",
+          admiteCremas: CATEGORIAS_HAMBURGUESA.indexOf(s.categoria) !== -1,
         },
         this,
         { mensaje: s.nombre + " agregado" }
@@ -123,7 +130,7 @@
       var editar = document.createElement("a");
       editar.className = "adm-btn-sm";
       editar.href = "/producto/" + encodeURIComponent(it.idProducto) + "?editar=" + idx;
-      editar.innerHTML = '<i class="bi bi-pencil-square"></i> Editar cantidad y cremas';
+      editar.innerHTML = '<i class="bi bi-pencil-square"></i> Editar personalización';
       body.appendChild(editar);
     }
 

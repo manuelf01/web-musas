@@ -21,11 +21,11 @@ def _actual(html):
 def test_migas_de_la_tienda(client, cliente_client):
     carta = cliente_client.get("/carta").get_data(as_text=True)
     assert _actual(carta) == "Carta" and "Inicio" in _migas(carta)
-    cat = cliente_client.get("/productos/Hamburguesas").get_data(as_text=True)
-    assert _actual(cat) == "Hamburguesas" and 'href="/carta"' in _migas(cat)
+    cat = cliente_client.get("/productos/Hamburguesas Simples").get_data(as_text=True)
+    assert _actual(cat) == "Hamburguesas Simples" and 'href="/carta"' in _migas(cat)
     prod = cliente_client.get("/producto/2").get_data(as_text=True)
     ruta = _migas(prod)
-    assert 'href="/carta"' in ruta and 'href="/productos/Hamburguesas"' in ruta
+    assert 'href="/carta"' in ruta and 'href="/productos/Hamburguesas%20Simples"' in ruta
     assert "carta-breadcrumb" not in prod
     editar = cliente_client.get("/producto/2?editar=0").get_data(as_text=True)
     assert _actual(editar).startswith("Editar") and 'href="/carrito"' in _migas(editar)

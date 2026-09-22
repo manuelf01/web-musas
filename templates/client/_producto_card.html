@@ -5,10 +5,12 @@
   "Especial de la casa": "peach", "Para compartir": "peach", "Barril": "peach"
 } %}
 {% set _ph_ico = {
-  "Hamburguesas": "bi-fire", "Salchipapas": "bi-fire", "Salchipapa": "bi-fire",
+  "Hamburguesas Simples": "bi-fire", "Hamburguesas Royal": "bi-fire",
+  "Hamburguesas Mixtas": "bi-fire", "Hamburguesas Hawaianas": "bi-fire",
+  "Hamburguesas a lo Pobre": "bi-fire", "Hamburguesas Especiales": "bi-fire",
+  "Maxi Burgers": "bi-fire", "Platos Especiales": "bi-egg-fried",
   "Bebidas": "bi-cup-straw", "Combos": "bi-bag-heart-fill",
-  "Postres": "bi-cake2-fill", "Cremas": "bi-droplet-half",
-  "Piqueos": "bi-egg-fried", "Acompañamientos": "bi-basket-fill"
+  "Salsas": "bi-droplet-half", "Papas": "bi-basket-fill", "Agregados": "bi-plus-circle-fill"
 } %}
 <article class="producto-card" data-filtro-item data-filtro-texto="{{ p.nombre }} {{ p.descripcion }} {{ p.nombreCategoria or '' }}"
          data-reveal data-reveal-delay="{{ (loop.index0 % 4) if loop is defined else 0 }}">

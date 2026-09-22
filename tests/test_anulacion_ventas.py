@@ -26,8 +26,8 @@ def test_anular_exige_motivo_y_excluye_la_venta_de_los_totales(bd_limpia):
     assert Comprobante.anular(cid, "otra vez, motivo largo", 1) == "ya_anulado"
     despues = Comprobante.kpis()
     assert despues["cantidad"] == antes["cantidad"] - 1
-    assert despues["total"] == round(antes["total"] - 42.0, 2)
-    assert Comprobante.serie_ventas("anio")["total"] == round(antes["total"] - 42.0, 2)
+    assert despues["total"] == round(antes["total"] - 25.0, 2)
+    assert Comprobante.serie_ventas("anio")["total"] == round(antes["total"] - 25.0, 2)
     d = Comprobante.detalle(cid)
     assert d["anulado"] and d["motivoAnulacion"] == "corto"
     assert Comprobante.anular(99999, "motivo valido", 1) == "no_existe"

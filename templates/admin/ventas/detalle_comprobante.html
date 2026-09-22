@@ -77,7 +77,7 @@
                 <div class="adm-recibo__prod">
                   {% if l.imagen %}<img class="adm-thumb" style="width:40px;height:40px;" src="{{ url_for('static', filename='img/' ~ l.imagen) }}" alt="" />
                   {% else %}<span class="adm-thumb" style="width:40px;height:40px;"><i class="bi bi-fire"></i></span>{% endif %}
-                  <span>{{ l.nombre }}{% if l.adicionales %}<small class="d-block" style="color:var(--musa-texto-suave);">Cremas: {{ l.adicionales | join(', ') }}</small>{% endif %}</span>
+                  <span>{{ l.nombre }}{% if l.adicionales %}<small class="d-block" style="color:var(--musa-texto-suave);">Personalización: {{ l.adicionales | join(', ') }}</small>{% endif %}</span>
                 </div>
               </td>
               <td class="num">{{ l.cantidad }}</td>

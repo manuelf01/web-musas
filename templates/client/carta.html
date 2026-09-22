@@ -4,14 +4,17 @@
 {% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}
 
 {% set eyebrows = {
-  "Hamburguesas": "Hechas al momento", "Salchipapas": "Tradición y sabor limeño",
-  "Bebidas": "Para acompañar", "Combos": "Rinden para la noche", "Postres": "El cierre dulce"
+  "Hamburguesas Simples": "La clásica de siempre", "Hamburguesas Royal": "Con huevo frito",
+  "Hamburguesas Mixtas": "Doble de todo", "Hamburguesas Hawaianas": "Dulce y salado",
+  "Hamburguesas a lo Pobre": "Con plátano frito", "Hamburguesas Especiales": "Para los más golosos",
+  "Maxi Burgers": "Las más grandes de la casa", "Platos Especiales": "Papas con todo",
+  "Bebidas": "Para acompañar", "Combos": "Rinden para compartir"
 } %}
 
 {% block content %}
 {% if categorias %}
 {% set visibles = [] %}
-{% for c in categorias if c[1] != "Cremas" %}{% set _ = visibles.append(c) %}{% endfor %}
+{% for c in categorias if c[1] not in categorias_ocultas %}{% set _ = visibles.append(c) %}{% endfor %}
 
 {% if not q %}
   {% with modo = "anclas", activa = None %}
@@ -29,7 +32,7 @@
     <form method="get" class="carta-filtros">
       <div class="carta-buscar">
         <i class="bi bi-search"></i>
-        <input type="search" name="q" value="{{ q }}" placeholder="Escribe para filtrar: smash, trufa, cerveza…"
+        <input type="search" name="q" value="{{ q }}" placeholder="Escribe para filtrar: pollo, hawaiana, chicha…"
                list="carta-sugerencias" data-filtro-vivo="#carta-live" autocomplete="off" />
         <datalist id="carta-sugerencias">
           {% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}

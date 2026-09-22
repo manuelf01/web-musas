@@ -185,7 +185,7 @@ def generar_comprobante_pdf(comprobante):
     for linea in comprobante["lineas"]:
         nombre = f"<b>{_texto(linea['nombre'])}</b>"
         if linea.get("adicionales"):
-            nombre += "<br/><font size='7.5' color='#6B6157'>Cremas: " + _texto(", ".join(linea["adicionales"])) + "</font>"
+            nombre += "<br/><font size='7.5' color='#6B6157'>" + _texto(", ".join(linea["adicionales"])) + "</font>"
         filas.append([
             Paragraph(nombre, normal),
             Paragraph(str(linea["cantidad"]), ParagraphStyle("cant", parent=normal, alignment=TA_CENTER)),

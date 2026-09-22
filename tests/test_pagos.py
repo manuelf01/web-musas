@@ -26,11 +26,11 @@ def test_resumen_por_medio_y_anulados_no_suman(bd_limpia):
     r = Pago.resumen(hoy, hoy)
     por = {m["medio"]: m for m in r["medios"]}
     assert por["Efectivo"]["cantidad"] == 1 and por["Yape"]["cantidad"] == 2
-    assert r["total"] == 126.0 and r["cantidad"] == 3
+    assert r["total"] == 75.0 and r["cantidad"] == 3
     assert por["Yape"]["pct"] + por["Efectivo"]["pct"] == 100
     Comprobante.anular(cid_yape, "cobro duplicado", 1)
     r = Pago.resumen(hoy, hoy)
-    assert r["total"] == 84.0 and r["anulado"]["cantidad"] == 1 and r["anulado"]["total"] == 42.0
+    assert r["total"] == 50.0 and r["anulado"]["cantidad"] == 1 and r["anulado"]["total"] == 25.0
     assert Pago.total(hoy, hoy, medio="Yape") == 2          # el listado sí muestra el anulado
     assert Pago.total(hoy, hoy, estado="vigente", medio="Yape") == 1
 

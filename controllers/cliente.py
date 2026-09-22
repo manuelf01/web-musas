@@ -7,7 +7,7 @@ from flask import (
     abort, send_file,
 )
 from model.Comprobante import Comprobante
-from model.Producto import Producto
+from model.Producto import Producto, CATEGORIAS_PERSONALIZACION
 from model.CategoriaProducto import CategoriaProducto
 from model.Pedido import Pedido, StockInsuficiente, LimitePedidos, FranjaLlena
 from dinero import dinero
@@ -19,8 +19,13 @@ from services.comprobante_pdf import generar_comprobante_pdf
 from negocio import PAGO_DIGITAL
 cliente = Blueprint('cliente', __name__)
 
-# Categorías cuyo producto admite cremas adicionales.
-CATEGORIAS_CON_CREMAS = ("Hamburguesas", "Salchipapas")
+# Categorías de hamburguesas: admiten elegir salsa, tipo de papas y agregados.
+# Los Platos Especiales, Combos y Bebidas ya vienen armados, sin personalizar.
+CATEGORIAS_CON_CREMAS = (
+    "Hamburguesas Simples", "Hamburguesas Royal", "Hamburguesas Mixtas",
+    "Hamburguesas Hawaianas", "Hamburguesas a lo Pobre",
+    "Hamburguesas Especiales", "Maxi Burgers",
+)
 
 RE_DNI = re.compile(r"^\d{8}$")
 RE_TEL = re.compile(r"^\d{9}$")
@@ -82,7 +87,7 @@ def _leer_carrito():
 @cliente.route("/")
 def home():
     user = session.get("cliente.auth", None)
-    categorias = [c for c in CategoriaProducto.obtener_categorias(solo_activas=True) if c[1] != "Cremas"]
+    categorias = [c for c in CategoriaProducto.obtener_categorias(solo_activas=True) if c[1] not in CATEGORIAS_PERSONALIZACION]
     return render_template(
         "client/index.html",
         cliente=user["nombres"] if user else None,
@@ -117,10 +122,12 @@ def productos_categoria(categoria):
 @cliente.route("/carta")
 def carta():
     categorias = CategoriaProducto.obtener_categorias(solo_activas=True)
-    productos = Producto.obtener_productos(solo_activos=True)
+    # Salsas/Papas/Agregados no son platos: no se listan, cuentan ni buscan en la carta.
+    productos = [p for p in Producto.obtener_productos(solo_activos=True)
+                 if p["nombreCategoria"] not in CATEGORIAS_PERSONALIZACION]
     # Sugerencias para el autocompletado del buscador (nombres + categorías).
     sugerencias = sorted({p["nombre"] for p in productos}
-                         | {c[1] for c in categorias if c[1] != "Cremas"})
+                         | {c[1] for c in categorias if c[1] not in CATEGORIAS_PERSONALIZACION})
 
     q = (request.args.get("q") or "").strip()
     if q:
@@ -359,18 +366,19 @@ def comprar_producto(id):
     producto = Producto.obtener_producto_por_id(id)
     if producto is None or not producto.get("disponibleTienda", True):
         return redirect(url_for("cliente.carta"))
-    cremas = (
-        Producto.getProductosCategoria("Cremas")
-        if producto["nombreCategoria"] in CATEGORIAS_CON_CREMAS
-        else []
-    )
+    admite = producto["nombreCategoria"] in CATEGORIAS_CON_CREMAS
+    salsas = Producto.getProductosCategoria("Salsas") if admite else []
+    papas = Producto.getProductosCategoria("Papas") if admite else []
+    agregados = Producto.getProductosCategoria("Agregados") if admite else []
     return render_template(
         "client/seleccion-producto.html",
         cliente=_cliente_nombre(),
         logueado=bool(session.get("cliente.auth")),
         producto=producto,
-        cremas=cremas,
-        admite_cremas=producto["nombreCategoria"] in CATEGORIAS_CON_CREMAS,
+        salsas=salsas,
+        papas=papas,
+        agregados=agregados,
+        admite_cremas=admite,
         editar_indice=request.args.get("editar", type=int),
     )
 

@@ -2,6 +2,11 @@ from bd import obtener_conexion
 
 PRECIO_MAX = 100000     # tope defensivo
 
+# Categorías que NO son platos: son las opciones para personalizar una
+# hamburguesa (salsa obligatoria, tipo de papas obligatorio, agregados de
+# pago opcionales). Nunca se muestran en la carta pública ni en sugeridos.
+CATEGORIAS_PERSONALIZACION = ("Salsas", "Papas", "Agregados")
+
 
 def _a_precio(valor):
     """Devuelve (precio_float, error). Nunca lanza."""
@@ -143,8 +148,8 @@ class Producto:
     def sugeridos(ids_en_carrito, limite=4):
         """Complementos para 'Completa tu pedido' en el carrito: productos activos
         y con stock que aún no están en el carrito. Prioriza lo que le falta al
-        pedido (bebida si hay comida, un postre, una salchipapa para compartir)
-        y rellena con los destacados."""
+        pedido (bebida si hay comida, un plato para compartir) y rellena con
+        los destacados."""
         ids = set()
         for i in ids_en_carrito:
             try:
@@ -156,13 +161,18 @@ class Producto:
         cat_por_id = {p["idProducto"]: p["nombreCategoria"] for p in todos}
         cats_carrito = {cat_por_id.get(i) for i in ids}
         tiene_bebida = "Bebidas" in cats_carrito
-        tiene_postre = "Postres" in cats_carrito
-        tiene_principal = bool(cats_carrito & {"Hamburguesas", "Salchipapas", "Combos"})
+        CATEGORIAS_HAMBURGUESA = {
+            "Hamburguesas Simples", "Hamburguesas Royal", "Hamburguesas Mixtas",
+            "Hamburguesas Hawaianas", "Hamburguesas a lo Pobre",
+            "Hamburguesas Especiales", "Maxi Burgers",
+        }
+        tiene_principal = bool(cats_carrito & (CATEGORIAS_HAMBURGUESA | {"Platos Especiales", "Combos"}))
+        tiene_plato = "Platos Especiales" in cats_carrito
 
         disp = [p for p in todos
                 if p["idProducto"] not in ids
                 and (p["existencias"] or 0) > 0
-                and p["nombreCategoria"] != "Cremas"]
+                and p["nombreCategoria"] not in CATEGORIAS_PERSONALIZACION]
 
         salida, vistos = [], set()
 
@@ -186,10 +196,8 @@ class Producto:
 
         if tiene_principal and not tiene_bebida:
             sumar(por_cat("Bebidas"), "Para acompañar")
-        if not tiene_postre:
-            sumar(por_cat("Postres"), "El toque dulce")
-        if tiene_principal and "Salchipapas" not in cats_carrito:
-            sumar(por_cat("Salchipapas"), "Para compartir", tope=1)
+        if tiene_principal and not tiene_plato:
+            sumar(por_cat("Platos Especiales"), "Para compartir", tope=1)
         sumar([p for p in disp if p["destacado"]], "Los más pedidos", tope=limite)
         sumar(disp, "También te puede gustar", tope=limite)
         return salida[:limite]
@@ -340,13 +348,14 @@ class Producto:
     def precios_por_ids(ids, solo_cremas=False):
         """{ idProducto: {'nombre':..., 'precio':..., 'categoria':...} } para los ids
         dados, solo de productos activos de categorías activas. `solo_cremas=True`
-        restringe a la categoría 'Cremas' (para que una hamburguesa no cuele como
-        crema)."""
+        restringe a las categorías de personalización (Salsas/Papas/Agregados),
+        para que una hamburguesa no cuele como salsa o agregado."""
         ids = [int(i) for i in ids if str(i).strip().lstrip("-").isdigit() and int(i) > 0]
         if not ids:
             return {}
         marcadores = ",".join(["%s"] * len(ids))
-        extra = " AND cp.nombreCategoria = 'Cremas'" if solo_cremas else ""
+        cats = ",".join(f"'{c}'" for c in CATEGORIAS_PERSONALIZACION)
+        extra = f" AND cp.nombreCategoria IN ({cats})" if solo_cremas else ""
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
@@ -368,7 +377,7 @@ class Producto:
             cursor.execute(
                 f"SELECT {Producto._COLS} FROM producto p "
                 "INNER JOIN categoriaProducto cp ON cp.idCategoria = p.idCategoria "
-                "WHERE cp.nombreCategoria <> 'Cremas' AND p.activo = 1 AND cp.activo = 1 "
+                "WHERE cp.nombreCategoria NOT IN ('Salsas','Papas','Agregados') AND p.activo = 1 AND cp.activo = 1 "
                 "ORDER BY (p.destacado IS NULL), p.existencias DESC, p.idProducto "
                 "LIMIT %s",
                 (limite,),

@@ -28,15 +28,15 @@ def test_insertar_producto_valida(bd_limpia):
 
 
 def test_actualizar_producto_precio_texto_no_rompe(bd_limpia):
-    err = Producto.actualizar_producto("Smash Las Musas", "d", "carísimo", "10", 2, 1)
+    err = Producto.actualizar_producto("Simple de Carne", "d", "carísimo", "10", 2, 1)
     assert err is not None
     p = Producto.obtener_producto_por_id(2)
-    assert p["precio"] == 18.0  # no cambió
+    assert p["precio"] == 8.50  # no cambió
 
 
 def test_dar_de_baja_categoria_saca_sus_productos_de_la_carta(bd_limpia):
     antes = {p["idProducto"] for p in Producto.obtener_productos(solo_activos=True)}
-    assert 2 in antes  # Smash está en Hamburguesas (cat 1)
+    assert 2 in antes  # Simple de Carne está en Hamburguesas Simples (cat 1)
     CategoriaProducto.cambiar_estado(1, False)
     despues = {p["idProducto"] for p in Producto.obtener_productos(solo_activos=True)}
     assert 2 not in despues

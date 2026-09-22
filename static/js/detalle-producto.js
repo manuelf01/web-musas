@@ -29,6 +29,30 @@
     }
   }
 
+  var admitePersonalizacion = root.dataset.admiteCremas === "1";
+
+  function validarPersonalizacion() {
+    if (!admitePersonalizacion) return true;
+    var ok = true;
+    document.querySelectorAll("[data-grupo-req]").forEach(function (grupo) {
+      var req = grupo.dataset.grupoReq;
+      var marcados = grupo.querySelectorAll(".crema-check:checked").length;
+      var valido = marcados >= 1;
+      grupo.classList.toggle("is-invalido", !valido);
+      var error = grupo.querySelector("[data-grupo-error]");
+      if (error) error.hidden = valido;
+      if (!valido) ok = false;
+    });
+    return ok;
+  }
+
+  document.querySelectorAll("[data-grupo-req] .crema-check").forEach(function (c) {
+    c.addEventListener("change", function () {
+      var grupo = c.closest("[data-grupo-req]");
+      if (grupo && grupo.classList.contains("is-invalido")) validarPersonalizacion();
+    });
+  });
+
   function cremasSeleccionadas() {
     return Array.prototype.map.call(
       document.querySelectorAll(".crema-check:checked"),
@@ -98,6 +122,11 @@
   document.querySelectorAll("[data-agregar]").forEach(function (b) {
     b.addEventListener("click", function () {
       if (enCarrito) return;
+      if (!validarPersonalizacion()) {
+        var primero = document.querySelector(".dp-personaliza__grupo.is-invalido");
+        if (primero) primero.scrollIntoView({ block: "center", behavior: "smooth" });
+        return;
+      }
       var unidades = qty;
       var item = {
           idProducto: Number(root.dataset.id),

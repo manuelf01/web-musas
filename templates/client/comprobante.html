@@ -54,7 +54,7 @@
             <tbody>
               {% for l in c.lineas %}
               <tr>
-                <td><strong>{{ l.nombre }}</strong>{% if l.adicionales %}<small class="d-block" style="color:var(--musa-texto-suave);">Cremas: {{ l.adicionales | join(', ') }}</small>{% endif %}</td>
+                <td><strong>{{ l.nombre }}</strong>{% if l.adicionales %}<small class="d-block" style="color:var(--musa-texto-suave);">Personalización: {{ l.adicionales | join(', ') }}</small>{% endif %}</td>
                 <td class="num">{{ l.cantidad }}</td>
                 <td class="num">S/ {{ '%.2f'|format(l.precioUnidad) }}</td>
                 <td class="num">S/ {{ '%.2f'|format(l.precioTotal) }}</td>

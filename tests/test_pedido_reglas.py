@@ -7,8 +7,8 @@ from model.Pedido import Pedido, LimitePedidos, StockInsuficiente
 
 from tests.conftest import CLIENTE_ID
 
-UNA_LINEA = [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
-              "cantidad": 1, "precioTotal": 18, "cremas": []}]
+UNA_LINEA = [{"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 8.5,
+              "cantidad": 1, "precioTotal": 8.5, "cremas": []}]
 
 
 def _crear(hora="19:00:00", items=None):
@@ -30,8 +30,8 @@ def test_sin_stock_suficiente_lanza_y_no_crea(bd_limpia):
         con.commit()
     con.close()
     with pytest.raises(StockInsuficiente):
-        _crear(items=[{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
-                       "cantidad": 5, "precioTotal": 90, "cremas": []}])
+        _crear(items=[{"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 8.5,
+                       "cantidad": 5, "precioTotal": 42.5, "cremas": []}])
     con = bd.obtener_conexion()
     with con.cursor() as cur:
         cur.execute("SELECT existencias FROM producto WHERE idProducto = 2")
@@ -100,8 +100,8 @@ def test_auto_no_show_no_marca_pedidos_de_hoy_despues_de_medianoche(bd_limpia, m
     id_pedido, _ = Pedido.crear_pedido_completo(
         CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
         "18:00:00", "efectivo", None,
-        [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 21, "cantidad": 1,
-          "precioTotal": 21, "cremas": []}],
+        [{"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 8.5, "cantidad": 1,
+          "precioTotal": 8.5, "cremas": []}],
     )
     Pedido.avanzar_preparacion(id_pedido)
     Pedido.avanzar_preparacion(id_pedido)

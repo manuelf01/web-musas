@@ -42,8 +42,8 @@ def test_pulso_de_cocina(admin_client, bd_limpia):
     f0 = d["firma"]
     Pedido.crear_pedido_completo(
         CLIENTE_ID, "cliente@correo.com", "C", "999", "19:00:00", "efectivo", None,
-        [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
-          "cantidad": 1, "precioTotal": 18, "cremas": []}])
+        [{"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 8.5,
+          "cantidad": 1, "precioTotal": 8.5, "cremas": []}])
     d2 = admin_client.get("/admin/pedidos/pulso").get_json()
     assert d2["firma"] != f0
     assert len(d2["pendientes"]) == 1
@@ -52,8 +52,8 @@ def test_pulso_de_cocina(admin_client, bd_limpia):
 def test_seguimiento_estado_del_cliente(cliente_client, bd_limpia):
     idp, _ = Pedido.crear_pedido_completo(
         CLIENTE_ID, "cliente@correo.com", "C", "999", "19:00:00", "efectivo", None,
-        [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
-          "cantidad": 1, "precioTotal": 18, "cremas": []}])
+        [{"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 8.5,
+          "cantidad": 1, "precioTotal": 8.5, "cremas": []}])
     d = cliente_client.get("/mis-pedidos/estado").get_json()
     assert d["estados"][str(idp)] == "recibido"
     Pedido.avanzar_preparacion(idp)

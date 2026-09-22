@@ -28,16 +28,16 @@ def test_cotiza_usa_el_precio_actual_de_la_bd(app, bd_limpia):
 
 
 def test_cotiza_ignora_cremas_en_productos_que_no_las_admiten(app, bd_limpia):
-    # Chicha Morada (id 9, Bebida) con una crema colada por POST directo.
-    items, total = _cotizar(app, [{"idProducto": 9, "cantidad": 1, "cremas": [16]}])
+    # Chicha Morada Natural (id 37, Bebida) con un agregado colado por POST directo.
+    items, total = _cotizar(app, [{"idProducto": 37, "cantidad": 1, "cremas": [51]}])
     assert items[0]["cremas"] == []
-    assert str(items[0]["precioUnidad"]) == "8.00"
+    assert str(items[0]["precioUnidad"]) == "3.00"
 
 
 def test_cotiza_suma_cremas_en_hamburguesa(app, bd_limpia):
-    items, _ = _cotizar(app, [{"idProducto": 2, "cantidad": 1, "cremas": [16, 19]}])
-    assert sorted(items[0]["cremas"]) == [16, 19]
-    assert str(items[0]["precioUnidad"]) == "21.00"   # 18 + 1 + 2
+    items, _ = _cotizar(app, [{"idProducto": 2, "cantidad": 1, "cremas": [57, 58]}])
+    assert sorted(items[0]["cremas"]) == [57, 58]
+    assert str(items[0]["precioUnidad"]) == "12.50"   # 8.50 + 2 (queso) + 2 (tocino)
 
 
 def test_endpoint_cotizar_devuelve_total_de_servidor(cliente_client, csrf):
@@ -45,13 +45,13 @@ def test_endpoint_cotizar_devuelve_total_de_servidor(cliente_client, csrf):
     r = cliente_client.post("/compra/cotizar",
                             data={"carrito_json": carrito, "_csrf": csrf})
     assert r.status_code == 200
-    assert r.get_json()["total"] == "18.00"
+    assert r.get_json()["total"] == "8.50"
 
 
 def test_franja_llena_se_rechaza_dentro_de_la_transaccion(bd_limpia, monkeypatch):
     monkeypatch.setattr(Pedido, "CUPO_POR_FRANJA", 1)
-    linea = [{"idProducto": 2, "nombre": "Smash", "precioUnidad": 18,
-              "cantidad": 1, "precioTotal": 18, "cremas": []}]
+    linea = [{"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 8.5,
+              "cantidad": 1, "precioTotal": 8.5, "cremas": []}]
     Pedido.crear_pedido_completo(1, "a@correo.com", "A", "999", "19:00:00",
                                  "efectivo", None, linea)
     with pytest.raises(FranjaLlena):

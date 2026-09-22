@@ -20,7 +20,7 @@ def test_carrito_json_malo_devuelve_lista_vacia(app):
 
 def test_carrito_ignora_lineas_sin_id_y_normaliza_cantidad(app):
     crudo = json.dumps([
-        {"idProducto": 2, "cantidad": 3, "cremas": [16, 16, 19]},
+        {"idProducto": 2, "cantidad": 3, "cremas": [51, 51, 54]},
         {"idProducto": 0, "cantidad": 1},          # id inválido -> fuera
         {"idProducto": "abc", "cantidad": 1},      # id no numérico -> fuera
         {"idProducto": 4, "cantidad": 9999},       # se recorta a 99
@@ -30,7 +30,7 @@ def test_carrito_ignora_lineas_sin_id_y_normaliza_cantidad(app):
     limpio = _leer(app, crudo)
     porid = {it["idProducto"]: it for it in limpio}
     assert set(porid) == {2, 4, 5}
-    assert porid[2]["cremas"] == [16, 19]   # sin duplicados
+    assert porid[2]["cremas"] == [51, 54]   # sin duplicados
     assert porid[4]["cantidad"] == 99
     assert porid[5]["cantidad"] == 1
 
@@ -44,14 +44,14 @@ def test_sugeridos_ofrece_bebida_si_hay_comida_sin_bebida(bd_limpia):
 
 
 def test_sugeridos_no_repite_lo_que_ya_esta(bd_limpia):
-    sug = Producto.sugeridos(["2", "9"])  # hamburguesa + Chicha Morada (bebida)
+    sug = Producto.sugeridos(["2", "37"])  # hamburguesa + Chicha Morada Natural (bebida)
     ids = {s["idProducto"] for s in sug}
-    assert 2 not in ids and 9 not in ids
+    assert 2 not in ids and 37 not in ids
     assert "Bebidas" not in {s["categoria"] for s in sug}  # ya tiene bebida
 
 
 def test_sugeridos_excluye_cremas_e_inactivos(bd_limpia):
-    Producto.cambiar_estado(14, False)  # Cookie (postre) de baja
+    Producto.cambiar_estado(23, False)  # una hamburguesa especial de baja
     sug = Producto.sugeridos([])
-    assert all(s["categoria"] != "Cremas" for s in sug)
-    assert 14 not in {s["idProducto"] for s in sug}
+    assert all(s["categoria"] not in {"Salsas", "Papas", "Agregados"} for s in sug)
+    assert 23 not in {s["idProducto"] for s in sug}

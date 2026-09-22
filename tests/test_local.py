@@ -20,9 +20,9 @@ def test_limites_horario_peru(dia, hora, abierto):
 
 
 @pytest.mark.parametrize('hora,abierto', [
-    ('17:59:59', False), ('18:00:00', True), ('22:59:59', True), ('23:00:00', False),
+    ('17:59:59', False), ('18:00:00', True), ('23:29:59', True), ('23:30:00', False),
 ])
-def test_sabado_cierra_a_las_23(hora, abierto):
+def test_sabado_cierra_a_las_2330(hora, abierto):
     ahora = datetime.fromisoformat('2026-09-12T' + hora).replace(tzinfo=HORA_PERU)
     assert estado_local(ahora)['abierto'] is abierto
 
@@ -62,7 +62,7 @@ def test_sede_y_mapa_en_inicio(client):
     assert '<iframe' in html and 'output=embed' in html
     assert 'title="Mapa de Sede Chiclayo:' in html
     assert 'Miraflores' not in html and 'Barranco' not in html
-    assert 'Balta Sur 006' in html and 'Hotel Colibrí' in html
+    assert 'Urb. Santa Victoria' in html
     assert '11:30 p.m.' in html and '9:00 a.m.' in html
 
 
@@ -75,17 +75,17 @@ def test_domingo(hora, abierto):
     assert estado_local(ahora)['abierto'] is abierto
 
 
-@pytest.mark.parametrize('fecha,espera', [
-    ('2026-09-12T23:00:00-05:00', 10),
-    ('2026-09-13T23:00:00-05:00', 19),
-    ('2026-09-14T00:00:00-05:00', 18),
+@pytest.mark.parametrize('fecha,segundos', [
+    ('2026-09-12T23:00:00-05:00', 1800),        # sábado 23:00, cierra a las 23:30
+    ('2026-09-13T23:00:00-05:00', 19 * 3600),   # domingo 23:00 (cerrado) -> lunes 18:00
+    ('2026-09-14T00:00:00-05:00', 18 * 3600),   # lunes 00:00 (cerrado) -> lunes 18:00
 ])
-def test_transiciones_fin_de_semana(fecha, espera):
-    assert estado_local(datetime.fromisoformat(fecha))['cambia_en'] == espera * 3600
+def test_transiciones_fin_de_semana(fecha, segundos):
+    assert estado_local(datetime.fromisoformat(fecha))['cambia_en'] == segundos
 
 
 @pytest.mark.parametrize('dia,primera,ultima,total', [
-    (12, '18:00', '22:30', 10), (13, '09:00', '22:30', 28),
+    (12, '18:00', '23:00', 11), (13, '09:00', '22:30', 28),
 ])
 def test_franjas_respetan_horario_semanal(monkeypatch, bd_limpia, dia, primera, ultima, total):
     import importlib

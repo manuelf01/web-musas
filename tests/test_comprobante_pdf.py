@@ -11,11 +11,11 @@ from tests.conftest import CLIENTE_ID
 
 ITEMS = [{
     "idProducto": 2,
-    "nombre": "Smash Las Musas",
-    "precioUnidad": 21,
+    "nombre": "Simple de Carne",
+    "precioUnidad": 12.5,   # 8.50 base + Queso (2.00) + Tocino (2.00)
     "cantidad": 2,
-    "precioTotal": 42,
-    "cremas": [16, 19],
+    "precioTotal": 25,
+    "cremas": [57, 58],
 }]
 
 
@@ -70,9 +70,9 @@ def test_snapshot_conserva_pago_lineas_y_cremas(bd_limpia):
 
     assert comprobante["formaPago"] == "Yape"
     assert comprobante["idCajero"] == 1
-    assert comprobante["montoTotal"] == 42.0
-    assert comprobante["lineas"][0]["nombre"] == "Smash Las Musas"
-    assert set(comprobante["lineas"][0]["adicionales"]) == {"Mayonesa de la Casa", "Cheddar Fundido"}
+    assert comprobante["montoTotal"] == 25.0
+    assert comprobante["lineas"][0]["nombre"] == "Simple de Carne"
+    assert set(comprobante["lineas"][0]["adicionales"]) == {"Queso", "Tocino"}
 
 
 def test_cliente_y_caja_descargan_el_mismo_pdf(bd_limpia, cliente_client, admin_client):
@@ -85,7 +85,7 @@ def test_cliente_y_caja_descargan_el_mismo_pdf(bd_limpia, cliente_client, admin_
     pdf_caja = admin_client.get(f"/admin/ventas/detalle_comprobante/{id_comprobante}/pdf")
 
     assert vista_cliente.status_code == 200
-    assert "Smash Las Musas" in vista_cliente.get_data(as_text=True)
+    assert "Simple de Carne" in vista_cliente.get_data(as_text=True)
     for respuesta in (pdf_cliente, pdf_caja):
         assert respuesta.status_code == 200
         assert respuesta.mimetype == "application/pdf"
@@ -93,7 +93,7 @@ def test_cliente_y_caja_descargan_el_mismo_pdf(bd_limpia, cliente_client, admin_
         texto = "".join(p.extract_text() or "" for p in PdfReader(BytesIO(respuesta.data)).pages)
         assert "LAS DE SIEMPRE" in texto
         assert "B001-" in texto
-        assert "42.00" in texto
+        assert "25.00" in texto
 
 
 def test_cliente_no_puede_ver_comprobante_ajeno(bd_limpia, cliente_client):

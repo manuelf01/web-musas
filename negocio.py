@@ -21,15 +21,27 @@ def ahora_peru():
 # obligue a rehacer el logo.
 NOMBRE_NEGOCIO = "Las de Siempre"
 
+# Dirección y horario reales del local (verificados en su página de pedidos
+# en línea). Único lugar donde viven: cámbialos acá y se actualizan en toda
+# la app (checkout, footer, comprobante, "Mi cuenta").
 SEDE = {
     "nombre": "Sede Chiclayo",
-    "direccion": "Av. José Balta Sur 006, Chiclayo 14008, Perú",
-    "referencia": "La Paperia, cerca del Hotel Colibrí",
-    "horario": "Lunes a viernes · 6:00 p.m. – 11:30 p.m. | Sábado · 6:00 p.m. – 11:00 p.m. | Domingo · 9:00 a.m. – 11:00 p.m.",
+    "direccion": "Av. José Balta, Chiclayo 14008, Perú",
+    "referencia": "Urb. Santa Victoria, Chiclayo",
+    "horario": "Lunes a sábado · 6:00 p.m. – 11:30 p.m. | Domingo · 9:00 a.m. – 11:00 p.m.",
 }
-_direccion_mapa = quote("La Paperia, " + SEDE["direccion"])
+_direccion_mapa = quote(SEDE["direccion"] + ", " + SEDE["referencia"])
 SEDE["mapa_url"] = "https://www.google.com/maps?q=" + _direccion_mapa
 SEDE["mapa_embed"] = SEDE["mapa_url"] + "&z=17&output=embed"
+
+# Redes y contacto reales. El WhatsApp de pedidos es el mismo que usa la
+# plataforma de pedidos en línea del negocio.
+REDES = {
+    "whatsapp_numero": "51983778218",
+    "whatsapp_url": "https://wa.me/51983778218",
+    "instagram_url": "https://www.instagram.com/lasdesiempreburger",
+    "tiktok_url": "https://www.tiktok.com/@lasdesiempreburger",
+}
 
 _pago_qr = os.environ.get("MUSAS_PAGO_QR", "").strip().replace("\\", "/")
 _pago_qr_externo = _pago_qr.lower().startswith("https://")
@@ -45,11 +57,10 @@ PAGO_DIGITAL = {
 
 
 def horario_dia(fecha):
-    """Minutos desde medianoche según el horario de OlaClick (/info)."""
+    """Minutos desde medianoche según el horario real del negocio: lunes a
+    sábado 6:00 p.m.-11:30 p.m., domingo 9:00 a.m.-11:00 p.m."""
     if fecha.weekday() == 6:
         return 9 * 60, 23 * 60
-    if fecha.weekday() == 5:
-        return 18 * 60, 23 * 60
     return 18 * 60, 23 * 60 + 30
 
 

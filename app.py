@@ -3,7 +3,8 @@ from datetime import timedelta
 
 from flask import Flask, request, session, jsonify
 import avisos
-from negocio import SEDE, NOMBRE_NEGOCIO, estado_local
+from negocio import SEDE, NOMBRE_NEGOCIO, REDES, estado_local
+from model.Producto import CATEGORIAS_PERSONALIZACION
 
 from controllers.admin import *
 from controllers.cliente import *
@@ -89,6 +90,8 @@ def _inyectar_sesion():
     return {
         "admin_sesion": session.get("admin.auth"),
         "sede": SEDE,
+        "redes": REDES,
+        "categorias_ocultas": CATEGORIAS_PERSONALIZACION,
         "nombre_negocio": NOMBRE_NEGOCIO,
         "local_estado": estado_local(),
         "mi_perfil": _perfil_actual(),
