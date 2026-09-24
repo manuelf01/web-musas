@@ -1087,3 +1087,11 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - Validación: suite completa aprobada (194 pruebas antes de las fotos; se repitió tras aplicar `017` sin regresiones) y verificación visual con Chrome headless en `/carta`, `/producto/1` (Simple de Pollo) y `/producto/34` (Salchitodo) confirmando que las fotos reales reemplazan el ícono placeholder.
 - Pendiente/diferido a propósito, no solicitado aún por el usuario: el texto de "tiempo de entrega" (el proyecto es solo retiro en tienda) y la copy de marketing genérica ("Carne Angus", "pan brioche artesanal") no se tocaron.
 - Verificación: 167 pruebas aprobadas; Resumen, Pedidos, Productos, Categorías, Ventas, Pagos, Usuarios y Mi perfil respondieron HTTP 200 en el servidor local.
+
+## 2026-09-23 - Listados con flechas y números, e imágenes de la personalización
+- Detalle de producto (`seleccion-producto.html`): las salsas, papas y agregados ahora muestran su imagen (antes el círculo siempre iba vacío aunque la imagen estuviera guardada en la BD).
+- Nuevo `paginacion.py` (`paginar(lista, por_pagina, nombre)`): corta una lista y devuelve `pagination.links` (flechas + números, conserva los filtros de la URL). Se usa en: Productos del panel (10 por página + selector de categoría `?cat=`), Usuarios (10), Mis pedidos del cliente (5), y Ventas/comprobantes pasó de 8 a 5 por página.
+- Mis pedidos: filtros en el servidor (búsqueda por número/producto/fecha, rango Desde–Hasta, chips Todos/En curso/Recogidos) — se quitó el filtro por JS (`mis-pedidos.js`), que ya no serviría con páginas. `Pedido.historial_cliente` agrega `fechaISO`.
+- Productos y Usuarios: la búsqueda pasó a ser del servidor (antes el filtro en vivo solo veía la página visible): `ui-comun.js` con `input[data-buscar-auto]` envía el formulario al dejar de teclear y `loader.js` respeta `data-loader-skip` en formularios.
+- Pruebas nuevas en `tests/test_paginacion.py`; suite completa aprobada.
+- Personalización a medias (`detalle-producto.js`): se guarda como borrador en `localStorage` (`musas_borrador_<idProducto>`, vigencia 24 h) cada vez que el cliente cambia una opción o la cantidad; al volver a la página del producto se restaura y avisa «Recuperamos tu personalización». Se borra al agregar al carrito. No aplica al modo «Editar» desde el carrito.

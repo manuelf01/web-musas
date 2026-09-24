@@ -3968,3 +3968,22 @@ a.vnav__flecha:hover { border-color: var(--musa-brasa); color: var(--musa-brasa)
   .anat-burger svg { animation: none; }
   .hero-anat__glow { animation: none; }
 }
+
+/* Selector de categoría junto al buscador del panel */
+.adm-select-cat { width: auto; min-width: 210px; height: 46px; border-radius: 14px; }
+
+/* Paginación de las pantallas del cliente (mismo aspecto que la del panel) */
+.musa-pag { margin-top: 22px; }
+.musa-pag .pagination { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0; justify-content: center; flex-wrap: wrap; }
+.musa-pag .page-link {
+  display: flex; min-width: 36px; height: 36px; align-items: center; justify-content: center;
+  border: 1px solid var(--musa-borde); border-radius: 10px; background: #fff;
+  color: var(--musa-carbon); text-decoration: none; font-size: 13px; font-weight: 600;
+}
+.musa-pag .active .page-link { background: var(--musa-brasa); border-color: var(--musa-brasa); color: #fff; }
+.musa-pag .disabled .page-link { opacity: .4; }
+.mp-barra { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.mp-barra .adm-search { flex: 1; min-width: 220px; }
+.mp-barra .mp-fecha { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--musa-texto-suave); }
+.mp-barra .mp-fecha input { height: 46px; width: auto; }
+.mp-mostrando { margin: 14px 0 0; color: var(--musa-texto-suave); font-size: 13px; text-align: center; }

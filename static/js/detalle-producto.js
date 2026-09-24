@@ -1,4 +1,6 @@
-/* Detalle de producto: stepper de cantidad, total en vivo y agregar al carrito. */
+/* Detalle de producto: stepper de cantidad, total en vivo y agregar al carrito.
+   La personalización a medias se guarda como borrador (localStorage) para que no se
+   pierda si el cliente cierra la pestaña o se va a otra página. */
 (function () {
   var root = document.getElementById("detalle-producto");
   if (!root) return;
@@ -30,6 +32,49 @@
   }
 
   var admitePersonalizacion = root.dataset.admiteCremas === "1";
+
+  // --- Borrador de la personalización ---------------------------------
+  var CLAVE_BORRADOR = "musas_borrador_" + root.dataset.id;
+  var VIGENCIA_BORRADOR = 24 * 60 * 60 * 1000;
+
+  function guardarBorrador() {
+    if (modoEditar) return;
+    try {
+      var ids = Array.prototype.map.call(
+        document.querySelectorAll(".crema-check:checked"),
+        function (c) { return Number(c.value); }
+      );
+      if (!ids.length && qty === 1) {
+        localStorage.removeItem(CLAVE_BORRADOR);
+      } else {
+        localStorage.setItem(CLAVE_BORRADOR, JSON.stringify({ ids: ids, qty: qty, t: Date.now() }));
+      }
+    } catch (e) {}
+  }
+
+  function borrarBorrador() {
+    try { localStorage.removeItem(CLAVE_BORRADOR); } catch (e) {}
+  }
+
+  if (!modoEditar) {
+    try {
+      var borrador = JSON.parse(localStorage.getItem(CLAVE_BORRADOR) || "null");
+      if (borrador && Date.now() - borrador.t < VIGENCIA_BORRADOR) {
+        var idsBorrador = (borrador.ids || []).map(Number);
+        var restauradas = 0;
+        document.querySelectorAll(".crema-check").forEach(function (c) {
+          c.checked = idsBorrador.indexOf(Number(c.value)) !== -1;
+          if (c.checked) restauradas++;
+        });
+        qty = Math.max(1, Math.min(99, Number(borrador.qty) || 1));
+        if ((restauradas || qty > 1) && window.MusasCarrito && window.MusasCarrito.toast) {
+          window.MusasCarrito.toast("Recuperamos tu personalización");
+        }
+      } else if (borrador) {
+        localStorage.removeItem(CLAVE_BORRADOR);
+      }
+    } catch (e) {}
+  }
 
   function validarPersonalizacion() {
     if (!admitePersonalizacion) return true;
@@ -96,6 +141,7 @@
   // Cambiar cantidad o cremas = otra combinación -> se puede volver a agregar.
   function reactivar() {
     if (enCarrito) enCarrito = false;
+    guardarBorrador();
     render();
   }
 
@@ -150,6 +196,7 @@
           mensaje: unidades + "× " + root.dataset.nombre + " en el carrito",
         }
       );
+      borrarBorrador();
       enCarrito = true;
       render();
     });

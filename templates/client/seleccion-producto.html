@@ -104,7 +104,7 @@
           {% macro opcion(item, grupo, tipo) %}
             <label class="crema-card">
               <span class="crema-card__info">
-                <span class="crema-card__img"></span>
+                {% if item.imagen %}<img class="crema-card__img" src="{{ url_for('static', filename='img/' ~ item.imagen) }}" alt="" loading="lazy" />{% else %}<span class="crema-card__img"></span>{% endif %}
                 <span>
                   <span class="crema-card__nombre d-block">{{ item.nombre }}</span>
                   {% if item.precio %}<span class="crema-card__precio">+ S/ {{ '%.2f'|format(item.precio) }}</span>{% endif %}

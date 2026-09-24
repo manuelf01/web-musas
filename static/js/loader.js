@@ -63,6 +63,7 @@
   document.addEventListener("submit", function (evento) {
     var formulario = evento.target;
     if (!formulario || formulario.nodeName !== "FORM" || evento.defaultPrevented) return;
+    if (formulario.hasAttribute("data-loader-skip")) return;
     var confirmable = formulario.hasAttribute("data-confirm") ||
       (evento.submitter && evento.submitter.hasAttribute("data-confirm"));
     if (confirmable && formulario.dataset.confirmHecho !== "1") return;

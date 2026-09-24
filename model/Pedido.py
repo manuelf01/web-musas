@@ -922,6 +922,7 @@ class Pedido:
                 "cancelable": estado == "recibido",
                 "hora": hora,
                 "fecha": fecha,
+                "fechaISO": c[3].strftime("%Y-%m-%d") if hasattr(c[3], "strftime") else "",
                 "boleta": bool(c[4]),
                 "digital": bool(c[5]),
                 "keyPedido": c[6],

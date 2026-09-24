@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, request, url_for, g, flash
-from flask_paginate import Pagination, get_page_parameter
+from paginacion import paginar
 from controllers.admin import admin
 from model.Producto import Producto
 from model.CategoriaProducto import CategoriaProducto
@@ -37,13 +37,6 @@ def _imagen_del_form(prefijo_ruta):
 def home():
     q = (request.args.get("q") or "").strip()
     estado = request.args.get("estado", "activos")
-    # Alto para que el catálogo entre en una sola página y el filtro en vivo
-    # (que actúa sobre las filas visibles) cubra todo sin recargar.
-    per_page = 60
-    page = request.args.get(get_page_parameter(), type=int, default=1)
-    if page < 1:
-        page = 1
-
     catalogo = Producto.obtener_productos()
     sin_stock = sum(1 for p in catalogo if p["activo"] and not p["existencias"])
     de_baja = sum(1 for p in catalogo if not p["activo"])
@@ -63,20 +56,21 @@ def home():
                      or ql in (p["descripcion"] or "").lower()
                      or ql in (p["nombreCategoria"] or "").lower()]
 
-    total = len(filtrados)
-    inicio = (page - 1) * per_page
-    pagina = filtrados[inicio:inicio + per_page]
-    pagination = Pagination(page=page, total=total, per_page=per_page,
-                            search=bool(q), record_name="productos", css_framework="bootstrap5")
-
     categorias = CategoriaProducto.obtener_categorias(solo_activas=True)
+    cat = request.args.get("cat", type=int)
+    if cat not in {c[0] for c in categorias}:
+        cat = None
+    if cat:
+        filtrados = [p for p in filtrados if p["idCategoria"] == cat]
+
+    pagina, pagination, rango = paginar(filtrados, 10, "productos")
     return render_template(
         "admin/productos/index.html",
         productos=pagina, usuario=g.user, pagination=pagination,
-        categorias=categorias, q=q, estado=estado,
+        categorias=categorias, q=q, estado=estado, cat=cat,
         sugerencias=sorted({p["nombre"] for p in catalogo}
                            | {p["nombreCategoria"] for p in catalogo if p["nombreCategoria"]}),
-        rango=(inicio + 1 if total else 0, inicio + len(pagina)),
+        rango=rango,
         conteos={"total": len(catalogo), "activos": activos, "de_baja": de_baja,
                  "sin_stock": sin_stock, "categorias": len(categorias)},
     )

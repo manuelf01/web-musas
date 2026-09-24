@@ -17,6 +17,7 @@ from avisos import ok_deshacer, error_en_formulario
 from formato import soles_en_letras
 from services.comprobante_pdf import generar_comprobante_pdf
 from negocio import PAGO_DIGITAL
+from paginacion import paginar
 cliente = Blueprint('cliente', __name__)
 
 # Categorías de hamburguesas: admiten elegir salsa, tipo de papas y agregados.
@@ -163,16 +164,52 @@ def _firma_estados(pedidos):
                     for p in sorted(pedidos, key=lambda p: p["idPedido"]))
 
 
+def _texto_pedido(p):
+    partes = [str(p["idPedido"]), p["fecha"]]
+    for l in p["lineas"]:
+        partes.append(l["nombre"] or "")
+        partes.extend(c["nombre"] for c in l["cremas"])
+    return " ".join(partes).lower()
+
+
 @cliente.route("/mis-pedidos")
 def mis_pedidos():
     user = session.get("cliente.auth", None)
     pedidos = Pedido.historial_cliente(user["idUsuario"]) if user else []
+    firma = _firma_estados(pedidos)
+
+    q = (request.args.get("q") or "").strip()
+    estado = request.args.get("estado", "todos")
+    desde = (request.args.get("desde") or "").strip()
+    hasta = (request.args.get("hasta") or "").strip()
+    hay_filtros = bool(q or desde or hasta or estado in ("activo", "recogido"))
+
+    if estado == "activo":
+        pedidos = [p for p in pedidos if p["activo"]]
+    elif estado == "recogido":
+        pedidos = [p for p in pedidos if p["estado"] == "recogido"]
+    else:
+        estado = "todos"
+    if desde:
+        pedidos = [p for p in pedidos if p["fechaISO"] >= desde]
+    if hasta:
+        pedidos = [p for p in pedidos if p["fechaISO"] <= hasta]
+    if q:
+        ql = q.lower()
+        pedidos = [p for p in pedidos if ql in _texto_pedido(p)]
+
+    pagina, pagination, rango = paginar(pedidos, 5, "pedidos")
     return render_template(
         "client/mis-pedidos.html",
         cliente=_cliente_nombre(),
         logueado=bool(user),
-        pedidos=pedidos,
-        firma=_firma_estados(pedidos),
+        pedidos=pagina,
+        pagination=pagination,
+        rango=rango,
+        hay_pedidos=bool(firma) or bool(pedidos),
+        hay_filtros=hay_filtros,
+        q=q, estado=estado, desde=desde, hasta=hasta,
+        firma=firma,
     )
 
 

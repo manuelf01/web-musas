@@ -22,16 +22,20 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="prod-sug" autocomplete="off"
-           data-filtro-vivo="#prod-lista" placeholder="Escribe para filtrar por nombre o categoría…" />
+           data-buscar-auto placeholder="Escribe para filtrar por nombre o categoría…" />
     <datalist id="prod-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
+  <select class="musa-input adm-select-cat" name="cat" aria-label="Filtrar por categoría" onchange="this.form.submit()">
+    <option value="">Todas las categorías</option>
+    {% for c in categorias %}<option value="{{ c[0] }}" {{ 'selected' if cat == c[0] }}>{{ c[1] }}</option>{% endfor %}
+  </select>
 </form>
 
 <div class="adm-chips">
-  <a class="adm-chip2 {{ 'is-active' if estado == 'activos' }}" href="{{ url_for('admin.productos.home', estado='activos', q=q) }}">En carta <b>{{ conteos.activos }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if estado == 'sin_stock' }}" href="{{ url_for('admin.productos.home', estado='sin_stock', q=q) }}">Sin stock <b>{{ conteos.sin_stock }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if estado == 'baja' }}" href="{{ url_for('admin.productos.home', estado='baja', q=q) }}">De baja <b>{{ conteos.de_baja }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if estado == 'todos' }}" href="{{ url_for('admin.productos.home', estado='todos', q=q) }}">Todos <b>{{ conteos.total }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'activos' }}" href="{{ url_for('admin.productos.home', estado='activos', q=q, cat=cat) }}">En carta <b>{{ conteos.activos }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'sin_stock' }}" href="{{ url_for('admin.productos.home', estado='sin_stock', q=q, cat=cat) }}">Sin stock <b>{{ conteos.sin_stock }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'baja' }}" href="{{ url_for('admin.productos.home', estado='baja', q=q, cat=cat) }}">De baja <b>{{ conteos.de_baja }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if estado == 'todos' }}" href="{{ url_for('admin.productos.home', estado='todos', q=q, cat=cat) }}">Todos <b>{{ conteos.total }}</b></a>
   <a class="adm-chip2" href="{{ url_for('admin.categoria.home') }}">Categorías <b>{{ conteos.categorias }}</b></a>
 </div>
 
@@ -44,7 +48,7 @@
         </thead>
         <tbody>
           {% for p in productos %}
-            <tr data-filtro-item data-filtro-texto="{{ p.nombre }} {{ p.nombreCategoria }} {{ p.descripcion }}"
+            <tr
                 style="{{ 'opacity:.55;' if not p.activo }}">
               <td>
                 <div class="adm-prod-cel">
@@ -95,11 +99,10 @@
       </table>
     </div>
     <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ pagination.total }} productos</p>
-    <p class="adm-vacio" data-filtro-vacio hidden>Ningún producto de esta página coincide con la búsqueda.</p>
     <div class="adm-pag">{{ pagination.links }}</div>
   {% else %}
     <p class="adm-vacio"><i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i>
-      {{ 'Sin resultados.' if q else 'No hay productos en este filtro.' }}</p>
+      {{ 'Sin resultados.' if (q or cat) else 'No hay productos en este filtro.' }}</p>
   {% endif %}
 </section>
 

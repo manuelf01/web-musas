@@ -3,6 +3,7 @@ import re
 from flask import Blueprint, render_template, redirect, request, url_for, g, flash
 from model.Usuario import Usuario, ROLES, ETIQUETA_ROL
 from seguridad import password_valida
+from paginacion import paginar
 from avisos import ok_deshacer, error_en_formulario
 
 usuarios = Blueprint('usuarios', __name__, url_prefix='/usuarios')
@@ -30,9 +31,10 @@ def home():
         lista = [u for u in lista if q in u["nombreCompleto"].lower()
                  or q in (u["dni"] or "") or q in (u["correo"] or "").lower()]
 
+    lista, pagination, rango = paginar(lista, 10, "cuentas")
     return render_template(
         "admin/usuarios/index.html",
-        usuarios=lista, filtro=rol, estado=estado, q=request.args.get("q", ""),
+        usuarios=lista, pagination=pagination, rango=rango, filtro=rol, estado=estado, q=request.args.get("q", ""),
         conteos=Usuario.contar_por_rol(),
         roles=[(r, ETIQUETA_ROL[r]) for r in ROLES],
         sugerencias=sorted({u["nombreCompleto"] for u in todos}

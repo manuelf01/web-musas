@@ -1,28 +1,7 @@
-/* Mis pedidos: filtros, ver palabra clave, repetir pedido. */
+/* Mis pedidos: ver palabra clave, repetir pedido (los filtros y la paginación los resuelve el servidor). */
 (function () {
   var root = document.getElementById("mis-pedidos");
   if (!root) return;
-
-  // --- Filtros ---
-  var chips = root.querySelectorAll("[data-filtro]");
-  var cards = root.querySelectorAll(".mp-card");
-  var avisoVacio = root.querySelector(".mp-vacio-filtro");
-
-  chips.forEach(function (c) {
-    c.addEventListener("click", function () {
-      chips.forEach(function (x) {
-        x.classList.toggle("is-active", x === c);
-      });
-      var f = c.dataset.filtro;
-      var visibles = 0;
-      cards.forEach(function (card) {
-        var ok = f === "todos" || card.dataset.estado === f;
-        card.hidden = !ok;
-        if (ok) visibles++;
-      });
-      if (avisoVacio) avisoVacio.hidden = visibles !== 0;
-    });
-  });
 
   // --- Ver palabra clave ---
   var modalEl = document.getElementById("modalClave");

@@ -23,7 +23,7 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="usr-sug" autocomplete="off"
-           data-filtro-vivo="#usr-lista" placeholder="Escribe para filtrar por nombre, DNI o correo…" />
+           data-buscar-auto placeholder="Escribe para filtrar por nombre, DNI o correo…" />
     <datalist id="usr-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
@@ -45,7 +45,7 @@
         <tbody>
           {% for u in usuarios %}
             {% set yo = (u.idUsuario|string == usuario.idUsuario|string) %}
-            <tr data-filtro-item data-filtro-texto="{{ u.nombreCompleto }} {{ u.dni }} {{ u.correo }} {{ u.rolTexto }}"
+            <tr
                 style="{{ 'opacity:.55;' if not u.activo }}">
               <td>
                 <div class="adm-prod-cel">
@@ -104,10 +104,10 @@
         </tbody>
       </table>
     </div>
-    <p class="adm-mostrando">{{ usuarios|length }} cuenta(s)</p>
-    <p class="adm-vacio" data-filtro-vacio hidden>Ninguna cuenta coincide con la búsqueda.</p>
+    <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ pagination.total }} cuentas</p>
+    <div class="adm-pag">{{ pagination.links }}</div>
   {% else %}
-    <p class="adm-vacio"><i class="bi bi-people d-block mb-2" style="font-size: 32px;"></i> No hay cuentas en este filtro.</p>
+    <p class="adm-vacio"><i class="bi bi-people d-block mb-2" style="font-size: 32px;"></i> {{ 'Sin resultados.' if q else 'No hay cuentas en este filtro.' }}</p>
   {% endif %}
 </section>
 

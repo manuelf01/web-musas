@@ -33,7 +33,7 @@
       <a href="{{ url_for('cliente.auth.login') }}" class="btn-brasa">Iniciar sesión</a>
     </div>
 
-  {% elif not pedidos %}
+  {% elif not hay_pedidos %}
     <div class="cx-empty">
       <i class="bi bi-bag-heart"></i>
       <h2>Aún no tienes pedidos</h2>
@@ -42,10 +42,25 @@
     </div>
 
   {% else %}
+    <form class="mp-barra" method="get" action="{{ url_for('cliente.mis_pedidos') }}">
+      <input type="hidden" name="estado" value="{{ estado }}" />
+      <div class="adm-search">
+        <i class="bi bi-search"></i>
+        <input type="search" name="q" value="{{ q }}" autocomplete="off" data-buscar-auto
+               placeholder="Buscar pedido o producto…" />
+      </div>
+      <label class="mp-fecha">Desde
+        <input class="musa-input" type="date" name="desde" value="{{ desde }}" onchange="this.form.submit()" /></label>
+      <label class="mp-fecha">Hasta
+        <input class="musa-input" type="date" name="hasta" value="{{ hasta }}" onchange="this.form.submit()" /></label>
+      {% if hay_filtros %}<a class="btn-contorno" href="{{ url_for('cliente.mis_pedidos') }}"><i class="bi bi-x-lg"></i> Limpiar</a>{% endif %}
+    </form>
+
     <div class="mp-filtros">
-      <button class="musa-chip is-active" data-filtro="todos" type="button">Todos</button>
-      <button class="musa-chip" data-filtro="activo" type="button">En curso</button>
-      <button class="musa-chip" data-filtro="recogido" type="button">Recogidos</button>
+      {% for clave, texto in [('todos', 'Todos'), ('activo', 'En curso'), ('recogido', 'Recogidos')] %}
+        <a class="musa-chip {{ 'is-active' if estado == clave }}"
+           href="{{ url_for('cliente.mis_pedidos', estado=clave, q=q or None, desde=desde or None, hasta=hasta or None) }}">{{ texto }}</a>
+      {% endfor %}
     </div>
 
     <div id="mp-seg" data-url="{{ url_for('cliente.mis_pedidos_estado') }}" data-firma="{{ firma }}"></div>
@@ -136,7 +151,12 @@
       {% endfor %}
     </div>
 
-    <p class="mp-vacio-filtro" hidden>No tienes pedidos en esta categoría.</p>
+    {% if pedidos %}
+      <p class="mp-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ pagination.total }} pedidos</p>
+      <div class="musa-pag">{{ pagination.links }}</div>
+    {% else %}
+      <p class="mp-vacio-filtro">No hay pedidos que coincidan con estos filtros.</p>
+    {% endif %}
   {% endif %}
 </div>
 

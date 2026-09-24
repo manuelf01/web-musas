@@ -59,6 +59,33 @@
 
   document.querySelectorAll("[data-filtro-vivo]").forEach(conectar);
 
+  // --- Búsqueda en el servidor mientras se escribe ------------------
+  // <input data-buscar-auto> dentro de un <form method=get>: al dejar de teclear
+  // envía el formulario (vuelve a la página 1) y recupera el foco al final del texto.
+  document.querySelectorAll("input[data-buscar-auto]").forEach(function (input) {
+    var form = input.form;
+    if (!form) return;
+    form.setAttribute("data-loader-skip", "");
+    var espera = null;
+    var previo = input.value;
+    input.addEventListener("input", function () {
+      clearTimeout(espera);
+      espera = setTimeout(function () {
+        if (input.value === previo) return;
+        try { sessionStorage.setItem("musaFocoBuscar", location.pathname); } catch (e) {}
+        form.requestSubmit ? form.requestSubmit() : form.submit();
+      }, 450);
+    });
+    try {
+      if (sessionStorage.getItem("musaFocoBuscar") === location.pathname) {
+        sessionStorage.removeItem("musaFocoBuscar");
+        input.focus();
+        var n = input.value.length;
+        input.setSelectionRange && input.setSelectionRange(n, n);
+      }
+    } catch (e) {}
+  });
+
   // --- Modal de confirmacion (todos los CRUD + cancelaciones) ------
   // Uso: en un <form>, en su <button type="submit"> o en un <a>:
   //   data-confirm="texto que explica lo que va a pasar"

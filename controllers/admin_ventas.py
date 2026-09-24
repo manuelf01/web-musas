@@ -51,7 +51,7 @@ def home():
         mes = hoy.month
     dia = _fecha(request.args.get("dia")) or hoy
 
-    per_page = 8
+    per_page = 5
     page = max(1, request.args.get(get_page_parameter(), type=int, default=1))
     total = Comprobante.obtener_total(q, tipo, medio, desde, hasta, estado)
     comprobantes = Comprobante.listado_paginado(
