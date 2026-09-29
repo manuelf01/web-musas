@@ -1095,3 +1095,9 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - Productos y Usuarios: la búsqueda pasó a ser del servidor (antes el filtro en vivo solo veía la página visible): `ui-comun.js` con `input[data-buscar-auto]` envía el formulario al dejar de teclear y `loader.js` respeta `data-loader-skip` en formularios.
 - Pruebas nuevas en `tests/test_paginacion.py`; suite completa aprobada.
 - Personalización a medias (`detalle-producto.js`): se guarda como borrador en `localStorage` (`musas_borrador_<idProducto>`, vigencia 24 h) cada vez que el cliente cambia una opción o la cantidad; al volver a la página del producto se restaura y avisa «Recuperamos tu personalización». Se borra al agregar al carrito. No aplica al modo «Editar» desde el carrito.
+
+## 2026-09-28 - Categorías con el diseño y paginación de Productos
+- Gestión de Categorías dejó la cuadrícula de tarjetas y adoptó la tabla del listado de Productos: imagen, nombre y descripción, cantidad de productos, estado y acciones de editar/eliminar/reactivar. El formulario de crear/editar también pasó del modal centrado al mismo panel lateral derecho de Productos.
+- El buscador ahora filtra en el servidor antes de paginar; así puede encontrar categorías que no estén en la página visible.
+- Se muestran 10 categorías por página con rango, flechas y números, conservando los filtros `q` y `estado` en los enlaces.
+- Agregada cobertura de primera/segunda página y búsqueda a `tests/test_paginacion.py`. Suite completa aprobada: 219 pruebas.

@@ -1,4 +1,4 @@
-"""Listados con flechas/números: productos (10), comprobantes (5), usuarios (10) y Mis pedidos (5)."""
+"""Listados con flechas/números: productos/categorías/usuarios (10), comprobantes y Mis pedidos (5)."""
 
 import re
 
@@ -23,6 +23,23 @@ def test_productos_filtrar_por_categoria(bd_limpia, admin_client):
     assert "Mostrando 1–10 de 10 productos" in html
     assert "<strong>Presa de Pollo</strong>" in html
     assert "<strong>Simple de Pollo</strong>" not in html
+
+
+def test_categorias_10_por_pagina_y_busqueda_en_servidor(bd_limpia, admin_client):
+    p1 = admin_client.get("/admin/categorias/").get_data(as_text=True)
+    p2 = admin_client.get("/admin/categorias/?page=2").get_data(as_text=True)
+    assert p1.count('data-cat-abrir data-modo="editar"') == 10
+    assert p2.count('data-cat-abrir data-modo="editar"') == 3
+    assert "Mostrando 1–10 de 13 categorías" in p1
+    assert "Mostrando 11–13 de 13 categorías" in p2
+    assert 'class="page-link"' in p1
+    assert 'class="adm-panel" id="panelCategoria"' in p1
+    assert 'class="adm-modal"' not in p1
+
+    filtrada = admin_client.get("/admin/categorias/?q=Bebidas").get_data(as_text=True)
+    assert filtrada.count('data-cat-abrir data-modo="editar"') == 1
+    assert "<strong>Bebidas</strong>" in filtrada
+    assert "Mostrando 1–1 de 1 categorías" in filtrada
 
 
 def test_usuarios_pagina_de_10(bd_limpia, admin_client):

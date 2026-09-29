@@ -1,4 +1,5 @@
 from flask import Blueprint, request, render_template, redirect, url_for, g, flash
+from paginacion import paginar
 from controllers.admin import admin
 from model.CategoriaProducto import CategoriaProducto
 from model.Producto import Producto
@@ -43,9 +44,10 @@ def home():
         ql = q.lower()
         lista = [c for c in lista if ql in c[1].lower() or ql in (c[2] or "").lower()]
 
+    pagina, pagination, rango = paginar(lista, 10, "categorías")
     return render_template(
         "admin/categoria/index.html",
-        categorias=lista, q=q, estado=estado,
+        categorias=pagina, q=q, estado=estado, pagination=pagination, rango=rango,
         totales=Producto.contar_por_categoria(),
         sugerencias=sorted({c[1] for c in todas}),
         conteos={"total": len(todas), "activas": activas, "de_baja": de_baja},

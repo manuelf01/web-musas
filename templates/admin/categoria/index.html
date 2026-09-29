@@ -4,13 +4,6 @@
 {% set migas = [('Gestión', None, 'bi-egg-fried'), (_est.get(estado, 'Categorías'), None)] %}
 {% block nav_categorias %}is-active{% endblock %}
 
-{% set emojis = {
-  "Hamburguesas Simples": "🍔", "Hamburguesas Royal": "🍳", "Hamburguesas Mixtas": "🌭",
-  "Hamburguesas Hawaianas": "🍍", "Hamburguesas a lo Pobre": "🍌",
-  "Hamburguesas Especiales": "⭐", "Maxi Burgers": "🍔", "Platos Especiales": "🍟",
-  "Bebidas": "🍹", "Combos": "🔥", "Salsas": "🥫", "Papas": "🍟", "Agregados": "➕"
-} %}
-
 {% block content %}
 <div class="adm-list-head">
   <div class="adm-head" style="margin-bottom: 0;">
@@ -29,7 +22,7 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="cat-sug" autocomplete="off"
-           data-filtro-vivo="#cat-grid" placeholder="Escribe para filtrar por nombre o descripción…" />
+           data-buscar-auto placeholder="Escribe para filtrar por nombre o descripción…" />
     <datalist id="cat-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
@@ -40,70 +33,81 @@
   <a class="adm-chip2 {{ 'is-active' if estado == 'todas' }}" href="{{ url_for('admin.categoria.home', estado='todas', q=q) }}">Todas <b>{{ conteos.total }}</b></a>
 </div>
 
-<div class="adm-cat-grid" id="cat-grid">
-  {% for c in categorias %}
-    {% set activa = (c|length <= 4) or c[4] %}
-    <article class="adm-cat-card" data-filtro-item data-filtro-texto="{{ c[1] }} {{ c[2] or '' }}"
-             style="{{ 'opacity:.6;' if not activa }}">
-      <div class="adm-cat-card__top">
-        <span class="adm-cat-emoji">
-          {% if c[3] %}<img src="{{ url_for('static', filename='img/' ~ c[3]) }}" alt="" />
-          {% else %}{{ emojis.get(c[1], "🍴") }}{% endif %}
-        </span>
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-          <span class="adm-badge-cat">{{ totales.get(c[0], 0) }} productos</span>
-          {% if not activa %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
-        </div>
-      </div>
-      <h3>{{ c[1] }}</h3>
-      <p>{{ (c[2] or "Sin descripción.") | truncate(90) }}</p>
-      <div class="adm-cat-card__foot">
-        <button type="button" class="adm-btn-sm" data-cat-abrir data-modo="editar"
-          data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}" data-imagen="{{ c[3] or '' }}"
-          data-activo="{{ 1 if activa else 0 }}">
-          <i class="bi bi-pencil"></i> Editar
-        </button>
-        <form action="{{ url_for('admin.categoria.estado') }}" method="POST">
-          {{ campo_csrf() }}
-          <input type="hidden" name="idCategoria" value="{{ c[0] }}" />
-          <input type="hidden" name="activar" value="{{ '0' if activa else '1' }}" />
-          <input type="hidden" name="volver" value="{{ estado }}" />
-          {% if activa %}
-            <button class="adm-btn-sm adm-btn-sm--danger"
-              data-confirm="La categoría «{{ c[1] }}» y sus {{ totales.get(c[0], 0) }} producto(s) dejarán de mostrarse en la carta y el inicio."
-              data-confirm-titulo="Eliminar de la carta"
-              data-confirm-ok="Sí, eliminar" data-confirm-tono="peligro">
-              <i class="bi bi-trash"></i> Eliminar</button>
-          {% else %}
-            <button class="adm-btn-sm"
-              data-confirm="«{{ c[1] }}» y sus productos activos volverán a la carta."
-              data-confirm-titulo="Reactivar categoría" data-confirm-ok="Sí, reactivar">
-              <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
-          {% endif %}
-        </form>
-      </div>
-    </article>
-  {% endfor %}
-
-  <button type="button" class="adm-cat-nueva" data-cat-abrir data-modo="crear">
-    <i class="bi bi-plus-circle"></i>
-    <strong>Crear nueva categoría</strong>
-    <span>Combos, promociones de temporada o extras</span>
-  </button>
-</div>
-
-{# ---------------- MODAL categoría ---------------- #}
-<div class="adm-modal__backdrop" id="modalCategoria">
-  <div class="adm-modal">
-    <button type="button" class="adm-modal__cerrar" data-cat-cerrar aria-label="Cerrar">&times;</button>
-    <div class="adm-modal__head">
-      <h2><i class="bi bi-tags" style="color: var(--musa-brasa);"></i> <span data-cat-titulo>Nueva categoría</span></h2>
-      <p>Crea o edita una sección para ordenar los platos de la carta.</p>
+<section class="adm-card" id="cat-lista">
+  {% if categorias %}
+    <div class="adm-tabla-wrap">
+      <table class="adm-tabla">
+        <thead>
+          <tr><th>Categoría</th><th class="num">Productos</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody>
+          {% for c in categorias %}
+            {% set activa = (c|length <= 4) or c[4] %}
+            <tr style="{{ 'opacity:.55;' if not activa }}">
+              <td>
+                <div class="adm-prod-cel">
+                  {% if c[3] %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ c[3]) }}" alt="" />
+                  {% else %}<span class="adm-thumb"><i class="bi bi-tags"></i></span>{% endif %}
+                  <div><strong>{{ c[1] }}</strong><p>{{ (c[2] or 'Sin descripción.') | truncate(72) }}</p></div>
+                </div>
+              </td>
+              <td class="num"><span class="adm-badge-stock">{{ totales.get(c[0], 0) }}</span></td>
+              <td>
+                {% if activa %}<span class="adm-badge-rol cliente">En carta</span>
+                {% else %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
+              </td>
+              <td>
+                <div class="acciones">
+                  <button type="button" class="adm-btn-sm" data-cat-abrir data-modo="editar"
+                    data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}"
+                    data-imagen="{{ c[3] or '' }}" data-activo="{{ 1 if activa else 0 }}">
+                    <i class="bi bi-pencil"></i> Editar
+                  </button>
+                  <form action="{{ url_for('admin.categoria.estado') }}" method="POST">
+                    {{ campo_csrf() }}
+                    <input type="hidden" name="idCategoria" value="{{ c[0] }}" />
+                    <input type="hidden" name="activar" value="{{ '0' if activa else '1' }}" />
+                    <input type="hidden" name="volver" value="{{ estado }}" />
+                    {% if activa %}
+                      <button class="adm-btn-sm adm-btn-sm--danger"
+                        data-confirm="La categoría «{{ c[1] }}» y sus {{ totales.get(c[0], 0) }} producto(s) dejarán de mostrarse en la carta y el inicio."
+                        data-confirm-titulo="Eliminar de la carta"
+                        data-confirm-ok="Sí, eliminar" data-confirm-tono="peligro">
+                        <i class="bi bi-trash"></i> Eliminar</button>
+                    {% else %}
+                      <button class="adm-btn-sm"
+                        data-confirm="«{{ c[1] }}» y sus productos activos volverán a la carta."
+                        data-confirm-titulo="Reactivar categoría" data-confirm-ok="Sí, reactivar">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
+                    {% endif %}
+                  </form>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
-    <form method="post" id="formCategoria" enctype="multipart/form-data">
-      {{ campo_csrf() }}
-      <input type="hidden" name="idCategoria" id="mc-id" />
-      <div class="adm-modal__body">
+    <p class="adm-mostrando">Mostrando {{ rango[0] }}–{{ rango[1] }} de {{ pagination.total }} categorías</p>
+    <div class="adm-pag">{{ pagination.links }}</div>
+  {% else %}
+    <p class="adm-vacio"><i class="bi bi-inbox d-block mb-2" style="font-size: 32px;"></i>
+      {{ 'Sin resultados.' if q else 'No hay categorías en este filtro.' }}</p>
+  {% endif %}
+</section>
+
+{# ---------------- PANEL agregar / editar ---------------- #}
+<div class="adm-panel__backdrop" data-cat-cerrar></div>
+<aside class="adm-panel" id="panelCategoria" aria-hidden="true">
+  <div class="adm-panel__head">
+    <button type="button" class="adm-panel__cerrar" data-cat-cerrar aria-label="Cerrar">&times;</button>
+    <h2><i class="bi bi-tags" style="color: var(--musa-brasa);"></i> <span data-cat-titulo>Nueva categoría</span></h2>
+    <p>Crea o edita una sección para ordenar los platos de la carta.</p>
+  </div>
+  <form method="post" id="formCategoria" enctype="multipart/form-data">
+    {{ campo_csrf() }}
+    <input type="hidden" name="idCategoria" id="mc-id" />
+    <div class="adm-panel__body">
         <div class="musa-field">
           <label class="musa-field-label" for="mc-nombre">Nombre de categoría</label>
           <input class="musa-input" id="mc-nombre" name="nombreCategoria" placeholder="Ej. Hamburguesas Veggie" required />
@@ -133,26 +137,26 @@
             <option value="0">Inactiva · eliminada de la carta</option>
           </select>
         </div>
-      </div>
-      <div class="adm-modal__foot">
-        <button type="button" class="btn-contorno" data-cat-cerrar>Cancelar</button>
-        <button type="submit" class="btn-brasa" id="mc-submit"
-          data-confirm="Se creará esta sección en la carta."
-          data-confirm-titulo="Nueva categoría" data-confirm-ok="Guardar">
-          <span data-cat-btn>Guardar categoría</span></button>
-      </div>
-    </form>
-  </div>
-</div>
+    </div>
+    <div class="adm-panel__foot">
+      <button type="submit" class="btn-brasa" id="mc-submit"
+        data-confirm="Se creará esta sección en la carta."
+        data-confirm-titulo="Nueva categoría" data-confirm-ok="Guardar">
+        <span data-cat-btn>Guardar categoría</span></button>
+      <button type="button" class="adm-cancelar" data-cat-cerrar>Cancelar</button>
+    </div>
+  </form>
+</aside>
 {% endblock %}
 
 {% block scripts %}
 <script>
 (function () {
-  var modal = document.getElementById("modalCategoria");
+  var panel = document.getElementById("panelCategoria");
+  var backdrop = document.querySelector(".adm-panel__backdrop");
   var form = document.getElementById("formCategoria");
-  var titulo = modal.querySelector("[data-cat-titulo]");
-  var btnTxt = modal.querySelector("[data-cat-btn]");
+  var titulo = panel.querySelector("[data-cat-titulo]");
+  var btnTxt = panel.querySelector("[data-cat-btn]");
   var preview = document.getElementById("mc-preview");
   var drop = document.getElementById("mc-drop");
   var url = document.getElementById("mc-url");
@@ -162,8 +166,16 @@
 
   function mostrar(src) { preview.src = src; preview.hidden = false; drop.hidden = true; }
   function limpiar() { preview.hidden = true; drop.hidden = false; }
-  function abrir() { modal.classList.add("abierto"); }
-  function cerrar() { modal.classList.remove("abierto"); }
+  function abrir() {
+    panel.classList.add("abierto");
+    backdrop.classList.add("abierto");
+    panel.setAttribute("aria-hidden", "false");
+  }
+  function cerrar() {
+    panel.classList.remove("abierto");
+    backdrop.classList.remove("abierto");
+    panel.setAttribute("aria-hidden", "true");
+  }
 
   document.querySelectorAll("[data-cat-abrir]").forEach(function (b) {
     b.addEventListener("click", function () {
@@ -194,7 +206,6 @@
     });
   });
   document.querySelectorAll("[data-cat-cerrar]").forEach(function (b) { b.addEventListener("click", cerrar); });
-  modal.addEventListener("click", function (e) { if (e.target === modal) cerrar(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") cerrar(); });
 
   document.getElementById("mc-imagen").addEventListener("change", function () {
