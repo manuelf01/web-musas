@@ -96,3 +96,31 @@ def test_mis_pedidos_de_5_en_5_con_busqueda_y_fechas(bd_limpia, cliente_client):
     assert cliente_client.get("/mis-pedidos?q=zzzz-no-existe").get_data(as_text=True).count('class="mp-card"') == 0
     assert cliente_client.get("/mis-pedidos?q=simple+de+carne").get_data(as_text=True).count('class="mp-card"') == 5
     assert cliente_client.get("/mis-pedidos?desde=2999-01-01").get_data(as_text=True).count('class="mp-card"') == 0
+
+
+def test_pedidos_pendientes_de_6_en_6(bd_limpia, admin_client):
+    from tests.conftest import CLIENTE_ID
+    con = obtener_conexion()
+    try:
+        with con.cursor() as cur:
+            for i, h in enumerate(["12:00:00", "12:30:00", "13:00:00", "13:30:00",
+                                    "14:00:00", "14:30:00", "15:00:00", "15:30:00"]):
+                cur.execute(
+                    "INSERT INTO registroPedido (idUsuario, numeroTelefono, horaRecojo, "
+                    "fechaPedido, billeteraDigital, medioPagoElegido, keyPedido) "
+                    "VALUES (%s, '999888777', %s, CURDATE(), 0, 'efectivo', %s)",
+                    (CLIENTE_ID, h, 1000 + i))
+                idp = cur.lastrowid
+                cur.execute(
+                    "INSERT INTO detalleOrden (idPedido, idProducto, nombreProducto, "
+                    "precioUnidad, cantidad, precioTotal) VALUES (%s, 2, 'Simple de Carne', 8.5, 1, 8.5)",
+                    (idp,))
+        con.commit()
+    finally:
+        con.close()
+    p1 = admin_client.get("/admin/pedidos/?estado=pendiente").get_data(as_text=True)
+    p2 = admin_client.get("/admin/pedidos/?estado=pendiente&page=2").get_data(as_text=True)
+    assert p1.count('class="ped-card"') == 6
+    assert p2.count('class="ped-card"') == 2
+    assert "Mostrando 1–6 de 8 pedidos" in p1
+    assert 'class="page-link"' in p1

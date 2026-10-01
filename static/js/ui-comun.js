@@ -15,6 +15,17 @@
     btn.setAttribute("aria-pressed", oculto ? "true" : "false");
   });
 
+  // --- Campos que solo admiten dígitos -------------------------------
+  // <input data-solo-numeros> descarta cualquier carácter que no sea 0-9
+  // mientras se escribe (la validación pattern/maxlength solo avisa al
+  // enviar el formulario; esto impide teclear letras desde el principio).
+  document.addEventListener("input", function (e) {
+    var input = e.target;
+    if (!input.matches || !input.matches("[data-solo-numeros]")) return;
+    var limpio = input.value.replace(/\D/g, "");
+    if (limpio !== input.value) input.value = limpio;
+  });
+
   // --- Filtrado en vivo (sin Enter) --------------------------------
   // <input data-filtro-vivo="#scope"> filtra los [data-filtro-item] dentro de #scope
   // opcional: [data-filtro-seccion] (se oculta si no le quedan items visibles)

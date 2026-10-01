@@ -217,9 +217,6 @@
           var btnNuevo = document.getElementById("ped-sonido");
           if (btnViejo && btnNuevo) btnNuevo.replaceWith(btnViejo);
         }
-        // Re-aplica el filtro en vivo si había texto tecleado.
-        var inp = document.getElementById("ped-buscar");
-        if (inp && inp.value) inp.dispatchEvent(new Event("input"));
         if (nuevos && nuevos.length && !SIN_MOV) resaltarNuevos(nuevos);
       })
       .catch(function () {

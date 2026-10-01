@@ -1101,3 +1101,15 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - El buscador ahora filtra en el servidor antes de paginar; así puede encontrar categorías que no estén en la página visible.
 - Se muestran 10 categorías por página con rango, flechas y números, conservando los filtros `q` y `estado` en los enlaces.
 - Agregada cobertura de primera/segunda página y búsqueda a `tests/test_paginacion.py`. Suite completa aprobada: 219 pruebas.
+
+## 2026-09-30 - Pedidos (panel): paginación de 6 en 6 en la pantalla de cocina
+- La lista de "Por entregar/Recibidos/En cocina/Listos/Todos" (`#ped-lista`, la que se refresca sola cada 15 s) ahora muestra 6 pedidos por página con flechas y números, usando `paginar()` de `paginacion.py`. Como el sondeo en vivo siempre vuelve a pedir la URL actual (con su `?page=`), en cuanto un pedido de la página 1 se entrega, el que sigue en orden de llegada sube solo a ocuparon su lugar en el próximo refresco, sin recargar la pantalla.
+- La tabla "Recogidos hoy" se paginó aparte con su propio parámetro `rpage` (en vez de `page`), porque cuando el filtro es "Todos" ambas listas se muestran a la vez en la misma pantalla y no pueden compartir el mismo número de página.
+- `paginacion.paginar()` ahora acepta un `page_param` opcional para este caso de dos listas en una misma pantalla.
+- El buscador de esta pantalla pasó de filtrar en el navegador (`data-filtro-vivo`, que solo veía la página visible) a buscar en el servidor (`data-buscar-auto`), igual que Productos/Usuarios/Mis pedidos — necesario porque con paginación el filtro en el navegador ya no alcanza a los pedidos de otras páginas. Se quitó el código de `pedidos-cocina.js` que reaplicaba el filtro viejo tras cada refresco (ya no hace falta).
+- Prueba nueva en `tests/test_paginacion.py` (inserta pedidos directo por SQL para no chocar con el límite de 2 pedidos activos por cuenta). Suite completa aprobada.
+
+## 2026-09-30 - Palabra clave en "Confirmar recojo": solo acepta números al escribir
+- El campo de la palabra clave (`admin/pedidos/index.html`, formulario "Cobrar y entregar") ya tenía `inputmode="numeric"` y `pattern="[0-9]{4}"`, pero eso solo avisa al enviar el formulario — no impedía teclear letras.
+- Nuevo atributo genérico `data-solo-numeros` + manejador en `ui-comun.js`: descarta cualquier carácter que no sea dígito apenas se escribe. Por ahora solo se aplicó a este campo (es el único que se pidió); queda disponible para reutilizar en otros campos numéricos si se pide después.
+- Verificado simulando el tecleo de letras mezcladas con números: el campo se queda solo con los dígitos. Suite completa aprobada.

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, g, request, redirect, url_for, fla
 from model.Comprobante import Comprobante
 from model.Pedido import Pedido
 from avisos import ok_deshacer
+from paginacion import paginar
 
 pedidos = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
@@ -42,10 +43,17 @@ def home():
         "listo": len([p for p in todos if p["estado"] == "listo"]),
         "recogido": len(recogidos),
     }
+    total_recogidos = len(recogidos)
+    # 6 por página: así la pantalla de cocina no se satura y, a medida que se
+    # entregan los primeros, los siguientes "suben" solos en el próximo sondeo.
+    pendientes, pag_pendientes, rango_pendientes = paginar(pendientes, 6, "pedidos")
+    recogidos, pag_recogidos, rango_recogidos = paginar(recogidos, 6, "pedidos", page_param="rpage")
     return render_template(
         "admin/pedidos/index.html",
         usuario=g.user, estado=estado, q=request.args.get("q", ""),
-        pendientes=pendientes, recogidos=recogidos, contadores=contadores,
+        pendientes=pendientes, pag_pendientes=pag_pendientes, rango_pendientes=rango_pendientes,
+        recogidos=recogidos, pag_recogidos=pag_recogidos, rango_recogidos=rango_recogidos,
+        total_recogidos=total_recogidos, contadores=contadores,
         sugerencias=sorted({p["cliente"] for p in todos}),
         firma=_firma(todos),
         ids_iniciales=",".join(str(p["idPedido"]) for p in todos if not p["recogido"]),
