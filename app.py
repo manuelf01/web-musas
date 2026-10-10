@@ -2,6 +2,7 @@ import os
 from datetime import timedelta
 
 from flask import Flask, request, session, jsonify
+from flask_socketio import SocketIO
 import avisos
 from negocio import SEDE, NOMBRE_NEGOCIO, REDES, estado_local
 from model.Producto import CATEGORIAS_PERSONALIZACION
@@ -26,8 +27,6 @@ try:
 except ImportError:
     _SECRET_KEY = "dev-musas-cambia-esto"
 
-# FLASK_DEBUG=1 para desarrollo; en producción se queda apagado (el depurador
-# de Werkzeug permite ejecutar código y NO debe exponerse).
 DEBUG = os.environ.get("FLASK_DEBUG", "1") == "1"
 _cookie_secure_env = os.environ.get("MUSAS_COOKIE_SECURE")
 COOKIE_SECURE = (not DEBUG) if _cookie_secure_env is None else _cookie_secure_env == "1"
@@ -38,13 +37,23 @@ app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=COOKIE_SECURE,
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
 
-# --- CSRF: token propio de sesión, validado en cada POST del navegador -------
+socketio = SocketIO(app)
+
+# --- CSRF ---------------------------------------------------------------
 app.jinja_env.globals["campo_csrf"] = campo_csrf
 app.jinja_env.globals["csrf_token"] = token_csrf
 app.jinja_env.globals["REGLA_PASSWORD"] = REGLA_PASSWORD
 app.jinja_env.globals["PASSWORD_PATTERN"] = PASSWORD_PATTERN
+
+# Content-types de formulario clásico. JSON se valida aparte por header.
+_FORM_CONTENT_TYPES = {
+    "application/x-www-form-urlencoded",
+    "multipart/form-data",
+}
+_JSON_CONTENT_TYPES = {"application/json"}
 
 
 @app.before_request
@@ -52,26 +61,44 @@ def _proteger_csrf():
     if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
         return
     ctype = (request.content_type or "").split(";")[0].strip()
-    formularios = ("application/x-www-form-urlencoded", "multipart/form-data", "text/plain", "")
-    if ctype not in formularios:
+
+    # JSON: solo se acepta el token por header (evita CSRF de formularios).
+    if ctype in _JSON_CONTENT_TYPES:
+        if not csrf_valido(request.headers.get("X-CSRF-Token")):
+            return _respuesta_csrf_invalido()
         return
-    if not csrf_valido(request.form.get(CAMPO_CSRF) or request.headers.get("X-CSRF-Token")):
-        cuerpo = (
-            "<!doctype html><meta charset='utf-8'>"
-            "<div style=\"font-family:system-ui;max-width:32rem;margin:15vh auto;text-align:center\">"
-            "<h2>La sesión expiró</h2>"
-            "<p>Por seguridad no pudimos procesar el formulario. Vuelve atrás y envíalo de nuevo.</p>"
-            "<a href='javascript:history.back()'>← Volver</a></div>"
-        )
-        return cuerpo, 400
+
+    # Formularios clásicos.
+    if ctype in _FORM_CONTENT_TYPES or ctype == "":
+        if not csrf_valido(
+            request.form.get(CAMPO_CSRF) or request.headers.get("X-CSRF-Token")
+        ):
+            return _respuesta_csrf_invalido()
+        return
+
+    # Cualquier otro content-type con método de escritura: rechazar.
+    return _respuesta_csrf_invalido()
+
+
+def _respuesta_csrf_invalido():
+    cuerpo = (
+        "<!doctype html><meta charset='utf-8'>"
+        "<div style=\"font-family:system-ui;max-width:32rem;margin:15vh auto;text-align:center\">"
+        "<h2>La sesión expiró</h2>"
+        "<p>Por seguridad no pudimos procesar el formulario. Vuelve atrás y envíalo de nuevo.</p>"
+        "<a href='javascript:history.back()'>← Volver</a></div>"
+    )
+    return cuerpo, 400
 
 
 def _perfil_actual():
-    """Quién tiene la sesión abierta (con su foto) para la cabecera de tienda y panel.
-    En el panel manda la sesión de admin; en la tienda, la de cliente."""
+    """Quién tiene la sesión abierta (con su foto) para la cabecera de tienda y panel."""
     from model.Usuario import Usuario
-    clave = ("admin.auth", "cliente.auth") if (request.blueprint or "").startswith("admin") \
-        else ("cliente.auth", "admin.auth")
+    bp = request.blueprint or ""
+    if bp == "admin" or bp.startswith("admin."):
+        clave = ("admin.auth", "cliente.auth")
+    else:
+        clave = ("cliente.auth", "admin.auth")
     for k in clave:
         sesion = session.get(k)
         if sesion and sesion.get("idUsuario"):
@@ -85,8 +112,6 @@ def _perfil_actual():
 
 @app.context_processor
 def _inyectar_sesion():
-    # Disponible en todas las plantillas: saber si hay un admin logueado
-    # mientras navega la tienda (para el header y saltarse el captcha).
     return {
         "admin_sesion": session.get("admin.auth"),
         "sede": SEDE,
@@ -115,6 +140,9 @@ def _cabeceras_seguridad(resp):
     return resp
 
 
+# --- Blueprints ---------------------------------------------------------
+# OJO: si `auth` es un único blueprint, no puedes registrarlo en dos padres
+# con el mismo nombre. Usa dos blueprints distintos o `name=`.
 admin.register_blueprint(productos)
 admin.register_blueprint(categoria_producto)
 admin.register_blueprint(usuarios)
@@ -122,14 +150,16 @@ admin.register_blueprint(pedidos)
 admin.register_blueprint(ventas)
 admin.register_blueprint(pagos)
 admin.register_blueprint(admin_perfil)
-admin.register_blueprint(auth)
-cliente.register_blueprint(auth)
+admin.register_blueprint(auth)          # auth_admin
+
+cliente.register_blueprint(auth)        # <-- revisa esto
 
 app.register_blueprint(admin)
 app.register_blueprint(cliente)
 
-# "Recordar sesión en este equipo": duración de la sesión permanente
 app.permanent_session_lifetime = timedelta(days=30)
 
+
 if __name__ == "__main__":
-    app.run(debug=DEBUG)
+    # En producción NO uses esto: usa gunicorn/uwsgi + eventlet/gevent.
+    socketio.run(app, host="0.0.0.0", port=4700, debug=DEBUG)
