@@ -25,6 +25,7 @@
 {% block content %}
 <div id="ped-cocina"
      data-pedidos-cocina
+     data-eventos-url="{{ url_for('admin.pedidos.eventos') }}"
      data-pulso-url="{{ url_for('admin.pedidos.pulso') }}"
      data-firma="{{ firma }}"
      data-ids-iniciales="{{ ids_iniciales }}"></div>

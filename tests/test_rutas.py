@@ -1,5 +1,7 @@
 """Humo de rutas: páginas públicas responden y el panel exige sesión."""
 
+import json
+
 import pytest
 
 import bd
@@ -49,6 +51,31 @@ def test_pulso_de_cocina(admin_client, bd_limpia):
     assert len(d2["pendientes"]) == 1
 
 
+def test_eventos_sse_de_cocina(admin_client, bd_limpia):
+    firma_anterior = admin_client.get("/admin/pedidos/pulso").get_json()["firma"]
+    id_pedido, _ = Pedido.crear_pedido_completo(
+        CLIENTE_ID, "cliente@correo.com", "C", "999", "19:00:00", "efectivo", None,
+        [{"idProducto": 2, "nombre": "Simple de Carne", "precioUnidad": 8.5,
+          "cantidad": 1, "precioTotal": 8.5, "cremas": []}])
+
+    respuesta = admin_client.get(
+        "/admin/pedidos/eventos",
+        query_string={"firma": firma_anterior},
+        buffered=False,
+    )
+    try:
+        partes = iter(respuesta.response)
+        assert respuesta.mimetype == "text/event-stream"
+        assert next(partes).decode("utf-8").startswith("retry: 3000")
+        evento = next(partes).decode("utf-8")
+        assert "event: pedidos" in evento
+        datos = json.loads(evento.split("data: ", 1)[1].strip())
+        assert id_pedido in datos["pendientes"]
+        assert datos["firma"] != firma_anterior
+    finally:
+        respuesta.close()
+
+
 def test_seguimiento_estado_del_cliente(cliente_client, bd_limpia):
     idp, _ = Pedido.crear_pedido_completo(
         CLIENTE_ID, "cliente@correo.com", "C", "999", "19:00:00", "efectivo", None,
@@ -57,6 +84,22 @@ def test_seguimiento_estado_del_cliente(cliente_client, bd_limpia):
     d = cliente_client.get("/mis-pedidos/estado").get_json()
     assert d["estados"][str(idp)] == "recibido"
     Pedido.avanzar_preparacion(idp)
+
+    respuesta = cliente_client.get(
+        "/mis-pedidos/eventos",
+        query_string={"firma": d["firma"]},
+        buffered=False,
+    )
+    try:
+        partes = iter(respuesta.response)
+        assert respuesta.mimetype == "text/event-stream"
+        assert next(partes).decode("utf-8").startswith("retry: 3000")
+        evento = next(partes).decode("utf-8")
+        datos_evento = json.loads(evento.split("data: ", 1)[1].strip())
+        assert datos_evento["estados"][str(idp)] == "preparando"
+    finally:
+        respuesta.close()
+
     d2 = cliente_client.get("/mis-pedidos/estado").get_json()
     assert d2["estados"][str(idp)] == "preparando"
     assert d2["firma"] != d["firma"]

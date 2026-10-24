@@ -1,20 +1,34 @@
-from flask import Blueprint, render_template, g, request, redirect, url_for, flash, jsonify
+import json
+
+from flask import (
+    Blueprint, Response, render_template, g, request, redirect, url_for, flash,
+    jsonify, stream_with_context,
+)
 from model.Comprobante import Comprobante
 from model.Pedido import Pedido
 from avisos import ok_deshacer
 from paginacion import paginar
+from services.pedidos_eventos import esperar_cambio_pedidos, version_actual
 
 pedidos = Blueprint("pedidos", __name__, url_prefix="/pedidos")
 
 
 def _firma(lista):
     """Huella del estado de los pedidos de hoy: cambia si entra un pedido nuevo
-    o si alguno cambia de estado / se recoge. La cocina la sondea cada pocos
-    segundos para refrescar sola la pantalla."""
+    o si alguno cambia de estado / se recoge. SSE la envía a la cocina para
+    refrescar sola la pantalla."""
     return "|".join(
         f'{p["idPedido"]}:{p["estado"]}:{1 if p["recogido"] else 0}'
         for p in sorted(lista, key=lambda p: p["idPedido"])
     )
+
+
+def _datos_pulso():
+    hoy = Pedido.pedidos_de_hoy(None)
+    return {
+        "firma": _firma(hoy),
+        "pendientes": [p["idPedido"] for p in hoy if not p["recogido"]],
+    }
 
 
 @pedidos.route("/")
@@ -62,12 +76,42 @@ def home():
 
 @pedidos.route("/pulso")
 def pulso():
-    """JSON ligero para el sondeo de la pantalla de cocina."""
-    hoy = Pedido.pedidos_de_hoy(None)
-    return jsonify({
-        "firma": _firma(hoy),
-        "pendientes": [p["idPedido"] for p in hoy if not p["recogido"]],
-    })
+    """JSON ligero usado como respaldo cuando EventSource no está disponible."""
+    respuesta = jsonify(_datos_pulso())
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
+@pedidos.route("/eventos")
+def eventos():
+    """Flujo SSE que avisa a cocina cuando cambia un pedido de hoy."""
+    firma_inicial = request.args.get("firma", "")
+
+    @stream_with_context
+    def generar():
+        ultima_firma = firma_inicial
+        version = version_actual()
+        # EventSource usa este valor para reconectar pronto si se corta la red.
+        yield "retry: 3000\n\n"
+        while True:
+            datos = _datos_pulso()
+            if datos["firma"] != ultima_firma:
+                ultima_firma = datos["firma"]
+                cuerpo = json.dumps(datos, ensure_ascii=False, separators=(",", ":"))
+                yield f"event: pedidos\ndata: {cuerpo}\n\n"
+            else:
+                # Evita que proxies y navegadores cierren una conexión inactiva.
+                yield ": latido\n\n"
+            version = esperar_cambio_pedidos(version, timeout=15)
+
+    return Response(
+        generar(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @pedidos.route("/preparar", methods=["POST"])

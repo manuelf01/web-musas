@@ -1127,3 +1127,11 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - `bidict` se fijó en `0.23.1`: la versión `0.24.1` incorporada por el compañero exige Python 3.11, mientras este proyecto usa Python 3.10. `pip install -r requirements.txt` y `pip check` terminaron correctamente con la versión compatible.
 - La importación de `app.py` registró 73 rutas y la compilación de los archivos Python modificados terminó correctamente.
 - Después de iniciar MariaDB desde XAMPP, la suite completa terminó correctamente: 196 pruebas aprobadas contra `db_musuas_test`. La base local `db_musuas` no fue modificada por las pruebas.
+
+## 2026-10-24 - Pedidos de cocina actualizados con Server-Sent Events
+- Nuevo `GET /admin/pedidos/eventos`: flujo autenticado `text/event-stream` que envía `{firma, pendientes}` cuando cambia un pedido y un comentario de latido cada 15 segundos para mantener la conexión.
+- Nuevo `services/pedidos_eventos.py`: señal en memoria con `threading.Condition`. Los cambios se notifican solo después del `commit` de crear, avanzar, retroceder, cancelar, entregar o marcar no-show.
+- `static/js/pedidos-cocina.js` usa `EventSource` como canal principal. El navegador se reconecta automáticamente; `/admin/pedidos/pulso` permanece como respaldo y para resincronizar al volver a la pestaña.
+- El seguimiento del cliente también usa SSE autenticado en `GET /mis-pedidos/eventos`; cada conexión recibe únicamente los estados de los pedidos de su cuenta. `/mis-pedidos/estado` permanece como respaldo.
+- Se retiró Flask-SocketIO y sus dependencias porque no tenía eventos implementados. SSE usa HTTP estándar y no agrega dependencias. El servidor local conserva el puerto 4700 y ejecuta Flask con `threaded=True`.
+- Las pruebas abren ambos flujos sin almacenamiento en búfer y validan sus eventos `pedidos`. Suite completa aprobada: 197 pruebas contra `db_musuas_test`.

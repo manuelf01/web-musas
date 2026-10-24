@@ -6,6 +6,7 @@ from bd import obtener_conexion
 from datetime import timedelta
 from dinero import dinero
 from negocio import SEDE, NOMBRE_NEGOCIO, ahora_peru, horario_dia
+from services.pedidos_eventos import notificar_cambio_pedidos
 
 
 MEDIOS_PAGO = {
@@ -135,6 +136,8 @@ class Pedido:
                             (id_usuario,),
                         )
             conexion.commit()
+            if vencidos:
+                notificar_cambio_pedidos()
         finally:
             conexion.close()
 
@@ -330,6 +333,7 @@ class Pedido:
                 # se genera en marcar_recogido() (venta realmente cobrada).
 
             conexion.commit()
+            notificar_cambio_pedidos()
             return id_pedido, key
         except Exception:
             conexion.rollback()
@@ -472,6 +476,7 @@ class Pedido:
                 if cursor.rowcount != 1:
                     return None
             conexion.commit()
+            notificar_cambio_pedidos()
             return _PREP_LABEL[nuevo]
         finally:
             conexion.close()
@@ -499,6 +504,7 @@ class Pedido:
                 if cursor.rowcount != 1:
                     return None
             conexion.commit()
+            notificar_cambio_pedidos()
             return _PREP_LABEL[nuevo]
         finally:
             conexion.close()
@@ -538,6 +544,7 @@ class Pedido:
                     return "no_cancelable"
                 Pedido._devolver_stock(cursor, id_pedido)
             conexion.commit()
+            notificar_cambio_pedidos()
             return "ok"
         finally:
             conexion.close()
@@ -569,6 +576,7 @@ class Pedido:
                         (fila[0],),
                     )
             conexion.commit()
+            notificar_cambio_pedidos()
             return True
         finally:
             conexion.close()
@@ -724,6 +732,7 @@ class Pedido:
                     tipo_comprobante, documento, razon_social,
                 )
             conexion.commit()
+            notificar_cambio_pedidos()
             return "ok"
         finally:
             conexion.close()

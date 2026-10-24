@@ -3,8 +3,8 @@ import re
 from io import BytesIO
 
 from flask import (
-    Blueprint, render_template, session, redirect, url_for, request, flash, jsonify,
-    abort, send_file,
+    Blueprint, Response, render_template, session, redirect, url_for, request,
+    flash, jsonify, abort, send_file, stream_with_context,
 )
 from model.Comprobante import Comprobante
 from model.Producto import Producto, CATEGORIAS_PERSONALIZACION
@@ -18,6 +18,7 @@ from formato import soles_en_letras
 from services.comprobante_pdf import generar_comprobante_pdf
 from negocio import PAGO_DIGITAL
 from paginacion import paginar
+from services.pedidos_eventos import esperar_cambio_pedidos, version_actual
 cliente = Blueprint('cliente', __name__)
 
 # Categorías de hamburguesas: admiten elegir salsa, tipo de papas y agregados.
@@ -164,6 +165,14 @@ def _firma_estados(pedidos):
                     for p in sorted(pedidos, key=lambda p: p["idPedido"]))
 
 
+def _datos_estados_cliente(id_usuario):
+    pedidos = Pedido.historial_cliente(id_usuario)
+    return {
+        "estados": {str(p["idPedido"]): p["estado"] for p in pedidos},
+        "firma": _firma_estados(pedidos),
+    }
+
+
 def _texto_pedido(p):
     partes = [str(p["idPedido"]), p["fecha"]]
     for l in p["lineas"]:
@@ -219,9 +228,43 @@ def mis_pedidos_estado():
     user = session.get("cliente.auth", None)
     if not user:
         return jsonify({"estados": {}, "firma": ""})
-    pedidos = Pedido.historial_cliente(user["idUsuario"])
-    estados = {str(p["idPedido"]): p["estado"] for p in pedidos}
-    return jsonify({"estados": estados, "firma": _firma_estados(pedidos)})
+    respuesta = jsonify(_datos_estados_cliente(user["idUsuario"]))
+    respuesta.headers["Cache-Control"] = "no-store"
+    return respuesta
+
+
+@cliente.route("/mis-pedidos/eventos")
+def mis_pedidos_eventos():
+    """SSE con los estados de los pedidos de la cuenta autenticada."""
+    user = session.get("cliente.auth", None)
+    if not user:
+        return Response(status=401)
+    id_usuario = user["idUsuario"]
+    firma_inicial = request.args.get("firma", "")
+
+    @stream_with_context
+    def generar():
+        ultima_firma = firma_inicial
+        version = version_actual()
+        yield "retry: 3000\n\n"
+        while True:
+            datos = _datos_estados_cliente(id_usuario)
+            if datos["firma"] != ultima_firma:
+                ultima_firma = datos["firma"]
+                cuerpo = json.dumps(datos, ensure_ascii=False, separators=(",", ":"))
+                yield f"event: pedidos\ndata: {cuerpo}\n\n"
+            else:
+                yield ": latido\n\n"
+            version = esperar_cambio_pedidos(version, timeout=15)
+
+    return Response(
+        generar(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 def _comprobante_del_cliente(id_pedido):

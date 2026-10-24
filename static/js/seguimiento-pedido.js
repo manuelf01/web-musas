@@ -1,6 +1,6 @@
 /* Seguimiento en vivo del pedido del cliente (página "Mis pedidos").
-   Sondea el estado cada 20 s y actualiza la línea de tiempo + la etiqueta
-   sin recargar. Cuando un pedido pasa a "listo" avisa con un toast. */
+   Recibe los cambios por Server-Sent Events y actualiza la línea de tiempo +
+   la etiqueta sin recargar. Conserva el sondeo como respaldo. */
 (function () {
   var marca = document.getElementById("mp-seg");
   if (!marca || !window.fetch) return;
@@ -13,6 +13,7 @@
   if (!hayActivo) return; // nada en curso: no hace falta sondear
 
   var URL = marca.dataset.url;
+  var URL_EVENTOS = marca.dataset.eventosUrl;
   var firma = marca.dataset.firma || "";
 
   var BADGE = {
@@ -86,24 +87,46 @@
     if (recargar) window.location.reload();
   }
 
-  function tick() {
-    fetch(URL, {
+  function aplicarCambio(d) {
+    if (!d || d.firma === firma) return;
+    firma = d.firma;
+    aplicar(d.estados || {});
+  }
+
+  function consultarEstado() {
+    return fetch(URL, {
       headers: { "X-Requested-With": "fetch" },
       credentials: "same-origin",
     })
       .then(function (r) {
         return r.ok ? r.json() : Promise.reject();
       })
-      .then(function (d) {
-        if (!d || d.firma === firma) return;
-        firma = d.firma;
-        aplicar(d.estados || {});
-      })
+      .then(aplicarCambio)
       .catch(function () {});
   }
 
-  setInterval(tick, 20000);
+  var eventos = null;
+  if (window.EventSource && URL_EVENTOS) {
+    var separador = URL_EVENTOS.indexOf("?") === -1 ? "?" : "&";
+    eventos = new EventSource(
+      URL_EVENTOS + separador + "firma=" + encodeURIComponent(firma)
+    );
+    eventos.addEventListener("pedidos", function (ev) {
+      try {
+        aplicarCambio(JSON.parse(ev.data));
+      } catch (e) {
+        consultarEstado();
+      }
+    });
+    eventos.onerror = consultarEstado;
+    window.addEventListener("pagehide", function () {
+      eventos.close();
+    });
+  } else {
+    setInterval(consultarEstado, 20000);
+  }
+
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) tick();
+    if (!document.hidden) consultarEstado();
   });
 })();

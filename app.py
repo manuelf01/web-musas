@@ -2,7 +2,6 @@ import os
 from datetime import timedelta
 
 from flask import Flask, request, session, jsonify
-from flask_socketio import SocketIO
 import avisos
 from negocio import SEDE, NOMBRE_NEGOCIO, REDES, estado_local
 from model.Producto import CATEGORIAS_PERSONALIZACION
@@ -39,8 +38,6 @@ app.config.update(
     SESSION_COOKIE_SECURE=COOKIE_SECURE,
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
 )
-
-socketio = SocketIO(app)
 
 # --- CSRF ---------------------------------------------------------------
 app.jinja_env.globals["campo_csrf"] = campo_csrf
@@ -161,5 +158,7 @@ app.permanent_session_lifetime = timedelta(days=30)
 
 
 if __name__ == "__main__":
-    # En producción NO uses esto: usa gunicorn/uwsgi + eventlet/gevent.
-    socketio.run(app, host="0.0.0.0", port=4700, debug=DEBUG)
+    # `threaded=True` permite atender las conexiones SSE sin bloquear el resto
+    # de peticiones durante el desarrollo. En producción usa un servidor WSGI
+    # con trabajadores por hilos y sin buffering para `text/event-stream`.
+    app.run(host="0.0.0.0", port=4700, debug=DEBUG, threaded=True)

@@ -1,12 +1,13 @@
-/* Pantalla de cocina: sondea el estado de los pedidos de hoy y refresca sola
-   la lista. Cuando entra un pedido NUEVO: pitido + aviso visual + título
-   parpadeante. Sin dependencias, sin archivos de audio. */
+/* Pantalla de cocina: recibe por Server-Sent Events los cambios de pedidos y
+   refresca sola la lista. Conserva /pulso como respaldo. Cuando entra un
+   pedido NUEVO: pitido + aviso visual + título parpadeante. */
 (function () {
   var cfg = document.getElementById("ped-cocina");
   if (!cfg) return;
 
+  var URL_EVENTOS = cfg.dataset.eventosUrl;
   var URL_PULSO = cfg.dataset.pulsoUrl;
-  var INTERVALO = 15000; // ms entre sondeos
+  var INTERVALO_RESPALDO = 15000;
   var firma = cfg.dataset.firma || "";
   var conocidos = {};
   (cfg.dataset.idsIniciales || "").split(",").forEach(function (id) {
@@ -225,35 +226,59 @@
   }
 
   // ---------------------------------------------------------------
-  //  Sondeo
+  //  Actualización en vivo: SSE como canal principal, sondeo como respaldo.
   // ---------------------------------------------------------------
-  function tick() {
-    fetch(URL_PULSO, {
+  function aplicarCambio(d) {
+    if (!d || d.firma === firma) return;
+    var pend = d.pendientes || [];
+    var nuevos = pend.filter(function (id) {
+      return !conocidos[id];
+    });
+    firma = d.firma;
+    pend.forEach(function (id) {
+      conocidos[id] = true;
+    });
+    refrescar(nuevos);
+    if (nuevos.length) avisar(nuevos);
+  }
+
+  function consultarPulso() {
+    return fetch(URL_PULSO, {
       headers: { "X-Requested-With": "fetch" },
       credentials: "same-origin",
     })
       .then(function (r) {
         return r.ok ? r.json() : Promise.reject();
       })
-      .then(function (d) {
-        if (!d || d.firma === firma) return;
-        var pend = d.pendientes || [];
-        var nuevos = pend.filter(function (id) {
-          return !conocidos[id];
-        });
-        firma = d.firma;
-        pend.forEach(function (id) {
-          conocidos[id] = true;
-        });
-        refrescar(nuevos);
-        if (nuevos.length) avisar(nuevos);
-      })
+      .then(aplicarCambio)
       .catch(function () {});
   }
 
-  setInterval(tick, INTERVALO);
+  var eventos = null;
+  if (window.EventSource && URL_EVENTOS) {
+    var separador = URL_EVENTOS.indexOf("?") === -1 ? "?" : "&";
+    eventos = new EventSource(
+      URL_EVENTOS + separador + "firma=" + encodeURIComponent(firma)
+    );
+    eventos.addEventListener("pedidos", function (ev) {
+      try {
+        aplicarCambio(JSON.parse(ev.data));
+      } catch (e) {
+        consultarPulso();
+      }
+    });
+    // EventSource se reconecta solo. El pulso comprueba el estado mientras
+    // recupera la conexión y también detecta una sesión vencida.
+    eventos.onerror = consultarPulso;
+    window.addEventListener("pagehide", function () {
+      eventos.close();
+    });
+  } else {
+    setInterval(consultarPulso, INTERVALO_RESPALDO);
+  }
+
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden) tick();
+    if (!document.hidden) consultarPulso();
   });
 
   pintarBotonSonido();

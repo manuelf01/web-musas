@@ -63,7 +63,10 @@
       {% endfor %}
     </div>
 
-    <div id="mp-seg" data-url="{{ url_for('cliente.mis_pedidos_estado') }}" data-firma="{{ firma }}"></div>
+    <div id="mp-seg"
+         data-eventos-url="{{ url_for('cliente.mis_pedidos_eventos') }}"
+         data-url="{{ url_for('cliente.mis_pedidos_estado') }}"
+         data-firma="{{ firma }}"></div>
 
     <div class="mp-lista" id="mp-lista">
       {% for p in pedidos %}

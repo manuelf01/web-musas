@@ -208,16 +208,20 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   `B001-000000NN` para boleta o `F001-000000NN` para factura. Exige estado listo y
   conserva medio de pago, cajero, líneas/adicionales y snapshot JSON. Las rutas
   del cliente comprueban `comprobante.idUsuario` antes de mostrar o descargar.
-- **Pantalla de cocina en vivo**: `GET /admin/pedidos/pulso` devuelve
-  `{firma, pendientes}`. `static/js/pedidos-cocina.js` lo sondea cada 15 s y, si
-  la `firma` cambió, reemplaza solo `#ped-lista` + `#ped-chips` de la página;
-  si entra un pedido nuevo, pitido (WebAudio) + banner `#ped-nuevo` + título
-  parpadeante. Si tocas el layout de `admin/pedidos/index.html`, mantené
-  `#ped-cocina`, `#ped-lista`, `#ped-chips` y `data-pedido-id` en `.ped-card`.
-- **Seguimiento del pedido (cliente)**: `GET /mis-pedidos/estado` →
-  `{estados, firma}`. `static/js/seguimiento-pedido.js` lo sondea cada 20 s solo
-  si hay un pedido en curso y actualiza en el sitio la `<ol class="mp-timeline">`
-  y la etiqueta (`data-mp-badge`). En `mis-pedidos.html` mantené `#mp-seg`,
+- **Pantalla de cocina en vivo (SSE)**: `GET /admin/pedidos/eventos` mantiene
+  una conexión `text/event-stream`. Tras confirmar una transacción, los métodos
+  de `Pedido` despiertan las conexiones mediante `services/pedidos_eventos.py`;
+  el evento lleva `{firma, pendientes}` y `static/js/pedidos-cocina.js` reemplaza
+  solo `#ped-lista` + `#ped-chips`. `GET /admin/pedidos/pulso` queda como respaldo
+  si `EventSource` no está disponible o se corta la conexión. Si entra un pedido
+  nuevo: pitido (WebAudio) + banner `#ped-nuevo` + título parpadeante. Si tocas el
+  layout, mantené `#ped-cocina`, `#ped-lista`, `#ped-chips`, `data-eventos-url`
+  y `data-pedido-id` en `.ped-card`.
+- **Seguimiento del pedido (cliente)**: `GET /mis-pedidos/eventos` envía por SSE
+  `{estados, firma}` solo para la cuenta autenticada. `GET /mis-pedidos/estado`
+  queda como respaldo. `static/js/seguimiento-pedido.js` escucha mientras hay un
+  pedido en curso y actualiza la `<ol class="mp-timeline">` y la etiqueta
+  (`data-mp-badge`). En `mis-pedidos.html` mantené `#mp-seg`, `data-eventos-url`,
   `data-pedido-id` en `.mp-card` y `data-mp-timeline`.
 - **Búsqueda en vivo**: `static/js/ui-comun.js`. Un `<input data-filtro-vivo="#scope">`
   oculta los `[data-filtro-item]` dentro de `#scope` conforme se teclea
