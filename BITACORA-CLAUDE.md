@@ -1121,3 +1121,9 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - Instalado `Flask-SocketIO==5.7.0` y sus dependencias (`python-socketio`, `python-engineio`, `bidict`, `simple-websocket`, `wsproto`, `h11`, `blinker`) en el `.venv` local — antes de instalarlo, `from app import app` fallaba (rompía el servidor Y toda la suite de tests).
 - Revisado el único `fetch(..., {method:"POST"})` del proyecto (`checkout.js` → `/compra/cotizar`): manda el token CSRF en el cuerpo del formulario, no por header, así que el endurecimiento de CSRF para JSON no lo afecta.
 - Validación: suite completa aprobada tras instalar la dependencia (MySQL se había apagado entre sesiones, se volvió a encender). Verificado visualmente en el puerto 4700.
+
+## 2026-10-24 - Actualización local desde `origin/Ramirez`
+- Actualización por avance rápido desde `cfb55e9` hasta `677c595`, sin conflictos ni migraciones nuevas.
+- `bidict` se fijó en `0.23.1`: la versión `0.24.1` incorporada por el compañero exige Python 3.11, mientras este proyecto usa Python 3.10. `pip install -r requirements.txt` y `pip check` terminaron correctamente con la versión compatible.
+- La importación de `app.py` registró 73 rutas y la compilación de los archivos Python modificados terminó correctamente.
+- Después de iniciar MariaDB desde XAMPP, la suite completa terminó correctamente: 196 pruebas aprobadas contra `db_musuas_test`. La base local `db_musuas` no fue modificada por las pruebas.
