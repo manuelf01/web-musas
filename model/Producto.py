@@ -1,4 +1,5 @@
 from bd import obtener_conexion
+from model.Inventario import Inventario
 
 PRECIO_MAX = 100000     # tope defensivo
 
@@ -82,7 +83,8 @@ class Producto:
         return lista_diccionarios
 
     @staticmethod
-    def insertar_producto(nombre, descripcion, precio, existencias, idCategoria, imagen=None):
+    def insertar_producto(nombre, descripcion, precio, existencias, idCategoria, imagen=None,
+                          id_usuario=None):
         """Devuelve None si se creó, o un texto de error."""
         nombre = (nombre or "").strip()
         descripcion = (descripcion or "").strip()
@@ -105,6 +107,14 @@ class Producto:
                 "VALUES (%s, %s, %s, %s, %s, %s)",
                 (int(idCategoria), nombre[:100], descripcion[:255], precio, existencias, imagen or None),
             )
+            id_producto = cursor.lastrowid
+            cursor.execute(
+                "INSERT INTO inventarioSaldo(idProducto,idAlmacen,stockFisico,stockReservado,"
+                "costoPromedio,version,fechaActualizacion) VALUES(%s,1,%s,0,0,0,NOW())",
+                (id_producto, existencias))
+            Inventario.registrar(
+                cursor, id_producto, "saldo_inicial", existencias, 0, existencias,
+                "producto", id_producto, "Stock al crear el producto", id_usuario)
         conexion.commit()
         conexion.close()
         return None
@@ -255,7 +265,8 @@ class Producto:
         }
 
     @staticmethod
-    def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria, imagen=None):
+    def actualizar_producto(nombre, descripcion, precio, existencias, id, idCategoria, imagen=None,
+                            id_usuario=None):
         """Devuelve None si se actualizó, o un texto de error. Los campos vacíos
         conservan el valor actual."""
         try:
@@ -276,8 +287,8 @@ class Producto:
             if err:
                 return err
 
-        if str(existencias).strip() == "":
-            existencias = actual["existencias"]
+        if existencias is None or str(existencias).strip() == "":
+            existencias = None
         else:
             existencias, err = _a_stock(existencias)
             if err:
@@ -292,19 +303,38 @@ class Producto:
 
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
+            saldo = Inventario._saldo_bloqueado(cursor, id)
+            if not saldo:
+                conexion.close()
+                return "El producto no existe."
+            stock_anterior = saldo["fisico"]
+            if existencias is None:
+                existencias = stock_anterior
+            if existencias < saldo["reservado"]:
+                conexion.close()
+                return "El stock físico no puede ser menor que el stock reservado."
             if imagen:
                 # Solo se cambia la imagen si se subió una nueva.
                 cursor.execute(
-                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, existencias=%s, "
+                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, "
                     "idCategoria=%s, imagen=%s WHERE idProducto=%s",
-                    (nombre, descripcion, precio, existencias, idCategoria, imagen, id),
+                    (nombre, descripcion, precio, idCategoria, imagen, id),
                 )
             else:
                 cursor.execute(
-                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, existencias=%s, "
+                    "UPDATE producto SET nombre=%s, descripcion=%s, precio=%s, "
                     "idCategoria=%s WHERE idProducto=%s",
-                    (nombre, descripcion, precio, existencias, idCategoria, id),
+                    (nombre, descripcion, precio, idCategoria, id),
                 )
+            if stock_anterior != existencias:
+                saldo["fisico"] = existencias
+                Inventario._guardar_saldo(cursor, id, saldo)
+                Inventario.registrar(
+                    cursor, id, "ajuste", abs(existencias - stock_anterior),
+                    stock_anterior, existencias, "edicion_producto", id,
+                    "Stock modificado desde el CRUD de productos", id_usuario,
+                    saldo["costo"], reservado_anterior=saldo["reservado"],
+                    reservado_posterior=saldo["reservado"])
         conexion.commit()
         conexion.close()
         return None

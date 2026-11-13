@@ -10,10 +10,11 @@
     {% endif %}
   </div>
   {% for m in resumen.medios %}
-    <div class="vpago {{ 'is-activo' if filtros.medio == m.medio }}">
+    <div class="vpago {{ 'is-activo' if filtros.medio == m.codigo }}">
       <span class="vpago__label"><i class="bi {{ iconos.get(m.medio, 'bi-wallet2') }}"></i> {{ m.medio }}</span>
       <strong class="vpago__monto">S/ {{ '%.2f'|format(m.total) }}</strong>
       <span class="vpago__sub">{{ m.cantidad }} pago{{ '' if m.cantidad == 1 else 's' }} · {{ m.pct }}%</span>
+      {% if m.descuento or m.comision %}<span class="vpago__sub">Descuentos S/ {{ '%.2f'|format(m.descuento) }} · Comisiones S/ {{ '%.2f'|format(m.comision) }} · Neto S/ {{ '%.2f'|format(m.neto) }}</span>{% endif %}
       <div class="adm-bar"><div style="width: {{ m.pct }}%;"></div></div>
     </div>
   {% endfor %}
@@ -21,31 +22,32 @@
 
 {% set hay_filtros = filtros.q or filtros.medio or filtros.estado %}
 {% if pagos %}
-  <div class="adm-tabla-wrap">
-    <table class="adm-tabla">
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards">
+    <table class="adm-tabla adm-tabla--cards">
       <thead>
         <tr><th>Fecha y hora</th><th>Pedido</th><th>Cliente</th><th>Medio</th><th class="num">Monto</th><th>Registró</th><th>Comprobante</th></tr>
       </thead>
       <tbody>
         {% for p in pagos %}
           <tr class="{{ 'fila-anulada' if p.anulado }}">
-            <td><strong style="font-family: 'Space Grotesk', sans-serif;">{{ p.fecha }}</strong><br />
+            <td data-label="Fecha y hora"><strong style="font-family: 'Space Grotesk', sans-serif;">{{ p.fecha }}</strong><br />
               <span style="color: var(--musa-texto-suave); font-size: 12px;">{{ p.hora }}</span></td>
-            <td>N.° {{ p.idPedido }}</td>
-            <td>
+            <td data-label="Pedido">N.° {{ p.idPedido }}</td>
+            <td data-label="Cliente">
               <div class="adm-prod-cel">
                 <span class="adm-thumb adm-avatar--sm" style="font-size:11px; color: var(--musa-brasa); font-family:'Space Grotesk',sans-serif; width:34px; height:34px;">{{ p.iniciales }}</span>
                 <div><strong style="font-size:13px;">{{ p.cliente }}</strong></div>
               </div>
             </td>
-            <td>
+            <td data-label="Medio">
               <span class="adm-badge-pago {{ 'digital' if p.medio != 'Efectivo' else 'efectivo' }}">
                 <i class="bi {{ iconos.get(p.medio, 'bi-wallet2') }}"></i> {{ p.medio }}
               </span>
             </td>
-            <td class="num" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(p.monto) }}</td>
-            <td>{{ p.cajero }}</td>
-            <td>
+            <td class="num" data-label="Monto" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(p.monto) }}
+              {% if p.descuento or p.comision %}<br /><small style="font-weight:400;color:var(--musa-texto-suave);">Neto S/ {{ '%.2f'|format(p.neto) }}</small>{% endif %}</td>
+            <td data-label="Registró">{{ p.cajero }}</td>
+            <td data-label="Comprobante">
               <a class="adm-btn-sm" href="{{ url_for('admin.ventas.show_detalle', idComprobante=p.idComprobante) }}">
                 <i class="bi bi-receipt"></i> {{ p.numero }}</a>
               {% if p.anulado %}<span class="vbadge-anulado"><i class="bi bi-slash-circle-fill"></i> Anulado</span>{% endif %}

@@ -1,0 +1,106 @@
+{% extends "admin/base.html" %}
+{% block title %}Aportes y gastos · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Ventas y caja', None, 'bi-cash-stack'), ('Caja', url_for('admin.caja.home'), 'bi-safe2'), ('Aportes y gastos', None, 'bi-arrow-left-right')] %}
+
+{% block content %}
+<div class="adm-head caja-cabecera">
+  <div>
+    <h1>Aportes y gastos</h1>
+    <p>Registra el dinero adicional y cada salida sin mezclarla con las ventas.</p>
+  </div>
+  {% if caja_actual %}
+  <button class="btn-brasa" type="button" data-caja-tipo="aporte" data-bs-toggle="modal" data-bs-target="#cajaMovimientoModal">
+    <i class="bi bi-plus-circle"></i> Agregar fondo
+  </button>
+  {% else %}
+  <a class="btn-brasa" href="{{ url_for('admin.caja.home') }}"><i class="bi bi-unlock"></i> Abrir caja</a>
+  {% endif %}
+</div>
+
+{% if caja %}
+<section class="adm-card caja-control caja-mov-cabecera">
+  <div class="caja-control__titulo">
+    <div><span class="caja-control__eyebrow">Turno seleccionado</span><h2>Caja Principal</h2></div>
+    <span class="caja-estado caja-estado--{{ caja.estado }}">{{ caja.estado|title }}</span>
+  </div>
+  <div class="caja-control__datos">
+    <div><small>Responsable</small><strong>{{ caja.abiertaPor }}</strong></div>
+    <div><small>Apertura</small><strong>{{ caja.fechaApertura.strftime('%d/%m/%Y · %H:%M') }}</strong></div>
+    <div><small>Fondo inicial</small><strong>S/ {{ '%.2f'|format(caja.fondoInicial) }}</strong></div>
+    <div><small>Efectivo disponible esperado</small><strong>S/ {{ '%.2f'|format(caja.efectivoEsperado) }}</strong></div>
+  </div>
+  {% if caja_actual and caja.id == caja_actual.id %}
+  <div class="caja-control__acciones">
+    <button class="btn-brasa" type="button" data-caja-tipo="aporte" data-bs-toggle="modal" data-bs-target="#cajaMovimientoModal"><i class="bi bi-plus-lg"></i> Registrar aporte</button>
+    <button class="btn-contorno" type="button" data-caja-tipo="gasto" data-bs-toggle="modal" data-bs-target="#cajaMovimientoModal"><i class="bi bi-dash-circle"></i> Registrar gasto</button>
+    <button class="btn-contorno" type="button" data-caja-tipo="retiro" data-bs-toggle="modal" data-bs-target="#cajaMovimientoModal"><i class="bi bi-box-arrow-up"></i> Registrar retiro</button>
+  </div>
+  {% elif caja_actual %}
+  <div class="caja-control__acciones"><a class="btn-brasa" href="{{ url_for('admin.caja.movimientos', sesion=caja_actual.id) }}">Ir a la caja abierta</a></div>
+  {% endif %}
+</section>
+
+<section class="caja-mov-kpis" aria-label="Resumen de aportes y gastos">
+  <article><span>Aportes de efectivo</span><strong>S/ {{ '%.2f'|format(caja.totalAportes) }}</strong><small>No se contabilizan como ventas</small></article>
+  <article><span>Gastos de caja chica</span><strong>S/ {{ '%.2f'|format(caja.totalGastos) }}</strong><small>Reducen el efectivo esperado</small></article>
+  <article><span>Retiros de efectivo</span><strong>S/ {{ '%.2f'|format(caja.totalRetiros) }}</strong><small>Dinero retirado del cajón</small></article>
+  <article class="es-saldo"><span>Disponible esperado</span><strong>S/ {{ '%.2f'|format(caja.efectivoEsperado) }}</strong><small>Se confirma al cerrar la caja</small></article>
+</section>
+
+<section class="adm-card caja-mov-listado">
+  <form method="get" class="caja-mov-filtros">
+    <select class="musa-input" name="sesion" aria-label="Turno de caja">
+      {% for s in historial %}<option value="{{ s.id }}" {{ 'selected' if caja.id == s.id }}>Caja del {{ s.apertura.strftime('%d/%m/%Y %H:%M') }} · {{ s.estado }}</option>{% endfor %}
+    </select>
+    <input class="musa-input" type="date" name="desde" value="{{ desde }}" aria-label="Fecha desde" />
+    <input class="musa-input" type="date" name="hasta" value="{{ hasta }}" aria-label="Fecha hasta" />
+    <select class="musa-input" name="tipo" aria-label="Tipo de movimiento">
+      <option value="">Todos los tipos</option>
+      {% for valor, nombre in tipos %}<option value="{{ valor }}" {{ 'selected' if tipo == valor }}>{{ nombre }}</option>{% endfor %}
+    </select>
+    <input class="musa-input" type="search" name="q" value="{{ q }}" placeholder="Concepto, documento o responsable" aria-label="Buscar movimiento" />
+    <button class="btn-contorno"><i class="bi bi-search"></i> Filtrar</button>
+    <a class="adm-btn-sm" href="{{ url_for('admin.caja.movimientos', sesion=caja.id) }}">Limpiar</a>
+  </form>
+
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+    <thead><tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Documento</th><th>Descripción</th><th>Medio</th><th class="num">Monto</th><th>Responsable</th><th>Evidencia</th></tr></thead>
+    <tbody>{% for m in movimientos %}<tr>
+      <td data-label="Fecha">{{ m.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+      <td data-label="Tipo"><span class="caja-tipo caja-tipo--{{ m.tipo }}">{{ etiquetas.get(m.tipo, m.tipo.replace('_', ' ')|title) }}</span></td>
+      <td data-label="Categoría">{{ m.categoria }}</td><td data-label="Documento">{{ m.documento or '—' }}</td><td data-label="Descripción">{{ m.concepto }}</td><td data-label="Medio">{{ m.medio }}</td>
+      <td class="num" data-label="Monto"><strong>{{ '-' if m.tipo in ['gasto','egreso','retiro','devolucion','ajuste_egreso'] else '+' }} S/ {{ '%.2f'|format(m.monto) }}</strong></td>
+      <td data-label="Responsable">{{ m.usuario }}</td><td data-label="Evidencia">{% if m.evidencia %}<a class="adm-btn-sm" href="{{ url_for('static', filename='img/' ~ m.evidencia) }}" target="_blank" rel="noopener" data-loader-skip><i class="bi bi-image"></i> Ver</a>{% else %}—{% endif %}</td>
+    </tr>{% else %}<tr><td colspan="9" class="adm-vacio">No hay aportes o gastos para los filtros seleccionados.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% else %}
+<section class="adm-card caja-control"><div class="caja-control__vacia"><span class="caja-control__icono"><i class="bi bi-lock"></i></span><div><strong>No hay una caja seleccionada</strong><p>Abre una caja para comenzar a registrar aportes y gastos.</p></div><a class="btn-brasa" href="{{ url_for('admin.caja.home') }}">Ir a Caja</a></div></section>
+{% endif %}
+
+{% if caja_actual and caja and caja.id == caja_actual.id %}
+<div class="modal fade caja-modal" id="cajaMovimientoModal" tabindex="-1" aria-labelledby="cajaMovimientoTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg"><div class="modal-content">
+    <div class="modal-header"><div><span class="caja-modal__eyebrow">Caja Principal</span><h2 class="modal-title" id="cajaMovimientoTitulo">Registrar movimiento</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <form method="post" enctype="multipart/form-data" action="{{ url_for('admin.caja.movimiento') }}">
+      {{ campo_csrf() }}<input type="hidden" name="volver" value="movimientos" />
+      <div class="modal-body">
+        <div class="caja-modal__aviso"><i class="bi bi-info-circle"></i><span>Un aporte repone efectivo, pero no es una venta. Los gastos y retiros reducen el efectivo esperado.</span></div>
+        <div class="row g-3">
+          <div class="col-md-6"><label class="musa-field-label" for="caja-mov-tipo">Tipo</label><select class="musa-input" id="caja-mov-tipo" name="tipo" required>{% for valor, nombre in tipos %}<option value="{{ valor }}">{{ nombre }}</option>{% endfor %}</select></div>
+          <div class="col-md-6"><label class="musa-field-label">Medio</label><select class="musa-input" name="medio" required>{% for m in medios %}<option value="{{ m.id }}" {{ 'selected' if m.codigo == 'efectivo' }}>{{ m.nombre }}</option>{% endfor %}</select></div>
+          <div class="col-md-6"><label class="musa-field-label">Monto</label><div class="caja-monto-input"><span>S/</span><input class="musa-input" type="number" name="monto" min="0.01" step="0.01" required /></div></div>
+          <div class="col-md-6"><label class="musa-field-label">Categoría</label><input class="musa-input" name="categoria" list="categorias-caja" maxlength="60" value="General" required /><datalist id="categorias-caja"><option value="Reposición de fondo"><option value="Insumos menores"><option value="Limpieza"><option value="Movilidad"><option value="Servicios"><option value="Retiro del propietario"></datalist></div>
+          <div class="col-md-6"><label class="musa-field-label">Documento o referencia</label><input class="musa-input" name="documento" maxlength="100" placeholder="Boleta, recibo u operación" /></div>
+          <div class="col-12"><label class="musa-field-label">Descripción</label><textarea class="musa-input" name="concepto" minlength="3" maxlength="255" rows="3" required></textarea></div>
+          <div class="col-12"><label class="musa-field-label">Foto o evidencia opcional</label><input class="musa-input" type="file" name="evidencia" accept="image/jpeg,image/png,image/webp,image/gif" /></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa" data-confirm="El movimiento quedará registrado y afectará el cuadre de la caja.">Registrar movimiento</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/caja.js', v='20261025-2') }}" defer></script>{% endblock %}

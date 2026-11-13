@@ -1135,3 +1135,164 @@ Login → Dashboard → Pedidos (llega cliente → escribe la palabra clave → 
 - El seguimiento del cliente también usa SSE autenticado en `GET /mis-pedidos/eventos`; cada conexión recibe únicamente los estados de los pedidos de su cuenta. `/mis-pedidos/estado` permanece como respaldo.
 - Se retiró Flask-SocketIO y sus dependencias porque no tenía eventos implementados. SSE usa HTTP estándar y no agrega dependencias. El servidor local conserva el puerto 4700 y ejecuta Flask con `threaded=True`.
 - Las pruebas abren ambos flujos sin almacenamiento en búfer y validan sus eventos `pedidos`. Suite completa aprobada: 197 pruebas contra `db_musuas_test`.
+
+## 2026-10-25 - Optimización, medios de pago, Caja y Kardex
+- Login sin enumeración de cuentas: se eliminó `/login/tipo-dni`; el navegador muestra el captcha al detectar 8 dígitos, clientes usan solo correo y personal solo DNI. Usuario inexistente, clave incorrecta y cuenta inactiva devuelven el mismo aviso y se conserva el freno por IP.
+- Los fondos de login/registro tienen variantes WebP de escritorio y móvil. Las subidas se limitan por bytes y píxeles, validan extensión + número mágico + Pillow, recodifican a WebP sin EXIF y crean detalle/miniatura con nombres aleatorios. Las descargas validan cada redirección contra SSRF y el borrado usa `commonpath`.
+- Inter y Space Grotesk se sirven desde `static/fonts`; login dejó de descargar animaciones y estado del local. Se agregó caché estática y una CSP en modo Report-Only para migración gradual.
+- Nuevo catálogo `medioPago`, administrable por superusuario, con tipo, imagen, estado, descuento, comisión porcentual/fija y marca de efectivo. `pagoVenta` congela bruto, descuento, cobrado, comisión y neto al entregar.
+- Nuevo módulo Caja: apertura obligatoria antes de cobrar, fondo inicial, ingresos/egresos/retiros/devoluciones/ajustes con categoría y evidencia, conciliación por medio, efectivo esperado, cierre inmutable e historial. Yape/Plin/tarjeta se concilian pero no aumentan el cajón.
+- Nuevo Kardex de productos terminados. Crear/editar producto, reservar stock, cancelación/no-show y anulación/restauración registran stock anterior/posterior en la misma transacción. Insumos y recetas quedan explícitamente para una etapa posterior.
+- Esquema nuevo integrado en `sql.sql` y migración `018_caja_medios_kardex.sql`. Se añadieron pruebas de seguridad de imágenes, login, caja, medios y Kardex.
+- Validación: compilación, 41 plantillas y 82 rutas correctas; suite completa aprobada (213 pruebas) contra `db_musuas_test`.
+- El usuario reparó `db_musuas` y autorizó recrearla desde `sql.sql`. Respaldo previo: `.local-runtime/db_musuas-antes-importar-sql-20261025-012126.sql`. Se importó el archivo completo mediante PyMySQL/UTF-8; como ya integra `001..018`, no se ejecutó 018 una segunda vez. Verificación: 13 tablas, 4 medios, 60 productos, 60 movimientos iniciales de Kardex y las nuevas pantallas Caja/Inventario/Medios/Pagos respondieron HTTP 200. El servidor real respondió HTTP 200 en `/login` (puerto 4700).
+
+## 2026-10-25 - Búsquedas automáticas sin loader repetitivo
+- Los formularios `data-buscar-auto` ya evitaban activar el loader al enviarse, pero el documento de resultados lo mostraba otra vez como carga inicial. `_loader.html` ahora reconoce la marca temporal `musaFocoBuscar` y oculta únicamente esa transición.
+- `loader.js` limpia el estado especial inmediatamente, por lo que enlaces, formularios normales y cambios de módulo siguen mostrando el loader. Se conserva el foco y la posición del cursor en el buscador.
+- Pruebas focalizadas de loader, paginación y rutas: 40 aprobadas.
+- Corrección reforzada tras reproducirse todavía en Productos: `loader.js` ahora detecta directamente cualquier formulario que contenga `input[data-buscar-auto]`, sin depender del atributo agregado por otro script. En desarrollo la caché estática queda en 0 y `loader.js`/`ui-comun.js` llevan versión `20261025-2` para invalidar inmediatamente la copia del navegador. Pruebas de loader y paginación: 10 aprobadas; HTML de Productos verificado con ambos assets versionados.
+- Solución definitiva: la búsqueda automática dejó de enviar/navegar el formulario. `ui-comun.js` consulta la misma URL mediante `fetch`, analiza el HTML y reemplaza solo `#prod-lista`, `#cat-lista`, `#usr-lista`, `#ped-lista` o `#mp-lista`; aborta respuestas anteriores y actualiza la URL con `history.replaceState`. Al no existir navegación, el loader no puede mostrarse. Assets elevados a `20261025-3`.
+- Búsqueda carácter por carácter: se retiró la espera de 450 ms. Cada cambio del campo inicia inmediatamente su consulta; `AbortController` cancela la anterior y el contador de secuencia impide que una respuesta atrasada reemplace resultados nuevos. Assets elevados a `20261025-4`.
+
+## 2026-10-25 - Caja compacta con operaciones en modales
+- La pantalla de Caja dejó de mostrar simultáneamente todos sus formularios y tablas. Ahora presenta una tarjeta compacta de **Caja Principal** con estado, responsable, apertura, fondo y efectivo esperado, además de un historial corto de turnos.
+- Apertura, resumen y conciliación, registro de aportes/gastos, detalle de movimientos y cierre se manejan en modales Bootstrap responsivos. Los formularios conservan CSRF y el modal de confirmación propio para las operaciones con consecuencias.
+- Consultar un turno del historial abre automáticamente su resumen en modo de solo lectura; si existe otra caja abierta, el encabezado continúa mostrando y permitiendo administrar la caja operativa actual.
+- Se añadió `static/js/caja.js` para enfocar el primer campo y abrir el resumen histórico solicitado, junto con estilos Neo-brasa adaptados a escritorio y móvil.
+- Validación: pruebas focalizadas de Caja, menú y rutas aprobadas; suite completa aprobada (215 pruebas) contra `db_musuas_test`.
+
+## 2026-10-25 - Módulo de Aportes y gastos
+- Se agregó la pantalla independiente `/admin/caja/movimientos/` dentro de **Ventas y caja**. Permite elegir el turno, filtrar por fechas/tipo/texto y consultar responsable, documento y evidencia, manteniendo el alta en un modal.
+- Se incorporaron los tipos explícitos `aporte` y `gasto`. Un aporte repone el efectivo esperado pero no se contabiliza como venta ni modifica el fondo inicial; los valores históricos `ingreso`/`egreso` siguen siendo compatibles.
+- Los accesos rápidos **Agregar fondo**, **Registrar gasto** y **Registrar retiro** preseleccionan el tipo correcto. Los aportes y retiros exigen un medio que afecte efectivo.
+- Los gastos, retiros, devoluciones y ajustes de salida en efectivo ya no pueden superar el dinero físico esperado. El mensaje indica registrar primero un aporte adicional.
+- La vista muestra totales separados de aportes, gastos y retiros, además del efectivo esperado. No fue necesaria otra migración porque `movimientoCaja.tipo` ya es `VARCHAR(20)`.
+- Validación: suite completa aprobada (216 pruebas) contra `db_musuas_test`.
+
+## 2026-10-25 - Prioridad operativa del menú administrativo
+- El grupo **Ventas y caja** se movió encima de **Gestión** en la barra lateral. De esta forma Caja, Pedidos, cobros y ventas quedan antes que Productos/Categorías/Inventario en el recorrido habitual de apertura del día.
+- Se agregó una prueba de regresión que comprueba ese orden para evitar que futuros cambios del menú lo reviertan accidentalmente.
+
+## 2026-10-25 - Inventario POS, Kardex, proveedores, compras y devoluciones
+- Migración `019_inventario_almacenes_compras_devoluciones.sql`: almacén principal, `inventarioSaldo` (físico, reservado, costo promedio, versión), Kardex ampliado, idempotencia de checkout, proveedores, compras/detalles y devoluciones/detalles. Integrada también en `sql.sql`.
+- `producto.existencias` queda como espejo compatible del **disponible**. Confirmar pedido aumenta reservado sin tocar físico; cancelar/no-show libera la reserva; cobrar y entregar reduce físico y reservado en la misma transacción que comprobante y pago.
+- El checkout genera una clave de idempotencia única. Reintentar exactamente la misma solicitud devuelve el pedido ya creado sin duplicar pedido ni reserva.
+- Se separaron las pantallas **Inventario**, **Kardex** y **Movimientos**. El Kardex incluye almacén, físico/reservado anterior y posterior, costo histórico, origen, documento, usuario y referencia a la reversión.
+- Proveedores y Compras permiten registrar documentos con múltiples productos. Solo al confirmar recepción se actualizan stock, costo promedio ponderado y Kardex, todo atómico e idempotente.
+- Devoluciones distingue cliente, proveedor y anulación; exige pedido entregado o compra recibida según corresponda, controla cantidades acumuladas y separa reincorporación de merma. No elimina históricos: genera reversión documentada.
+- Permisos: administrador consulta; superusuario autoriza movimientos manuales, proveedores, compras/recepciones y devoluciones.
+- Base local respaldada en `.local-runtime/db_musuas-antes-migracion-019.sql`; migración 019 aplicada y 60 saldos reconciliados preservando pedidos activos anteriores.
+- Validación final: 95 rutas registradas y suite completa aprobada (223 pruebas) contra `db_musuas_test`.
+
+## 2026-10-26 - Navegación permanente de la tienda en móvil
+- La barra inferior fija de la tienda ahora ofrece cinco accesos: Inicio, Carta, importe del carrito, Pedidos y Cuenta/Ingresar. Si hay una sesión administrativa abierta, el quinto acceso lleva al Panel.
+- El importe del carrito se actualiza desde el mismo `localStorage` usado por el contador y también actualiza la etiqueta accesible del enlace. Mi cuenta e Iniciar sesión resaltan su acceso correspondiente.
+- En escritorio se conserva la cabecera `sticky`; no se duplica la navegación al final de la página.
+- Validación: escenarios móviles de visitante y cliente cubiertos; suite completa aprobada (225 pruebas) contra `db_musuas_test`.
+- El formulario público de acceso se redactó exclusivamente para clientes: solicita correo electrónico y contraseña. La detección local y el captcha por DNI administrativo continúan funcionando sin exponerse como instrucciones al cliente.
+
+## 2026-10-26 - Checkout secuencial en la misma página
+- Finalizar pedido ahora presenta un flujo de tres pasos sin recargas: datos y hora de recojo, forma de pago e indicaciones, y revisión/confirmación del pedido.
+- Solo se muestra un panel a la vez; los botones Anterior/Continuar conservan la información y el indicador superior permite regresar a pasos ya habilitados. Cada avance valida lo necesario y muestra una explicación clara si falta hora o medio de pago.
+- El servidor continúa recotizando y validando todo al confirmar. Sin JavaScript, los tres bloques permanecen visibles como alternativa funcional.
+- Validación: pruebas focalizadas del checkout y suite completa aprobadas (225 pruebas) contra `db_musuas_test`.
+
+## 2026-10-26 - Personalización secuencial de productos
+- Las hamburguesas personalizables ahora avanzan dentro de la misma tarjeta por cuatro pasos: Salsas, Papas, Agregados y Revisión. Salsas y papas se validan antes de continuar; agregados permanece opcional.
+- La revisión enumera las elecciones y sus recargos, permite definir la cantidad y muestra el total antes de agregar o guardar cambios en una línea del carrito.
+- Se puede regresar a cualquier paso ya habilitado sin perder selecciones; el borrador en `localStorage` y la edición desde el carrito siguen vigentes. Los productos sin personalización mantienen el flujo directo.
+- Validación: pruebas focalizadas de ambos tipos de producto y suite completa aprobadas (225 pruebas) contra `db_musuas_test`.
+
+## 2026-10-26 - Confirmación visible y Deshacer al agregar al carrito
+- El aviso dinámico del carrito dejó la parte inferior y ahora aparece como tarjeta verde en la esquina superior derecha, consistente con los avisos de sesión. En móvil ocupa el ancho disponible debajo de la cabecera.
+- Al agregar un producto ofrece **Deshacer** durante 8 segundos, además de **Ver carrito** y cerrar. El temporizador y su barra se pausan mientras el cursor permanece sobre el aviso.
+- Deshacer resta exactamente la cantidad de esa adición sin borrar compras posteriores de la misma combinación. Actualiza contador, total, botón del detalle y listado del carrito cuando corresponda.
+- Validación: pruebas focalizadas y suite completa aprobadas (226 pruebas) contra `db_musuas_test`.
+
+## 2026-10-26 - Aprovechamiento responsive del ancho de pantalla
+- El ancho general de tienda aumentó de 1200 a 1440 px: inicio, carta, categorías, cabecera, pie y carrito aprovechan mejor monitores grandes y la carta puede distribuir más productos por fila.
+- El panel admite hasta 1600 px para tablas/tableros y el detalle de producto hasta 1200 px. Historial, confirmaciones y comprobantes aumentaron moderadamente a 900 px.
+- Checkout secuencial, formularios y páginas de lectura conservan límites propios para evitar líneas demasiado largas. Los gutters continúan siendo fluidos y los puntos de quiebre móviles no cambian.
+- Validación: 18 pruebas focalizadas y suite completa aprobadas (227 pruebas) contra `db_musuas_test`.
+- Corrección móvil: las acciones de carrito/perfil/salir se ocultan en la cabecera de hasta 768 px porque ya están disponibles en la barra inferior fija. El encabezado conserva solo la marca y deja de desbordarse horizontalmente.
+
+## 2026-10-26 - Navegación sticky compacta en la carta
+- En escritorio la cabecera principal permanece pegada arriba y la barra de categorías queda inmediatamente debajo usando la misma altura dinámica. Las migas siguen en el flujo normal y desaparecen al desplazarse.
+- Después de 48 px de scroll, la cabecera baja suavemente de 80 a 68 px y reduce el símbolo/nombre de marca para ganar espacio vertical sin ocultar Inicio, Carta, Pedidos, carrito o cuenta.
+- `static/js/nav-tienda.js` usa `requestAnimationFrame`, listener pasivo y media query de escritorio; no modifica la navegación móvil.
+- Validación: 11 pruebas focalizadas y suite completa aprobadas (228 pruebas) contra `db_musuas_test`.
+- Ajuste tras prueba visual: en Chrome la cabecera `sticky` podía desplazarse mientras la barra de categorías ocupaba la parte superior. En escritorio la cabecera ahora usa `position: fixed` y el cuerpo reserva exactamente `--musa-nav-h`; las categorías conservan `sticky` debajo de ella y la compactación actualiza ambas alturas.
+- Refinamiento visual de la barra sticky: durante el scroll reduce padding/tamaño de chips, oculta la ubicación repetida y agrega sombra de separación. Al volver al inicio recupera la barra completa; el buscador de la carta continúa desplazándose con el contenido.
+- Validación del refinamiento: 8 pruebas focalizadas aprobadas.
+- Separación adicional: la barra compacta reserva 14 px inferiores del mismo fondo crema. El contenido de la carta pasa por debajo de ese colchón visual, evitando que buscador y selector parezcan pegados o superpuestos a las categorías.
+- Corrección estructural del encabezado de Carta: el título/contador ocupa ahora la primera fila y los controles de buscar/ordenar una segunda fila alineada a la derecha (ancho máximo 620 px). El contenedor también gana 8 px de separación superior; en móvil el buscador toma una fila completa.
+- Ajuste de alineación: en escritorio, título/contador y filtros vuelven a compartir una fila mediante una grilla estable de dos columnas. La separación respecto de categorías pertenece ahora al contenedor completo (36 px); por debajo de 1050 px se apilan para no comprimir controles.
+
+## 2026-10-26 - Modales unificados en el panel administrativo
+- Los formularios de Productos, Categorías, Usuarios y Medios de pago dejaron el panel lateral y adoptaron una ventana centrada Neo-brasa con encabezado contextual, cuerpo desplazable y acciones fijas. Se añadió foco inicial, encierro de Tab, cierre con Escape, devolución del foco y atributos de diálogo.
+- Proveedores, Compras, Movimientos de inventario y Devoluciones comparten el mismo patrón Bootstrap/Caja, con tamaños según el contenido y comportamiento responsive.
+- Cobrar y entregar un pedido ahora abre una ventana de revisión con cliente, medio elegido, total, tipo de comprobante, documento y palabra clave. Los botones rápidos de cocina permanecen en la tarjeta.
+- Recibir mercadería usa una revisión previa del documento, proveedor, almacén, líneas y total antes de actualizar inventario y Kardex.
+- La reversión de una devolución solicita un motivo real en vez de enviar una explicación fija. La anulación de venta también pasó a un modal de riesgo con motivo y decisión explícita sobre el stock.
+- Las consultas (Resumen, Ventas, Inventario, Kardex y comprobante) y filtros permanecen como páginas; las acciones de baja/reactivación siguen usando el modal común de confirmación.
+- Validación: suite completa aprobada (231 pruebas) contra `db_musuas_test`.
+
+## 2026-10-27 - Nombres comerciales de los roles
+- Se conservaron sin migración los códigos internos `superusuario`, `administrador` y `usuario`, junto con todas sus reglas de autorización.
+- La interfaz ahora los presenta como **Administrador**, **Cajero** y **Cliente**, respectivamente. El cambio alcanza filtros, formularios, perfil, barra lateral y mensajes de permisos.
+- El acceso por DNI se denomina **Acceso del personal**, porque lo utilizan tanto Administrador como Cajero.
+- Validación: suite completa aprobada (232 pruebas) contra `db_musuas_test`.
+
+## 2026-10-30 - Comandas térmicas de cocina
+- El flujo operativo queda como **Recibido → En cocina → Listo para recojo → Entregado**. Ya no se puede usar la ruta de “preparar” para saltar directamente de Recibido a Listo.
+- **Enviar a cocina e imprimir** registra en una sola transacción el estado, la hora local de Perú, el Cajero responsable y el primer intento de impresión.
+- Se añadió una comanda independiente del comprobante, optimizada para papel térmico de 80 mm: logo, número grande, hora de recojo/envío, nombre corto, cantidades, productos, salsas, papas, agregados y notas. No expone teléfono, correo, clave, precios ni medio de pago.
+- Las reimpresiones se contabilizan sin volver a cambiar el estado y quedan identificadas en el papel. Los pedidos anteriores a la migración pueden generar su comanda pendiente sin retroceder.
+- Migración `020_comandas_cocina.sql`, integrada también en `sql.sql`: `fechaEnvioCocina`, `idUsuarioComanda`, `impresionesComanda` y `fechaUltimaImpresion`.
+- Base local respaldada en `.local-runtime/db_musuas-antes-migracion-020.sql`; migración 020 aplicada conservando los datos existentes.
+- Validación: suite completa aprobada (236 pruebas) contra `db_musuas_test`; después del cierre de la regla de retroceso, 18 pruebas focalizadas adicionales aprobadas.
+
+## 2026-10-31 - Tema claro, oscuro y sistema
+- Se añadió un selector de apariencia en la cabecera del panel y de la tienda: Claro, Oscuro y Sistema. La selección se comparte entre ambos módulos mediante `localStorage`.
+- Una inicialización en el `<head>` aplica el tema antes de mostrar la página; Sistema sigue `prefers-color-scheme` y responde a cambios del sistema operativo.
+- La paleta oscura usa tokens semánticos compartidos para fondos, superficies, texto, bordes y acento, con ajustes para formularios, tablas, modales, avisos, loader, tarjetas y gráficos.
+- Las reglas de impresión fuerzan papel claro; la comanda térmica conserva su plantilla independiente y clara.
+- Ajuste posterior: se conservan los tokens de marca carbón y crema para las superficies inversas. El menú lateral permanece oscuro y se mejoró el contraste de chips, categorías, estado del local y paginación en modo oscuro.
+- La preferencia se controla con un switch accesible Claro/Oscuro; la primera visita toma el tema del dispositivo. El modo oscuro usa fondos cálidos de café/carbón, superficies más próximas entre sí y acentos de brasa menos saturados para reducir el contraste visual agresivo.
+- Corrección de contraste en el detalle de producto: el wordmark de la cabecera y sus enlaces conservan texto legible; las tarjetas de beneficios y la nota destacada usan superficies y tipografía adecuadas al tema oscuro.
+- Se extendieron las superficies oscuras a estados vacíos, tarjetas de pasos/beneficios, chips de categoría, carrito y confirmación; se ajustaron textos de cuenta, barra de categorías y etiquetas para evitar texto claro sobre blanco o texto negro sobre fondos oscuros.
+- Se corrigieron superficies y textos del panel: perfil en la cabecera, métricas de Ventas y Pagos, KPIs y encabezados de Caja, tipos de movimiento, estados y botones secundarios/modales. Las tarjetas claras ahora usan superficies cálidas; campos y textos conservan contraste en tema oscuro.
+- Se corrigió el contraste del modal de confirmación (título, descripción, cancelar y botón destructivo) y de la etiqueta de página actual en las migas del panel.
+- No requiere migración ni dependencias nuevas. Validación automatizada pendiente.
+
+## 2026-11-06 - Skeleton loading en cargas parciales
+- Se agregaron placeholders tipo esqueleto al actualizar comprobantes de Ventas mediante filtros y al cargar sugerencias del carrito. Solo aparecen si la solicitud supera 180 ms, para evitar parpadeos en respuestas rápidas y al filtrar.
+- Las regiones anuncian su estado de carga a lectores de pantalla; la animación respeta la preferencia de movimiento reducido y los colores usan tokens compatibles con tema claro y oscuro.
+- Las vistas renderizadas completas por Flask conservan el loader global; el esqueleto se usa solo donde hay una solicitud de datos asíncrona real.
+
+## 2026-11-06 - Loader global solo en el primer ingreso
+- El loader de marca se muestra únicamente en la primera carga de la pestaña, usando `sessionStorage` para recordar que ya se presentó.
+- Se retiró su activación global en clics y envíos de formularios, que cubría vistas ya renderizadas por Flask. La navegación interna y las confirmaciones ya no disparan el overlay.
+- Las cargas parciales conservan sus esqueletos con umbral de 180 ms; las respuestas rápidas no producen parpadeo.
+## 2026-11-06 - Offcanvas móvil y actualización de Bootstrap
+- Se actualizó Bootstrap de 5.2.3 a 5.3.8 (última versión estable de la rama 5 según la documentación oficial).
+- El menú administrativo ahora usa `offcanvas-lg`: en móvil se abre sobre el contenido con el backdrop y el cierre accesible de Bootstrap; desde 992 px vuelve a ser la barra fija de escritorio, con colapso opcional.
+- Se retiró el comportamiento móvil de barra lateral angosta que reservaba 64 px y ocultaba las etiquetas de navegación.
+- Inventario, Kardex, Movimientos y Devoluciones presentan sus tablas como fichas con etiquetas en móvil, sin desplazamiento horizontal.
+- No se modificaron rutas, roles, permisos, operaciones de inventario ni esquema de base de datos.
+
+## 2026-11-13 - Inventario de insumos y recetas
+- Se prepara la migración `021_insumos_recetas.sql` y se integra su esquema en `sql.sql`. A solicitud del usuario, se aplicó solo la migración 021 a `db_musuas`; `sql.sql` no se importó.
+- Respaldo previo: `.local-runtime/db_musuas-antes-migracion-021-20261113.sql` (61 KB). La migración creó las seis tablas nuevas sin modificar tablas ni registros existentes.
+- Se añaden insumos por almacén, recetas base y de personalización, compras de ingredientes, cálculo de capacidad estimada y trazabilidad separada.
+- El pedido reserva ingredientes al confirmarse; el envío a cocina convierte la reserva en consumo junto al cambio de estado, en una sola transacción. Cancelaciones anteriores a cocina liberan la reserva.
+- Movimientos separa productos listos para vender de ingredientes y muestra el cambio ocurrido, origen y saldo disponible resultante.
+- Ventas incorpora un resumen por producto del día seleccionado, excluye comprobantes anulados y solo cuenta pedidos cobrados.
+- Insumos muestra el consumo diario agregado por ingrediente y almacén a partir de los pedidos enviados a cocina; las mermas manuales se mantienen separadas.
+- El formulario de insumos usa un selector con categorías habituales y las categorías ya usadas por insumos; permite crear una nueva sin mezclar las categorías de la carta ni requerir otra migración.
+## 2026-11-13 - Roles administrativos e identidad única
+- Gestión de usuarios sigue protegida para el rol interno `superusuario` (etiqueta visible: Administrador). Ahora puede promover una cuenta existente a Administrador si ya tiene un DNI válido de 8 dígitos. Las cuentas que ya son Administrador mantienen protección contra edición o baja; siguen pudiéndose crear nuevas cuentas administrativas.
+- El DNI y el correo identifican una cuenta y no pueden repetirse. Ya existía unicidad en correo; se añadió `uq_usuario_dni` en `usuario`. Los clientes sin DNI pueden conservar `NULL`. Los nombres, teléfonos y roles no son únicos: puede haber varios cajeros y administradores, cada uno con identidad propia.
+- Antes de aplicar la migración 022 se comprobó que no hubiera DNI duplicados (0 grupos) y se respaldó `db_musuas` en `.local-runtime/db_musuas-antes-migracion-022-20261113.sql` (68,805 bytes). Se aplicó únicamente el índice DNI, sin importar `sql.sql`; índice verificado.
+- Se agregaron pruebas para promoción autorizada, DNI obligatorio al promover un cliente, unicidad de DNI en la base y etiquetas visibles de roles.

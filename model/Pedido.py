@@ -7,14 +7,10 @@ from datetime import timedelta
 from dinero import dinero
 from negocio import SEDE, NOMBRE_NEGOCIO, ahora_peru, horario_dia
 from services.pedidos_eventos import notificar_cambio_pedidos
-
-
-MEDIOS_PAGO = {
-    "efectivo": "Efectivo",
-    "tarjeta": "Tarjeta",
-    "yape": "Yape",
-    "plin": "Plin",
-}
+from model.Caja import Caja
+from model.Inventario import Inventario
+from model.MedioPago import MedioPago
+from model.Insumos import Insumos
 
 
 def _hora_env(nombre, defecto):
@@ -129,7 +125,9 @@ class Pedido:
                     )
                     if cursor.rowcount != 1:
                         continue
-                    Pedido._devolver_stock(cursor, id_pedido)
+                    Pedido._devolver_stock(
+                        cursor, id_pedido, "devolucion_no_show",
+                        "Pedido vencido sin recojo", None)
                     if id_usuario:
                         cursor.execute(
                             "UPDATE usuario SET noShows = noShows + 1 WHERE idUsuario = %s",
@@ -138,22 +136,30 @@ class Pedido:
             conexion.commit()
             if vencidos:
                 notificar_cambio_pedidos()
+        except Exception:
+            conexion.rollback()
+            raise
         finally:
             conexion.close()
 
     @staticmethod
-    def _devolver_stock(cursor, id_pedido):
-        """Suma de vuelta a `producto.existencias` lo que consumió un pedido."""
+    def _devolver_stock(cursor, id_pedido, tipo="devolucion", motivo=None, id_usuario=None):
+        """Libera una reserva o reincorpora una salida ya entregada."""
         cursor.execute(
             "SELECT idProducto, SUM(cantidad) FROM detalleOrden "
             "WHERE idPedido = %s GROUP BY idProducto",
             (id_pedido,),
         )
         for id_prod, cant in cursor.fetchall():
-            cursor.execute(
-                "UPDATE producto SET existencias = existencias + %s WHERE idProducto = %s",
-                (cant, id_prod),
-            )
+            if tipo in ("devolucion_cancelacion", "devolucion_no_show", "liberacion_cancelacion"):
+                Inventario.liberar_reserva(
+                    cursor, id_prod, cant, id_pedido, tipo, motivo, id_usuario)
+            else:
+                Inventario.entrada(
+                    cursor, id_prod, cant, None, tipo, "pedido", id_pedido,
+                    motivo, id_usuario)
+        if tipo in ("devolucion_cancelacion", "devolucion_no_show", "liberacion_cancelacion"):
+            Insumos.liberar_pedido(cursor, id_pedido, motivo or "Pedido cancelado", id_usuario)
 
     @staticmethod
     def _label_hora(hh, mm):
@@ -238,13 +244,25 @@ class Pedido:
     # ------------------------------------------------------------------
     @staticmethod
     def crear_pedido_completo(idUsuario, correo, nombres, telefono, hora_recojo,
-                              medio_pago, notas, items):
+                              medio_pago, notas, items, idempotencia=None):
+        idempotencia = (str(idempotencia or "").strip()[:64] or None)
         conexion = obtener_conexion()
         try:
             with conexion.cursor() as cursor:
                 # --- 0. Límite de pedidos activos por persona -------------------
                 if not idUsuario:
                     raise ValueError("Los pedidos requieren una cuenta registrada")
+                if idempotencia:
+                    cursor.execute(
+                        "SELECT idPedido,keyPedido FROM registroPedido "
+                        "WHERE idUsuario=%s AND idempotencia=%s LIMIT 1",
+                        (idUsuario, idempotencia))
+                    existente = cursor.fetchone()
+                    if existente:
+                        return existente[0], existente[1]
+                medio = MedioPago.por_codigo(medio_pago, cursor)
+                if not medio or not medio["activo"]:
+                    raise ValueError("El medio de pago no está disponible")
                 cursor.execute(
                     f"SELECT COUNT(*) FROM registroPedido WHERE idUsuario = %s AND {_ACTIVO}",
                     (idUsuario,),
@@ -298,11 +316,11 @@ class Pedido:
                     """INSERT INTO registroPedido
                        (idUsuario, dniNoRegistrado, nombres, correoRecojo, numeroTelefono,
                         estadoRecojo, horaRecojo, fechaPedido, estadoBoleta,
-                        billeteraDigital, medioPagoElegido, keyPedido, notas)
-                       VALUES (%s, NULL, %s, %s, %s, 0, %s, %s, 0, %s, %s, %s, %s)""",
+                        billeteraDigital, medioPagoElegido, keyPedido, notas, idempotencia)
+                       VALUES (%s, NULL, %s, %s, %s, 0, %s, %s, 0, %s, %s, %s, %s, %s)""",
                     (idUsuario, nombres, correo, telefono, hora_recojo,
-                     ahora_peru().date(), 1 if medio_pago in ("yape", "plin") else 0,
-                     medio_pago, key, notas or None),
+                     ahora_peru().date(), 1 if medio["tipo"] == "billetera" else 0,
+                     medio_pago, key, notas or None, idempotencia),
                 )
                 id_pedido = cursor.lastrowid
 
@@ -323,20 +341,28 @@ class Pedido:
                             (id_pedido, id_crema, id_detalle),
                         )
 
-                # --- 2. Descuento de existencias (se reserva el stock) --------
+                # --- 2. Reserva: físico no cambia; baja solo el disponible. -----
                 for id_prod, pedidas in unidades.items():
-                    cursor.execute(
-                        "UPDATE producto SET existencias = existencias - %s WHERE idProducto = %s",
-                        (pedidas, id_prod),
-                    )
+                    if not Inventario.reservar(cursor, id_prod, pedidas, id_pedido, idUsuario):
+                        raise StockInsuficiente(stock[id_prod][0], stock[id_prod][1])
+                Insumos.reservar_pedido(cursor, id_pedido, idUsuario, items)
                 # El comprobante NO se emite aquí: el pago es al recoger, así que
                 # se genera en marcar_recogido() (venta realmente cobrada).
 
             conexion.commit()
             notificar_cambio_pedidos()
             return id_pedido, key
-        except Exception:
+        except Exception as exc:
             conexion.rollback()
+            if idempotencia and getattr(exc, "args", [None])[0] == 1062:
+                with conexion.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT idPedido,keyPedido FROM registroPedido "
+                        "WHERE idUsuario=%s AND idempotencia=%s LIMIT 1",
+                        (idUsuario, idempotencia))
+                    existente = cursor.fetchone()
+                    if existente:
+                        return existente[0], existente[1]
             raise
         finally:
             conexion.close()
@@ -346,7 +372,7 @@ class Pedido:
     # el módulo de Ventas del panel (tablas comprobante / detalleComprobante).
     # ------------------------------------------------------------------
     @staticmethod
-    def _emitir_comprobante(cursor, id_pedido, medio_pago, id_cajero=None,
+    def _emitir_comprobante(cursor, id_pedido, medio, sesion_caja, id_cajero=None,
                             tipo_comprobante="boleta", documento=None, razon_social=None):
         cursor.execute(
             "SELECT idUsuario, nombres, correoRecojo, numeroTelefono, horaRecojo, notas "
@@ -374,22 +400,25 @@ class Pedido:
             for id_detalle, nombre in cursor.fetchall():
                 cremas.setdefault(id_detalle, []).append(nombre or "Crema")
 
-        total = dinero(sum(dinero(l[5]) for l in lineas))
+        bruto = dinero(sum(dinero(l[5]) for l in lineas))
+        importes = MedioPago.calcular(medio, bruto)
+        total = importes["cobrado"]
         sub_total = dinero(total / dinero("1.18"))
         igv = dinero(total - sub_total)
         ahora = ahora_peru()
         serie = "F001" if tipo_comprobante == "factura" else "B001"
-        medio = MEDIOS_PAGO[medio_pago]
+        nombre_medio = medio["nombre"]
 
         cursor.execute(
             """INSERT INTO comprobante
                (idPedido, idUsuario, dniNoRegistrado, tipoComprobante, razonSocial,
                 fechaComprobante, horaComprobante,
-                subTotal, montoTotal, igv, numeroComprobante, medioPago, idCajero)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s)""",
+                subTotal, montoTotal, igv, montoBruto, descuento,
+                numeroComprobante, medioPago, idCajero)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NULL, %s, %s)""",
             (id_pedido, id_usuario, documento, tipo_comprobante, razon_social or None,
              ahora.date(), ahora.strftime("%H:%M:%S"),
-             sub_total, total, igv, medio, id_cajero),
+             sub_total, total, igv, bruto, importes["descuento"], nombre_medio, id_cajero),
         )
         id_comp = cursor.lastrowid
         numero = f"{serie}-{id_comp:08d}"
@@ -439,10 +468,12 @@ class Pedido:
             "horaEntrega": ahora.strftime("%H:%M"),
             "horaRecojo": ahora.strftime("%H:%M"),
             "notas": notas or "",
-            "medioPago": medio,
+            "medioPago": nombre_medio,
             "idCajero": id_cajero,
             "subTotal": f"{sub_total:.2f}",
             "igv": f"{igv:.2f}",
+            "montoBruto": f"{bruto:.2f}",
+            "descuento": f"{importes['descuento']:.2f}",
             "montoTotal": f"{total:.2f}",
             "lineas": lineas_snapshot,
         }
@@ -451,6 +482,15 @@ class Pedido:
             "WHERE idComprobante = %s",
             (numero, json.dumps(snapshot, ensure_ascii=False), id_comp),
         )
+        cursor.execute(
+            "INSERT INTO pagoVenta(idComprobante,idSesionCaja,idMedioPago,medioNombre,"
+            "montoBruto,descuento,montoCobrado,comision,montoNeto,porcentajeDescuento,"
+            "porcentajeComision,comisionFija,fechaHora,idCajero) "
+            "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (id_comp, sesion_caja["id"], medio["id"], nombre_medio, bruto,
+             importes["descuento"], total, importes["comision"], importes["neto"],
+             medio["descuentoPct"], medio["comisionPct"], medio["comisionFija"],
+             ahora.replace(tzinfo=None), id_cajero))
         return id_comp
 
     @staticmethod
@@ -478,6 +518,106 @@ class Pedido:
             conexion.commit()
             notificar_cambio_pedidos()
             return _PREP_LABEL[nuevo]
+        finally:
+            conexion.close()
+
+    @staticmethod
+    def enviar_a_cocina(id_pedido, id_usuario):
+        """Genera la primera comanda y pasa recibido -> en cocina.
+
+        Para pedidos anteriores a la migración que ya estén en cocina/listos,
+        permite generar la comanda faltante sin retroceder su estado. La hora,
+        el responsable y el primer intento de impresión quedan en la misma
+        transacción que el cambio de estado.
+        """
+        ahora = ahora_peru().replace(tzinfo=None)
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "SELECT estadoPrep,fechaEnvioCocina FROM registroPedido "
+                    "WHERE idPedido=%s AND " + _ACTIVO + " FOR UPDATE",
+                    (id_pedido,),
+                )
+                fila = cursor.fetchone()
+                if fila is None:
+                    return "no_existe"
+                prep = int(fila[0] or 0)
+                if fila[1] is not None:
+                    return "ya_enviada"
+                nuevo = PREP_PREPARANDO if prep == PREP_RECIBIDO else prep
+                if prep == PREP_RECIBIDO:
+                    Insumos.consumir_pedido(cursor, id_pedido, id_usuario)
+                cursor.execute(
+                    "UPDATE registroPedido SET estadoPrep=%s,fechaEnvioCocina=%s,"
+                    "idUsuarioComanda=%s,impresionesComanda=impresionesComanda+1,"
+                    "fechaUltimaImpresion=%s WHERE idPedido=%s AND fechaEnvioCocina IS NULL",
+                    (nuevo, ahora, id_usuario, ahora, id_pedido),
+                )
+                if cursor.rowcount != 1:
+                    return "ya_enviada"
+            conexion.commit()
+            notificar_cambio_pedidos()
+            return "en_cocina" if prep == PREP_RECIBIDO else "comanda_generada"
+        except Exception:
+            conexion.rollback()
+            raise
+        finally:
+            conexion.close()
+
+    @staticmethod
+    def registrar_reimpresion_comanda(id_pedido):
+        """Cuenta un intento de reimpresión sin alterar el estado del pedido."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE registroPedido SET impresionesComanda=impresionesComanda+1,"
+                    "fechaUltimaImpresion=%s WHERE idPedido=%s AND fechaEnvioCocina IS NOT NULL",
+                    (ahora_peru().replace(tzinfo=None), id_pedido),
+                )
+                if cursor.rowcount != 1:
+                    return False
+            conexion.commit()
+            return True
+        finally:
+            conexion.close()
+
+    @staticmethod
+    def marcar_listo(id_pedido):
+        """Avanza exclusivamente de en cocina a listo para recojo."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE registroPedido SET estadoPrep=%s WHERE idPedido=%s "
+                    "AND estadoPrep=%s AND " + _ACTIVO,
+                    (PREP_LISTO, id_pedido, PREP_PREPARANDO),
+                )
+                if cursor.rowcount != 1:
+                    return False
+            conexion.commit()
+            notificar_cambio_pedidos()
+            return True
+        finally:
+            conexion.close()
+
+    @staticmethod
+    def volver_a_cocina(id_pedido):
+        """Corrige únicamente listo -> en cocina; nunca deshace la comanda."""
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE registroPedido SET estadoPrep=%s WHERE idPedido=%s "
+                    "AND estadoPrep=%s AND " + _ACTIVO,
+                    (PREP_PREPARANDO, id_pedido, PREP_LISTO),
+                )
+                if cursor.rowcount != 1:
+                    return False
+            conexion.commit()
+            notificar_cambio_pedidos()
+            return True
         finally:
             conexion.close()
 
@@ -542,7 +682,9 @@ class Pedido:
                 )
                 if cursor.rowcount != 1:
                     return "no_cancelable"
-                Pedido._devolver_stock(cursor, id_pedido)
+                Pedido._devolver_stock(
+                    cursor, id_pedido, "devolucion_cancelacion",
+                    "Pedido cancelado", id_usuario)
             conexion.commit()
             notificar_cambio_pedidos()
             return "ok"
@@ -569,7 +711,9 @@ class Pedido:
                 )
                 if cursor.rowcount != 1:
                     return False
-                Pedido._devolver_stock(cursor, id_pedido)
+                Pedido._devolver_stock(
+                    cursor, id_pedido, "devolucion_no_show",
+                    "Cliente no recogió el pedido", None)
                 if fila[0]:
                     cursor.execute(
                         "UPDATE usuario SET noShows = noShows + 1 WHERE idUsuario = %s",
@@ -599,7 +743,8 @@ class Pedido:
                 "SELECT rp.idPedido, rp.dniNoRegistrado, rp.nombres, rp.numeroTelefono, "
                 "rp.estadoRecojo, rp.horaRecojo, rp.estadoBoleta, rp.billeteraDigital, "
                 "rp.keyPedido, rp.notas, COALESCE(u.noShows, 0), rp.estadoPrep, "
-                "rp.correoRecojo, rp.medioPagoElegido "
+                "rp.correoRecojo, rp.medioPagoElegido, rp.fechaEnvioCocina, "
+                "rp.impresionesComanda "
                 "FROM registroPedido rp LEFT JOIN usuario u ON u.idUsuario = rp.idUsuario "
                 f"WHERE rp.fechaPedido = %s{cond} "
                 "ORDER BY rp.estadoRecojo, rp.estadoPrep DESC, rp.horaRecojo, rp.idPedido",
@@ -666,6 +811,8 @@ class Pedido:
                 "boleta": bool(c[6]),
                 "digital": bool(c[7]),
                 "medioPago": (c[13] or ("yape" if c[7] else "efectivo")).lower(),
+                "tieneComanda": c[14] is not None,
+                "impresionesComanda": int(c[15] or 0),
                 "keyPedido": c[8],
                 "notas": c[9],
                 "noShows": int(c[10] or 0),
@@ -700,8 +847,12 @@ class Pedido:
                 if medio_pago is None:
                     medio_pago = fila[6] or ("yape" if fila[5] else "efectivo")
                 medio_pago = str(medio_pago).strip().lower()
-                if medio_pago not in MEDIOS_PAGO:
+                medio = MedioPago.por_codigo(medio_pago, cursor)
+                if not medio:
                     return "pago_invalido"
+                sesion_caja = Caja.abierta_cursor(cursor, bloquear=True)
+                if not sesion_caja:
+                    return "caja_cerrada"
                 tipo_comprobante = str(tipo_comprobante or "").strip().lower()
                 documento = str(documento or fila[7] or "").strip()
                 razon_social = str(razon_social or "").strip()[:200]
@@ -727,8 +878,14 @@ class Pedido:
                 )
                 if cursor.rowcount != 1:
                     return "no_existe"
+                cursor.execute(
+                    "SELECT idProducto,SUM(cantidad) FROM detalleOrden WHERE idPedido=%s "
+                    "GROUP BY idProducto", (id_pedido,))
+                for id_producto, cantidad in cursor.fetchall():
+                    Inventario.confirmar_salida(
+                        cursor, id_producto, cantidad, id_pedido, id_cajero)
                 Pedido._emitir_comprobante(
-                    cursor, id_pedido, medio_pago, id_cajero,
+                    cursor, id_pedido, medio, sesion_caja, id_cajero,
                     tipo_comprobante, documento, razon_social,
                 )
             conexion.commit()
@@ -948,7 +1105,8 @@ class Pedido:
             cursor.execute(
                 "SELECT idPedido, idUsuario, dniNoRegistrado, nombres, numeroTelefono, "
                 "estadoRecojo, cancelado, noShow, horaRecojo, estadoBoleta, billeteraDigital, "
-                "keyPedido, notas, estadoPrep, correoRecojo, medioPagoElegido "
+                "keyPedido, notas, estadoPrep, correoRecojo, medioPagoElegido, "
+                "fechaEnvioCocina, impresionesComanda, fechaUltimaImpresion "
                 "FROM registroPedido WHERE idPedido = %s",
                 (id_pedido,),
             )
@@ -963,15 +1121,28 @@ class Pedido:
             filas = cursor.fetchall()
 
             cursor.execute(
-                "SELECT dc.idDetalleOrden, pr.nombre, pr.precio "
+                "SELECT dc.idDetalleOrden, pr.nombre, pr.precio, cp.nombreCategoria "
                 "FROM detalleCremas dc INNER JOIN producto pr ON pr.idProducto = dc.idCrema "
+                "LEFT JOIN categoriaProducto cp ON cp.idCategoria=pr.idCategoria "
                 "WHERE dc.idPedido = %s", (id_pedido,))
             cremas_raw = cursor.fetchall()
         conexion.close()
 
         cremas_por_detalle = {}
-        for id_det, nombre, precio in cremas_raw:
-            cremas_por_detalle.setdefault(id_det, []).append({"nombre": nombre, "precio": precio})
+        personalizacion_por_detalle = {}
+        for id_det, nombre, precio, categoria in cremas_raw:
+            categoria_normalizada = (categoria or "").strip().lower()
+            if "papa" in categoria_normalizada:
+                grupo = "papas"
+            elif "crema" in categoria_normalizada or "salsa" in categoria_normalizada:
+                grupo = "salsas"
+            else:
+                grupo = "agregados"
+            opcion = {"nombre": nombre, "precio": precio, "grupo": grupo}
+            cremas_por_detalle.setdefault(id_det, []).append(opcion)
+            personalizacion_por_detalle.setdefault(
+                id_det, {"salsas": [], "papas": [], "agregados": []}
+            )[grupo].append(nombre)
 
         hora = str(timedelta(seconds=p[8].seconds)) if hasattr(p[8], "seconds") else str(p[8])
         items = [
@@ -981,6 +1152,9 @@ class Pedido:
                 "cantidad": f[4],
                 "precioTotal": f[5],
                 "cremas": cremas_por_detalle.get(f[0], []),
+                "personalizacion": personalizacion_por_detalle.get(
+                    f[0], {"salsas": [], "papas": [], "agregados": []}
+                ),
             }
             for f in filas
         ]
@@ -1002,7 +1176,19 @@ class Pedido:
             "notas": p[12],
             "correo": p[14] or "",
             "medioPago": (p[15] or ("yape" if p[10] else "efectivo")).lower(),
+            "fechaEnvioCocina": p[16],
+            "fechaEnvioCocinaTexto": p[16].strftime("%d/%m/%Y %H:%M") if p[16] else "",
+            "impresionesComanda": int(p[17] or 0),
+            "fechaUltimaImpresion": p[18],
+            "nombreCorto": (p[3] or "Cliente").split()[0],
             "lineas": items,
             "total": sum(i["precioTotal"] for i in items),
         }
+
+    @staticmethod
+    def obtener_comanda(id_pedido):
+        pedido = Pedido.obtener_pedido_completo(id_pedido)
+        if pedido is None or pedido["fechaEnvioCocina"] is None:
+            return None
+        return pedido
 

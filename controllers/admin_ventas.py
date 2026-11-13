@@ -79,6 +79,7 @@ def home():
         kpis=Comprobante.kpis(),
         serie=Comprobante.serie_ventas(vista, anio, mes),
         serie_horas=Comprobante.serie_por_hora(dia),
+        resumen_productos=Comprobante.resumen_productos_dia(dia),
         vista=vista, anio=anio, mes=mes, anios=anios, meses=MESES,
         dia=dia.isoformat(), hoy=hoy.isoformat(), ayer=(hoy - timedelta(days=1)).isoformat(),
         **contexto,
@@ -97,7 +98,7 @@ def show_detalle(idComprobante):
         return redirect(url_for("admin.ventas.home"))
 
     etiquetas = {
-        "recibido": "Recibido", "preparando": "En preparación", "listo": "Listo para recojo",
+        "recibido": "Recibido", "preparando": "En cocina", "listo": "Listo para recojo",
         "recogido": "Recogido", "cancelado": "Cancelado", "no_show": "No recogió",
     }
     return render_template(

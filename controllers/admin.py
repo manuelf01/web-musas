@@ -39,5 +39,5 @@ def verificacion_usuario_logueado():
     # Gestión de usuarios: solo el superusuario.
     ep = request.endpoint or ""
     if ep.startswith("admin.usuarios.") and user.get("rol") != "superusuario":
-        flash("Solo un superusuario puede entrar a la gestión de usuarios.", "error")
+        flash("Solo el Administrador puede entrar a la gestión de usuarios.", "error")
         return redirect(url_for("admin.home"))

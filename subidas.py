@@ -1,8 +1,7 @@
-"""
-Subida de imágenes del panel de administración (productos y categorías).
+"""Procesamiento seguro de imágenes subidas o descargadas.
 
-Guarda el archivo en static/img/<subcarpeta>/ con un nombre aleatorio y
-devuelve la ruta relativa que se guarda en la BD (p. ej. "productos/ab12cd.jpg").
+Los productos y categorías se recodifican a WebP, sin metadatos, y generan una
+versión de detalle más una miniatura. La BD guarda solo la ruta de detalle.
 """
 
 import io
@@ -10,16 +9,23 @@ import ipaddress
 import os
 import secrets
 import socket
+import urllib.error
 import urllib.request
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
-from PIL import Image
+from PIL import Image, ImageOps
+
 
 EXTENSIONES = {"jpg", "jpeg", "png", "webp", "gif"}
 _BASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "img")
 _MAX_BYTES = 5 * 1024 * 1024
-_MIME_EXT = {
-    "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
+_MAX_PIXELES = 25_000_000
+_DETALLE_MAX = (1600, 1600)
+_MINIATURA_MAX = (480, 480)
+_MAX_REDIRECCIONES = 4
+_MIME_FORMATO = {
+    "image/jpeg": "jpeg", "image/png": "png", "image/webp": "webp",
+    "image/gif": "gif",
 }
 
 
@@ -27,146 +33,207 @@ def _extension(nombre):
     return nombre.rsplit(".", 1)[-1].lower() if "." in (nombre or "") else ""
 
 
-def guardar_imagen(archivo, subcarpeta):
-    """`archivo` = FileStorage de request.files. Devuelve "subcarpeta/nombre.ext"
-    o None si no hay archivo o no es una imagen válida."""
-    if not archivo or not archivo.filename:
+def _formato_magico(datos):
+    """Detecta el formato por firma binaria antes de abrirlo con Pillow."""
+    if datos.startswith(b"\xff\xd8\xff"):
+        return "jpeg"
+    if datos.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if datos[:4] == b"RIFF" and datos[8:12] == b"WEBP":
+        return "webp"
+    if datos.startswith((b"GIF87a", b"GIF89a")):
+        return "gif"
+    return None
+
+
+def _leer_limitado(flujo):
+    datos = flujo.read(_MAX_BYTES + 1)
+    return datos if datos and len(datos) <= _MAX_BYTES else None
+
+
+def _abrir_verificada(datos, formato_esperado=None):
+    """Número mágico, decodificación completa y límite contra bombas de imagen."""
+    formato = _formato_magico(datos)
+    if not formato or (formato_esperado and formato != formato_esperado):
+        return None
+    try:
+        prueba = Image.open(io.BytesIO(datos))
+        prueba.verify()
+        imagen = Image.open(io.BytesIO(datos))
+        imagen.load()
+        if imagen.width * imagen.height > _MAX_PIXELES:
+            return None
+        return ImageOps.exif_transpose(imagen)
+    except Exception:
         return None
 
+
+def _guardar_webp(imagen, subcarpeta, prefijo=None):
+    carpeta = os.path.join(_BASE, subcarpeta)
+    os.makedirs(carpeta, exist_ok=True)
+    base = prefijo or secrets.token_hex(8)
+    detalle_nombre = f"{base}.webp"
+    mini_nombre = f"{base}-thumb.webp"
+    modo = "RGBA" if "A" in imagen.getbands() else "RGB"
+    original = imagen.convert(modo)
+    detalle = original.copy()
+    detalle.thumbnail(_DETALLE_MAX, Image.Resampling.LANCZOS)
+    mini = original.copy()
+    mini.thumbnail(_MINIATURA_MAX, Image.Resampling.LANCZOS)
+    # La recodificación crea archivos nuevos sin EXIF, comentarios ni perfiles.
+    detalle.save(os.path.join(carpeta, detalle_nombre), "WEBP", quality=82, method=6)
+    mini.save(os.path.join(carpeta, mini_nombre), "WEBP", quality=76, method=6)
+    return f"{subcarpeta}/{detalle_nombre}"
+
+
+def guardar_imagen(archivo, subcarpeta):
+    """Valida extensión, firma y decodificación; devuelve una ruta WebP."""
+    if not archivo or not archivo.filename:
+        return None
     ext = _extension(archivo.filename)
     if ext not in EXTENSIONES:
         return None
-
-    # Verifica que el contenido sea realmente una imagen (no un script renombrado).
-    try:
-        Image.open(archivo.stream).verify()
-    except Exception:
+    datos = _leer_limitado(archivo.stream)
+    if not datos:
         return None
-    archivo.stream.seek(0)
-
-    carpeta = os.path.join(_BASE, subcarpeta)
-    os.makedirs(carpeta, exist_ok=True)
-    nombre = f"{secrets.token_hex(8)}.{'jpg' if ext == 'jpeg' else ext}"
-    archivo.save(os.path.join(carpeta, nombre))
-    return f"{subcarpeta}/{nombre}"
+    esperado = "jpeg" if ext in ("jpg", "jpeg") else ext
+    imagen = _abrir_verificada(datos, esperado)
+    return _guardar_webp(imagen, subcarpeta) if imagen else None
 
 
 def _host_es_publico(host):
-    """Bloquea localhost / IPs privadas (evita SSRF a la red interna)."""
+    """Bloquea localhost e IPs internas antes de cada salto HTTP."""
     try:
         for info in socket.getaddrinfo(host, None):
             ip = ipaddress.ip_address(info[4][0])
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            if (ip.is_private or ip.is_loopback or ip.is_link_local
+                    or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
                 return False
         return True
     except (socket.gaierror, ValueError):
         return False
 
 
+def _url_publica(url):
+    partes = urlparse(url)
+    return (partes.scheme in ("http", "https") and bool(partes.hostname)
+            and _host_es_publico(partes.hostname))
+
+
+class _SinRedireccion(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _descargar_url(url):
+    """Sigue pocos saltos y vuelve a validar destino, MIME, tamaño y firma."""
+    opener = urllib.request.build_opener(_SinRedireccion())
+    actual = url
+    for _ in range(_MAX_REDIRECCIONES + 1):
+        if not _url_publica(actual):
+            return None, None
+        req = urllib.request.Request(actual, headers={"User-Agent": "Mozilla/5.0 (LasDeSiempre)"})
+        try:
+            with opener.open(req, timeout=8) as resp:
+                ctype = (resp.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+                return _leer_limitado(resp), _MIME_FORMATO.get(ctype)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (301, 302, 303, 307, 308):
+                return None, None
+            destino = exc.headers.get("Location")
+            if not destino:
+                return None, None
+            actual = urljoin(actual, destino)
+        except Exception:
+            return None, None
+    return None, None
+
+
 def guardar_desde_url(url, subcarpeta):
-    """Descarga una imagen desde un enlace de internet y la guarda como un archivo
-    local. Devuelve "subcarpeta/nombre.ext" o None si el enlace no sirve."""
     url = (url or "").strip()
     if not url:
         return None
-    partes = urlparse(url)
-    if partes.scheme not in ("http", "https") or not partes.hostname:
+    datos, formato = _descargar_url(url)
+    if not datos or not formato:
         return None
-    if not _host_es_publico(partes.hostname):
-        return None
+    imagen = _abrir_verificada(datos, formato)
+    return _guardar_webp(imagen, subcarpeta) if imagen else None
 
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (LasMusas)"})
+
+def miniatura_imagen(ruta_relativa):
+    """Devuelve la miniatura si existe; soporta imágenes históricas."""
+    if not ruta_relativa:
+        return ruta_relativa
+    base, ext = os.path.splitext(ruta_relativa)
+    candidata = f"{base}-thumb{ext}"
+    destino = os.path.join(_BASE, *candidata.split("/"))
+    return candidata if os.path.isfile(destino) else ruta_relativa
+
+
+def _ruta_dentro_base(ruta_relativa):
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            ctype = (resp.headers.get("Content-Type") or "").split(";")[0].strip().lower()
-            if ctype not in _MIME_EXT:
-                return None
-            datos = resp.read(_MAX_BYTES + 1)
-    except Exception:
+        piezas = str(ruta_relativa).replace("\\", "/").split("/")
+        destino = os.path.abspath(os.path.join(_BASE, *piezas))
+        return destino if os.path.commonpath((_BASE, destino)) == _BASE else None
+    except (TypeError, ValueError):
         return None
-    if not datos or len(datos) > _MAX_BYTES:
-        return None
-
-    try:
-        Image.open(io.BytesIO(datos)).verify()
-    except Exception:
-        return None
-
-    ext = _MIME_EXT[ctype]
-    carpeta = os.path.join(_BASE, subcarpeta)
-    os.makedirs(carpeta, exist_ok=True)
-    nombre = f"{secrets.token_hex(8)}.{ext}"
-    with open(os.path.join(carpeta, nombre), "wb") as fh:
-        fh.write(datos)
-    return f"{subcarpeta}/{nombre}"
 
 
 def borrar_imagen(ruta_relativa):
-    """Borra static/img/<ruta_relativa> si existe (solo dentro de static/img)."""
-    if not ruta_relativa:
+    """Borra detalle y miniatura únicamente dentro de static/img."""
+    destino = _ruta_dentro_base(ruta_relativa)
+    if not destino:
         return
-    destino = os.path.normpath(os.path.join(_BASE, ruta_relativa))
-    if destino.startswith(_BASE) and os.path.isfile(destino):
-        try:
-            os.remove(destino)
-        except OSError:
-            pass
+    base, ext = os.path.splitext(destino)
+    for ruta in (destino, f"{base}-thumb{ext}"):
+        if os.path.isfile(ruta):
+            try:
+                os.remove(ruta)
+            except OSError:
+                pass
 
 
-# ----------------------------------------------------------------------
-#  Foto de perfil: cuadrada, 320x320, JPEG (misma proporción en todos lados)
-# ----------------------------------------------------------------------
 AVATAR_LADO = 320
 
 
 def guardar_avatar(archivo, id_usuario):
-    """Recorta al centro en cuadrado, redimensiona y guarda en static/img/perfiles/.
-    Devuelve (ruta_relativa | None, mensaje_de_error | None)."""
-    from PIL import ImageOps
-
     if not archivo or not archivo.filename:
         return None, "Elige una imagen para tu foto de perfil."
-    if _extension(archivo.filename) not in EXTENSIONES:
+    ext = _extension(archivo.filename)
+    if ext not in EXTENSIONES:
         return None, "La foto debe ser JPG, PNG, WEBP o GIF."
-    datos = archivo.stream.read(_MAX_BYTES + 1)
-    if len(datos) > _MAX_BYTES:
-        return None, "La foto pesa más de 5 MB."
-    try:
-        imagen = Image.open(io.BytesIO(datos))
-        imagen.verify()
-        imagen = Image.open(io.BytesIO(datos))
-        imagen = ImageOps.exif_transpose(imagen)
-        if imagen.width * imagen.height > 40_000_000:
-            return None, "La foto es demasiado grande."
-        imagen = ImageOps.fit(imagen.convert("RGB"), (AVATAR_LADO, AVATAR_LADO), Image.LANCZOS)
-    except Exception:
-        return None, "El archivo no es una imagen válida."
-
+    datos = _leer_limitado(archivo.stream)
+    if not datos:
+        return None, "La foto está vacía o pesa más de 5 MB."
+    esperado = "jpeg" if ext in ("jpg", "jpeg") else ext
+    imagen = _abrir_verificada(datos, esperado)
+    if imagen is None:
+        return None, "El archivo no es una imagen válida, no coincide con su extensión o es demasiado grande."
+    imagen = ImageOps.fit(imagen.convert("RGB"), (AVATAR_LADO, AVATAR_LADO), Image.Resampling.LANCZOS)
     carpeta = os.path.join(_BASE, "perfiles")
     os.makedirs(carpeta, exist_ok=True)
-    nombre = f"u{int(id_usuario)}-{secrets.token_hex(6)}.jpg"
-    imagen.save(os.path.join(carpeta, nombre), "JPEG", quality=88, optimize=True)
+    nombre = f"u{int(id_usuario)}-{secrets.token_hex(6)}.webp"
+    imagen.save(os.path.join(carpeta, nombre), "WEBP", quality=82, method=6)
     return f"perfiles/{nombre}", None
 
 
 def ruta_avatar_valida(ruta, id_usuario):
-    """True si `ruta` es una foto de ESTE usuario que existe (evita apuntar a archivos ajenos)."""
     import re as _re
-    if not _re.fullmatch(r"perfiles/u%d-[0-9a-f]{12}\.jpg" % int(id_usuario), ruta or ""):
+    patron = r"perfiles/u%d-[0-9a-f]{12}\.(?:jpg|webp)" % int(id_usuario)
+    if not _re.fullmatch(patron, ruta or ""):
         return False
-    return os.path.isfile(os.path.join(_BASE, *ruta.split("/")))
+    destino = _ruta_dentro_base(ruta)
+    return bool(destino and os.path.isfile(destino))
 
 
 def podar_avatares(id_usuario, conservar):
-    """Borra las fotos viejas de un usuario, dejando solo las de `conservar`
-    (la actual y la anterior, para poder deshacer el cambio)."""
     carpeta = os.path.join(_BASE, "perfiles")
     if not os.path.isdir(carpeta):
         return
     dejar = {os.path.basename(r) for r in conservar if r}
-    prefijo = "u%d-" % int(id_usuario)
+    prefijo = f"u{int(id_usuario)}-"
     for nombre in os.listdir(carpeta):
-        if nombre.startswith(prefijo) and nombre.endswith(".jpg") and nombre not in dejar:
+        if nombre.startswith(prefijo) and nombre not in dejar and nombre.endswith((".jpg", ".webp")):
             try:
                 os.remove(os.path.join(carpeta, nombre))
             except OSError:

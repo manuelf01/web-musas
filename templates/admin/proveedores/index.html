@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% block title %}Proveedores · {{ nombre_negocio }}{% endblock %}
+{% set migas=[('Gestión',None,'bi-box-seam'),('Proveedores',None,'bi-truck')] %}
+{% block content %}
+<div class="adm-head">
+  <div><h1>Proveedores</h1><p>Datos comerciales para compras y devoluciones al proveedor.</p></div>
+  {% if puede_modificar %}<button class="btn-brasa" data-bs-toggle="modal" data-bs-target="#proveedorModal"><i class="bi bi-plus-lg"></i> Agregar proveedor</button>{% endif %}
+</div>
+<section class="adm-card"><div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+  <thead><tr><th>Razón social</th><th>RUC</th><th>Contacto</th><th>Teléfono / correo</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for p in proveedores %}<tr>
+    <td data-label="Razón social"><strong>{{ p.nombre }}</strong><br/><small>{{ p.direccion }}</small></td><td data-label="RUC">{{ p.ruc or '—' }}</td><td data-label="Contacto">{{ p.contacto or '—' }}</td><td data-label="Teléfono / correo">{{ p.telefono or '—' }}<br/><small>{{ p.correo }}</small></td>
+    <td data-label="Estado">{% if puede_modificar %}<form class="adm-switch" method="post" action="{{ url_for('admin.proveedores.estado', id_proveedor=p.id) }}"{% if p.activo %} data-confirm="{{ p.nombre }} no podrá usarse en nuevas compras hasta que lo vuelvas a activar." data-confirm-titulo="Desactivar proveedor" data-confirm-ok="Desactivar" data-confirm-tono="peligro"{% endif %}>{{ campo_csrf() }}<input type="hidden" name="activo" value="{{ 0 if p.activo else 1 }}"/><button class="adm-switch__btn {{ 'is-on' if p.activo }}" type="submit" role="switch" aria-checked="{{ 'true' if p.activo else 'false' }}" aria-label="{{ 'Desactivar' if p.activo else 'Activar' }} proveedor {{ p.nombre }}"><span class="adm-switch__track" aria-hidden="true"><span></span></span><span class="adm-switch__estado">{{ 'Activo' if p.activo else 'Inactivo' }}</span></button></form>{% else %}<span class="caja-estado caja-estado--{{ 'abierta' if p.activo else 'cerrada' }}">{{ 'Activo' if p.activo else 'Inactivo' }}</span>{% endif %}</td>
+    <td data-label="Acciones">{% if puede_modificar %}<div class="acciones">
+      <button class="adm-btn-sm" data-proveedor-editar data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-ruc="{{ p.ruc }}" data-contacto="{{ p.contacto }}" data-telefono="{{ p.telefono }}" data-correo="{{ p.correo }}" data-direccion="{{ p.direccion }}" data-bs-toggle="modal" data-bs-target="#proveedorModal"><i class="bi bi-pencil"></i> Editar</button>
+    </div>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="6" class="adm-vacio">Todavía no hay proveedores.</td></tr>{% endfor %}</tbody>
+</table></div></section>
+
+{% if puede_modificar %}
+<div class="modal fade caja-modal" id="proveedorModal" tabindex="-1" aria-labelledby="proveedorModalTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><div><span class="caja-modal__eyebrow">Directorio de abastecimiento</span><h2 class="modal-title" id="proveedorModalTitulo">Agregar proveedor</h2></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <form method="post" action="{{ url_for('admin.proveedores.guardar') }}">{{ campo_csrf() }}<input type="hidden" name="id" id="prov-id"/>
+      <div class="modal-body"><div class="row g-3">
+        <div class="col-md-8"><label class="musa-field-label" for="prov-nombre">Razón social</label><input class="musa-input" name="nombre" id="prov-nombre" required/></div>
+        <div class="col-md-4"><label class="musa-field-label" for="prov-ruc">RUC</label><input class="musa-input" name="ruc" id="prov-ruc" inputmode="numeric" pattern="[0-9]{11}" maxlength="11"/></div>
+        <div class="col-md-6"><label class="musa-field-label" for="prov-contacto">Contacto</label><input class="musa-input" name="contacto" id="prov-contacto"/></div>
+        <div class="col-md-3"><label class="musa-field-label" for="prov-telefono">Teléfono</label><input class="musa-input" name="telefono" id="prov-telefono"/></div>
+        <div class="col-md-3"><label class="musa-field-label" for="prov-correo">Correo</label><input class="musa-input" type="email" name="correo" id="prov-correo"/></div>
+        <div class="col-12"><label class="musa-field-label" for="prov-direccion">Dirección</label><input class="musa-input" name="direccion" id="prov-direccion"/></div>
+      </div></div>
+      <div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa">Guardar proveedor</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>
+(function () {
+  var modal = document.getElementById('proveedorModal');
+  if (!modal) return;
+  document.querySelectorAll('[data-proveedor-editar]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      ['id','nombre','ruc','contacto','telefono','correo','direccion'].forEach(function (k) { document.getElementById('prov-'+k).value=b.dataset[k]||''; });
+      document.getElementById('proveedorModalTitulo').textContent = 'Editar proveedor';
+    });
+  });
+  modal.addEventListener('hidden.bs.modal', function () {
+    this.querySelector('form').reset(); document.getElementById('prov-id').value='';
+    document.getElementById('proveedorModalTitulo').textContent = 'Agregar proveedor';
+  });
+})();
+</script>{% endblock %}

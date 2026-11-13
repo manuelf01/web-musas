@@ -5,6 +5,14 @@
   var cfg = document.getElementById("ped-cocina");
   if (!cfg) return;
 
+  // Si el servidor rechazó la clave, vuelve a abrir el cobro correcto y
+  // conserva el error dentro de la ventana, no perdido entre las tarjetas.
+  var campoConError = document.querySelector('.caja-modal [data-enfocar]');
+  if (campoConError && window.bootstrap) {
+    var modalError = campoConError.closest('.modal');
+    window.bootstrap.Modal.getOrCreateInstance(modalError).show();
+  }
+
   var URL_EVENTOS = cfg.dataset.eventosUrl;
   var URL_PULSO = cfg.dataset.pulsoUrl;
   var INTERVALO_RESPALDO = 15000;

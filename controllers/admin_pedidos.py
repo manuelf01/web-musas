@@ -5,7 +5,9 @@ from flask import (
     jsonify, stream_with_context,
 )
 from model.Comprobante import Comprobante
+from model.MedioPago import MedioPago
 from model.Pedido import Pedido
+from model.Insumos import StockInsumoInsuficiente
 from avisos import ok_deshacer
 from paginacion import paginar
 from services.pedidos_eventos import esperar_cambio_pedidos, version_actual
@@ -39,6 +41,20 @@ def home():
     q = (request.args.get("q") or "").strip().lower()
 
     todos = Pedido.pedidos_de_hoy(None)
+    medios = {m["codigo"]: m for m in MedioPago.listar()}
+    for pedido in todos:
+        medio = medios.get(pedido["medioPago"])
+        if medio:
+            importes = MedioPago.calcular(medio, pedido["total"])
+            pedido["medioNombre"] = medio["nombre"]
+            pedido["medioTipo"] = medio["tipo"]
+            pedido["totalCobrar"] = float(importes["cobrado"])
+            pedido["descuentoPago"] = float(importes["descuento"])
+        else:
+            pedido["medioNombre"] = pedido["medioPago"].capitalize()
+            pedido["medioTipo"] = "otro"
+            pedido["totalCobrar"] = pedido["total"]
+            pedido["descuentoPago"] = 0.0
     if q:
         todos = [p for p in todos if q in p["cliente"].lower()
                  or q in str(p["idPedido"]) or q in (p["dni"] or "").lower()
@@ -118,26 +134,60 @@ def eventos():
 def preparar():
     id_pedido = request.form.get("idPedido")
     estado = request.form.get("estado", "pendiente")
-    nuevo = Pedido.avanzar_preparacion(id_pedido)
     deshacer = (url_for("admin.pedidos.retroceder"), {"idPedido": id_pedido, "estado": estado})
-    if nuevo == "preparando":
-        ok_deshacer(f"Pedido N° {id_pedido} en preparación. El cliente ya no puede cancelarlo.", *deshacer)
-    elif nuevo == "listo":
+    if Pedido.marcar_listo(id_pedido):
         ok_deshacer(f"Pedido N° {id_pedido} marcado como listo para recojo.", *deshacer)
     else:
-        flash(f"No se pudo avanzar el pedido N° {id_pedido}.", "error")
+        flash(f"El pedido N° {id_pedido} debe estar en cocina antes de marcarlo como listo.", "error")
     return redirect(url_for("admin.pedidos.home", estado=estado))
+
+
+@pedidos.route("/enviar-cocina", methods=["POST"])
+def enviar_cocina():
+    id_pedido = request.form.get("idPedido")
+    estado = request.form.get("estado", "pendiente")
+    try:
+        resultado = Pedido.enviar_a_cocina(id_pedido, g.user["idUsuario"])
+    except StockInsumoInsuficiente as exc:
+        flash(f"No se puede enviar a cocina: quedan {exc.disponible} y se necesitan "
+              f"{exc.requerido} de {exc.nombre}. Revisa el inventario o la receta.", "error")
+        return redirect(url_for("admin.pedidos.home", estado=estado))
+    if resultado in ("en_cocina", "comanda_generada"):
+        return redirect(url_for("admin.pedidos.comanda", id_pedido=id_pedido, imprimir=1))
+    if resultado == "ya_enviada":
+        flash(f"El pedido N° {id_pedido} ya tiene una comanda. Usa «Reimprimir comanda».", "error")
+    else:
+        flash(f"No se pudo enviar el pedido N° {id_pedido} a cocina.", "error")
+    return redirect(url_for("admin.pedidos.home", estado=estado))
+
+
+@pedidos.route("/comanda/<int:id_pedido>")
+def comanda(id_pedido):
+    pedido = Pedido.obtener_comanda(id_pedido)
+    if pedido is None:
+        flash(f"El pedido N° {id_pedido} todavía no tiene una comanda.", "error")
+        return redirect(url_for("admin.pedidos.home"))
+    respuesta = render_template(
+        "admin/pedidos/comanda.html", pedido=pedido,
+        autoimprimir=request.args.get("imprimir") == "1",
+    )
+    return Response(respuesta, headers={"Cache-Control": "no-store"})
+
+
+@pedidos.route("/comanda/<int:id_pedido>/reimprimir", methods=["POST"])
+def reimprimir_comanda(id_pedido):
+    if not Pedido.registrar_reimpresion_comanda(id_pedido):
+        flash(f"El pedido N° {id_pedido} todavía no tiene una comanda.", "error")
+        return redirect(url_for("admin.pedidos.home"))
+    return redirect(url_for("admin.pedidos.comanda", id_pedido=id_pedido, imprimir=1))
 
 
 @pedidos.route("/retroceder", methods=["POST"])
 def retroceder():
     id_pedido = request.form.get("idPedido")
     estado = request.form.get("estado", "pendiente")
-    nuevo = Pedido.retroceder_preparacion(id_pedido)
-    if nuevo == "recibido":
-        flash(f"Pedido N° {id_pedido} volvió a «recibido». El cliente puede cancelarlo otra vez.", "ok")
-    elif nuevo == "preparando":
-        flash(f"Pedido N° {id_pedido} volvió a «en preparación».", "ok")
+    if Pedido.volver_a_cocina(id_pedido):
+        flash(f"Pedido N° {id_pedido} volvió a «En cocina».", "ok")
     else:
         flash(f"No se pudo deshacer el avance del pedido N° {id_pedido}.", "error")
     return redirect(url_for("admin.pedidos.home", estado=estado))
@@ -178,6 +228,8 @@ def confirmar():
         flash(f"El pedido N° {id_pedido} debe marcarse como listo antes de entregarlo.", "error")
     elif resultado == "pago_invalido":
         flash("El pedido no tiene un medio de pago válido.", "error")
+    elif resultado == "caja_cerrada":
+        flash("Abre una caja antes de cobrar y entregar pedidos.", "error")
     elif resultado == "dni_invalido":
         flash("Para la boleta ingresa un DNI válido de 8 dígitos.", "error")
     elif resultado == "ruc_invalido":

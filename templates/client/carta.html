@@ -1,4 +1,5 @@
 {% extends "client/base.html" %}
+{% block scripts_pagina_base %}<script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>{% endblock %}
 {% block title %}Carta completa — {{ nombre_negocio }}{% endblock %}
 {% set migas = [('Carta', None, 'bi-card-list')] %}
 {% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}
@@ -23,7 +24,7 @@
 {% endif %}
 
 <div class="musa-shell carta-wrap" id="carta-live">
-  <div class="carta-head">
+  <div class="carta-head carta-head--filtros">
     <div class="carta-head__titulo">
       <h1>Nuestra carta</h1>
       <span class="carta-head__conteo">{{ productos|length }} producto{{ '' if productos|length == 1 else 's' }} · retiro en tienda</span>

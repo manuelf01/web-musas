@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+{% block title %}Inventario · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Gestión', None, 'bi-box-seam'), ('Inventario', None, 'bi-boxes')] %}
+{% block content %}
+<div class="adm-head"><div><h1>Inventario</h1><p>Saldo actual físico, reservado y disponible por producto y almacén.</p></div><a class="btn-brasa" href="{{ url_for('admin.inventario.movimientos') }}"><i class="bi bi-arrow-left-right"></i> {{ 'Registrar movimiento' if puede_modificar else 'Ver movimientos' }}</a></div>
+<nav class="adm-filtros mb-3" aria-label="Secciones del inventario"><a class="musa-chip is-active" href="{{ url_for('admin.inventario.home') }}" aria-current="page">Productos terminados</a><a class="musa-chip" href="{{ url_for('admin.inventario.insumos') }}">Insumos</a><a class="musa-chip" href="{{ url_for('admin.inventario.recetas') }}">Recetas y producción</a><a class="musa-chip" href="{{ url_for('admin.inventario.movimientos') }}">Movimientos</a><a class="musa-chip" href="{{ url_for('admin.inventario.kardex') }}">Kardex</a></nav>
+{% if alertas %}<div class="musa-alert mb-4"><strong>{{ alertas|length }} productos con disponibilidad baja:</strong> {{ alertas|map(attribute='producto')|join(', ') }}.</div>{% endif %}
+<section class="adm-card">
+  <form method="get" class="vbuscador"><select class="musa-input" name="almacen" aria-label="Almacén">{% for a in almacenes %}<option value="{{ a.id }}" {{ 'selected' if almacen_id == a.id }}>{{ a.nombre }}</option>{% endfor %}</select><input class="musa-input" type="search" aria-label="Buscar producto o categoría" name="q" value="{{ q }}" placeholder="Buscar producto o categoría"/><button class="btn-contorno"><i class="bi bi-search"></i> Filtrar</button></form>
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards"><thead><tr><th>Producto</th><th>Almacén</th><th class="num">Físico</th><th class="num">Reservado</th><th class="num">Disponible</th><th class="num">Costo promedio</th><th>Actualizado</th></tr></thead><tbody>
+  {% for s in saldos %}<tr><td data-label="Producto"><strong>{{ s.producto }}</strong><br/><small>{{ s.categoria }}</small></td><td data-label="Almac&#233;n">{{ s.almacen }}</td><td class="num" data-label="F&#237;sico">{{ s.fisico }}</td><td class="num" data-label="Reservado">{{ s.reservado }}</td><td class="num" data-label="Disponible"><span class="adm-badge-stock {{ 'cero' if s.disponible <= 0 }}">{{ s.disponible }}</span></td><td class="num" data-label="Costo promedio">S/ {{ '%.4f'|format(s.costo) }}</td><td data-label="Actualizado">{{ s.actualizado.strftime('%d/%m/%Y %H:%M') }}</td></tr>{% else %}<tr><td colspan="7" class="adm-vacio">No hay saldos para este almacén.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endblock %}

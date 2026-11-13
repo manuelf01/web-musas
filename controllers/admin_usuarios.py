@@ -111,7 +111,7 @@ def actualizar():
         flash("La cuenta no existe.", "error")
         return redirect(url_for("admin.usuarios.home"))
     if objetivo["esSuper"]:
-        flash("No puedes editar a otro superusuario. Solo puedes crear uno nuevo.", "error")
+        flash("No puedes editar a otro Administrador. Solo puedes crear uno nuevo.", "error")
         return redirect(url_for("admin.usuarios.home"))
 
     rol = request.form.get("rol") or objetivo["rol"]
@@ -122,14 +122,12 @@ def actualizar():
     telefono = (request.form.get("telefono") or "").strip()
 
     err = _validar_datos(rol, dni, nombres, apellidos, correo, telefono)
-    if err is None and rol == "superusuario":
-        err = "Para dar rol de superusuario, crea la cuenta desde «Agregar usuario»."
     if err is None:
         err = Usuario.actualizar_datos(id, dni, nombres, apellidos, correo, telefono)
     if err is None:
         err = Usuario.cambiar_rol(id, rol)
-    if err is None and str(g.user.get("idUsuario")) != str(id):
-        Usuario.cambiar_estado(id, request.form.get("activo", "1") == "1")
+    if err is None and "activo" in request.form and str(g.user.get("idUsuario")) != str(id):
+        Usuario.cambiar_estado(id, request.form.get("activo") == "1")
     if err:
         error_en_formulario(err, "editar", request.form, id)
     else:
@@ -149,7 +147,7 @@ def estado():
     if objetivo is None:
         flash("La cuenta no existe.", "error")
     elif objetivo["esSuper"]:
-        flash("No puedes dar de baja a un superusuario.", "error")
+        flash("No puedes dar de baja a un Administrador.", "error")
     elif str(g.user.get("idUsuario")) == str(id):
         flash("No puedes dar de baja tu propia cuenta.", "error")
     else:

@@ -1,6 +1,7 @@
 """Humo de rutas: páginas públicas responden y el panel exige sesión."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -19,6 +20,7 @@ def test_paginas_publicas_ok(client, url):
 
 @pytest.mark.parametrize("url", [
     "/admin/", "/admin/pedidos/", "/admin/productos/", "/admin/ventas/",
+    "/admin/caja/", "/admin/inventario/", "/admin/medios-pago/",
 ])
 def test_panel_sin_sesion_redirige(client, url):
     r = client.get(url, follow_redirects=False)
@@ -27,7 +29,8 @@ def test_panel_sin_sesion_redirige(client, url):
 
 @pytest.mark.parametrize("url", [
     "/admin/", "/admin/pedidos/", "/admin/productos/", "/admin/categorias/",
-    "/admin/ventas/", "/admin/perfil/", "/admin/usuarios/",
+    "/admin/ventas/", "/admin/perfil/", "/admin/usuarios/", "/admin/caja/",
+    "/admin/inventario/", "/admin/medios-pago/",
 ])
 def test_panel_con_sesion_ok(admin_client, url):
     assert admin_client.get(url).status_code == 200
@@ -36,6 +39,60 @@ def test_panel_con_sesion_ok(admin_client, url):
 def test_carrito_exige_login(client):
     r = client.get("/carrito", follow_redirects=False)
     assert r.status_code in (301, 302)
+
+
+def test_navegacion_movil_publica_muestra_total_e_ingreso(client):
+    publica = client.get("/carta").get_data(as_text=True)
+    assert 'class="musa-tabbar"' in publica
+    assert "data-carrito-total-label" in publica
+    assert ">Ingresar</span>" in publica
+    assert "carrito.js?v=20261026-2" in publica
+
+
+def test_navegacion_movil_autenticada_muestra_mi_cuenta(cliente_client):
+    autenticada = cliente_client.get("/mi-cuenta").get_data(as_text=True)
+    assert ">Mi cuenta</span>" in autenticada
+    assert 'class="active" aria-label="Mi cuenta"' in autenticada
+
+
+def test_aviso_del_carrito_es_visible_y_permite_deshacer():
+    raiz = Path(__file__).resolve().parents[1]
+    js = (raiz / "static/js/carrito.js").read_text(encoding="utf-8")
+    css = (raiz / "static/css/musas-theme.css").read_text(encoding="utf-8")
+    assert 'opciones.deshacer' in js
+    assert 'musas:carrito-deshacer' in js
+    assert 'duracion: opciones.duracion || (cantidadAgregada ? 8000 : 4200)' in js
+    assert ".musa-toasts" in css and "top: 96px" in css and "right: 20px" in css
+
+
+def test_layout_aprovecha_monitores_grandes_sin_estirar_formularios():
+    css = (Path(__file__).resolve().parents[1] / "static/css/musas-theme.css").read_text(encoding="utf-8")
+    assert "--musa-ancho: 1440px" in css
+    assert "--musa-ancho-panel: 1600px" in css
+    assert "--musa-ancho-detalle: 1200px" in css
+    assert "--musa-ancho-lectura: 900px" in css
+    assert ".musa-navbar .musa-nav-actions { display: flex !important;" in css
+    assert ".musa-navbar .musa-nav-actions > :not(.musa-theme-switch) { display: none !important; }" in css
+
+
+def test_cabecera_y_categorias_sticky_se_compactan_solo_en_escritorio(client):
+    raiz = Path(__file__).resolve().parents[1]
+    css = (raiz / "static/css/musas-theme.css").read_text(encoding="utf-8")
+    js = (raiz / "static/js/nav-tienda.js").read_text(encoding="utf-8")
+    html = client.get("/carta").get_data(as_text=True)
+    assert ".musa-navbar" in css and "position: sticky" in css
+    assert ".musa-catbar" in css and "top: var(--musa-nav-h)" in css
+    assert "@media (min-width: 769px)" in css and "musa-nav-compacta" in css
+    assert "body:not(.adm) { padding-top: var(--musa-nav-h)" in css
+    assert "position: fixed;\n    top: 0;\n    right: 0;\n    left: 0;" in css
+    assert "html.musa-nav-compacta .musa-catbar__inner" in css
+    assert "html.musa-nav-compacta .musa-catbar__lugar { display: none; }" in css
+    assert "padding-bottom: 14px" in css
+    assert 'matchMedia("(min-width: 769px)")' in js
+    assert "nav-tienda.js?v=20261026-1" in html
+    assert 'class="carta-head carta-head--filtros"' in html
+    assert ".carta-head--filtros > .carta-filtros" in css
+    assert "grid-template-columns: minmax(0, 1fr) minmax(500px, 620px)" in css
 
 
 def test_pulso_de_cocina(admin_client, bd_limpia):
@@ -115,3 +172,8 @@ def test_checkout_muestra_datos_de_cuenta_solo_lectura(cliente_client, bd_limpia
     assert 'id="correo"' in html and "cliente@correo.com" in html
     assert 'id="correo"' in html and "readonly" in html
     assert 'name="dni"' not in html
+    assert html.count("data-ck-paso=") == 3
+    assert 'data-ck-siguiente="2"' in html
+    assert 'data-ck-siguiente="3"' in html
+    assert 'data-ck-anterior="1"' in html and 'data-ck-anterior="2"' in html
+    assert "checkout.js?v=20261026-1" in html

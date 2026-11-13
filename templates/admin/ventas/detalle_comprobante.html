@@ -75,7 +75,7 @@
             <tr>
               <td>
                 <div class="adm-recibo__prod">
-                  {% if l.imagen %}<img class="adm-thumb" style="width:40px;height:40px;" src="{{ url_for('static', filename='img/' ~ l.imagen) }}" alt="" />
+                  {% if l.imagen %}<img class="adm-thumb" style="width:40px;height:40px;" src="{{ url_for('static', filename='img/' ~ miniatura_imagen(l.imagen)) }}" alt="" loading="lazy" decoding="async" />
                   {% else %}<span class="adm-thumb" style="width:40px;height:40px;"><i class="bi bi-fire"></i></span>{% endif %}
                   <span>{{ l.nombre }}{% if l.adicionales %}<small class="d-block" style="color:var(--musa-texto-suave);">Personalización: {{ l.adicionales | join(', ') }}</small>{% endif %}</span>
                 </div>
@@ -90,6 +90,8 @@
 
       <div class="adm-recibo__tot">
         <dl>
+          {% if c.descuento %}<div class="fila"><span>Importe de productos</span><span>S/ {{ '%.2f'|format(c.montoBruto) }}</span></div>
+          <div class="fila"><span>Descuento por medio de pago</span><span>− S/ {{ '%.2f'|format(c.descuento) }}</span></div>{% endif %}
           <div class="fila"><span>Op. gravada</span><span>S/ {{ '%.2f'|format(c.subTotal) }}</span></div>
           <div class="fila"><span>IGV (18%)</span><span>S/ {{ '%.2f'|format(c.igv) }}</span></div>
           <div class="fila grande"><span>Total</span><strong>S/ {{ '%.2f'|format(c.montoTotal) }}</strong></div>
@@ -130,23 +132,32 @@
     <p class="small mt-3 mb-0" style="color:var(--musa-texto-suave);">Comprobante interno de la operación. No es un comprobante electrónico enviado a SUNAT.</p>
 
     {% if not c.anulado %}
-    <form method="post" action="{{ url_for('admin.ventas.anular', idComprobante=c.idComprobante) }}" class="vanular">
-      {{ campo_csrf() }}
+    <div class="vanular">
       <h4><i class="bi bi-slash-circle"></i> Anular esta venta</h4>
       <p>El comprobante se conserva marcado como anulado y deja de sumar en las ventas.</p>
-      <label class="musa-field-label" for="anular-motivo">Motivo (obligatorio)</label>
-      <textarea id="anular-motivo" name="motivo" class="musa-input" rows="2" minlength="5" maxlength="255" required
-                placeholder="Ej. Cobro duplicado, cliente devolvió el pedido…"></textarea>
-      <label class="vanular__check">
-        <input type="checkbox" name="devolver_stock" value="1" />
-        Devolver los productos al inventario
-      </label>
-      <button type="submit" class="btn-peligro"
-        data-confirm="El comprobante {{ c.numero }} (S/ {{ '%.2f'|format(c.montoTotal) }}) quedará anulado y dejará de contar en las ventas. Podrás deshacerlo desde esta misma pantalla."
-        data-confirm-titulo="Anular venta" data-confirm-ok="Sí, anular" data-confirm-tono="peligro">
+      <button type="button" class="btn-peligro" data-bs-toggle="modal" data-bs-target="#anularVentaModal">
         <i class="bi bi-slash-circle"></i> Anular venta</button>
-    </form>
+    </div>
     {% endif %}
   </aside>
 </div>
+
+{% if not c.anulado %}
+<div class="modal fade caja-modal" id="anularVentaModal" tabindex="-1" aria-labelledby="anularVentaTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><div><span class="caja-modal__eyebrow">Corrección de venta</span><h2 class="modal-title" id="anularVentaTitulo">Anular {{ c.numero }}</h2></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <form method="post" action="{{ url_for('admin.ventas.anular', idComprobante=c.idComprobante) }}">
+      {{ campo_csrf() }}
+      <div class="modal-body">
+        <div class="musa-alert musa-alert--danger mb-3">Esta venta por <strong>S/ {{ '%.2f'|format(c.montoTotal) }}</strong> dejará de contar en los totales. El comprobante permanecerá visible como anulado.</div>
+        <label class="musa-field-label" for="anular-motivo">Motivo (obligatorio)</label>
+        <textarea id="anular-motivo" name="motivo" class="musa-input" rows="3" minlength="5" maxlength="255" required placeholder="Ej. Cobro duplicado, cliente devolvió el pedido…"></textarea>
+        <label class="vanular__check mt-3"><input type="checkbox" name="devolver_stock" value="1"/> Devolver los productos al inventario</label>
+        <small class="musa-field-help">Actívalo únicamente si los productos realmente pueden reincorporarse.</small>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn-peligro"><i class="bi bi-slash-circle"></i> Confirmar anulación</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
 {% endblock %}

@@ -1,12 +1,10 @@
 """Listados con flechas/números: productos/categorías/usuarios (10), comprobantes y Mis pedidos (5)."""
 
-import re
-
 from bd import obtener_conexion
 
 
 def _filas(html):
-    return len(re.findall(r'<td>\s*<div class="adm-prod-cel">', html))
+    return html.count('class="adm-prod-cel"')
 
 
 def test_productos_10_por_pagina_y_pagina_2(bd_limpia, admin_client):

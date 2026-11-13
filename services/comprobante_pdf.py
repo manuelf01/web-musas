@@ -205,14 +205,21 @@ def generar_comprobante_pdf(comprobante):
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, CREMA]),
     ]))
 
-    totales = Table([
+    filas_totales = []
+    if comprobante.get("descuento"):
+        filas_totales.extend([
+            [Paragraph("Importe de productos", normal), Paragraph(f"S/ {comprobante['montoBruto']:.2f}", normal)],
+            [Paragraph("Descuento por medio de pago", normal), Paragraph(f"- S/ {comprobante['descuento']:.2f}", normal)],
+        ])
+    filas_totales.extend([
         [Paragraph("Op. gravada", normal), Paragraph(f"S/ {comprobante['subTotal']:.2f}", normal)],
         [Paragraph("IGV (18 %) incluido", normal), Paragraph(f"S/ {comprobante['igv']:.2f}", normal)],
         [Paragraph("TOTAL PAGADO", total_style), Paragraph(f"S/ {comprobante['montoTotal']:.2f}", total_style)],
-    ], colWidths=[50 * mm, 38 * mm], hAlign="RIGHT")
+    ])
+    totales = Table(filas_totales, colWidths=[50 * mm, 38 * mm], hAlign="RIGHT")
     totales.setStyle(TableStyle([
         ("ALIGN", (1, 0), (1, -1), "RIGHT"),
-        ("LINEABOVE", (0, 2), (-1, 2), 1.2, BRASA),
+        ("LINEABOVE", (0, -1), (-1, -1), 1.2, BRASA),
         ("TOPPADDING", (0, 0), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
     ]))

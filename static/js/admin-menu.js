@@ -1,15 +1,13 @@
-/* Menú lateral del panel: la hamburguesa de la marca lo contrae/expande.
-   Escritorio: se recuerda la elección. Pantallas angostas: el menú está
-   contraído y al pulsar se abre encima del contenido (se cierra al tocar fuera). */
+/* Admin navigation: desktop collapse and Bootstrap responsive offcanvas on mobile. */
 (function () {
   "use strict";
   var html = document.documentElement;
   var boton = document.querySelector("[data-adm-toggle]");
   if (!boton) return;
-  var angosta = window.matchMedia("(max-width: 900px)");
+  var movil = window.matchMedia("(max-width: 991.98px)");
 
   function compacto() {
-    return angosta.matches ? !html.classList.contains("adm-abierto") : html.classList.contains("adm-colapsado");
+    return !movil.matches && html.classList.contains("adm-colapsado");
   }
 
   function pintar() {
@@ -21,37 +19,19 @@
   }
 
   boton.addEventListener("click", function () {
-    if (angosta.matches) {
-      html.classList.toggle("adm-abierto");
-    } else {
-      var contraido = html.classList.toggle("adm-colapsado");
-      try { localStorage.setItem("musa.adm.menu", contraido ? "colapsado" : "expandido"); } catch (e) {}
-    }
+    var contraido = html.classList.toggle("adm-colapsado");
+    try { localStorage.setItem("musa.adm.menu", contraido ? "colapsado" : "expandido"); } catch (e) {}
     pintar();
   });
-
-  document.addEventListener("click", function (e) {
-    if (angosta.matches && html.classList.contains("adm-abierto") && !e.target.closest(".adm-side")) {
-      html.classList.remove("adm-abierto");
-      pintar();
-    }
-  });
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && html.classList.contains("adm-abierto")) {
-      html.classList.remove("adm-abierto");
-      pintar();
-      boton.focus();
-    }
-  });
-  var cambio = function () { html.classList.remove("adm-abierto"); pintar(); };
-  if (angosta.addEventListener) angosta.addEventListener("change", cambio);
-  else if (angosta.addListener) angosta.addListener(cambio);
 
   // ---- Módulos: acordeón (barra expandida) y ventana flotante (barra contraída)
   var GUARDADO = "musa.adm.grupos";
   var grupos = document.querySelectorAll(".adm-grupo");
   var recordados = [];
-  try { recordados = JSON.parse(localStorage.getItem(GUARDADO) || "[]"); } catch (e) {}
+  try {
+    var gruposGuardados = JSON.parse(localStorage.getItem(GUARDADO) || "[]");
+    if (Array.isArray(gruposGuardados)) recordados = gruposGuardados;
+  } catch (e) {}
   function recordar() {
     var abiertos = [];
     grupos.forEach(function (g) { if (g.classList.contains("is-abierto")) abiertos.push(g.dataset.grupo); });

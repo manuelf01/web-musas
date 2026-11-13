@@ -1,5 +1,6 @@
 import json
 import re
+import secrets
 from io import BytesIO
 
 from flask import (
@@ -12,6 +13,8 @@ from model.CategoriaProducto import CategoriaProducto
 from model.Pedido import Pedido, StockInsuficiente, LimitePedidos, FranjaLlena
 from dinero import dinero
 from model.Usuario import Usuario
+from model.MedioPago import MedioPago
+from model.Insumos import StockInsumoInsuficiente
 from seguridad import password_valida
 from avisos import ok_deshacer, error_en_formulario
 from formato import soles_en_letras
@@ -497,6 +500,8 @@ def pag_compra():
         sesion=cuenta or user,
         franjas=Pedido.franjas_recojo(),
         pago_digital=PAGO_DIGITAL,
+        medios_pago=MedioPago.listar(solo_activos=True),
+        idempotencia=secrets.token_hex(16),
     )
 
 
@@ -510,6 +515,8 @@ def _recotizar(user, mensaje):
         form=request.form.to_dict(),
         franjas=Pedido.franjas_recojo(),
         pago_digital=PAGO_DIGITAL,
+        medios_pago=MedioPago.listar(solo_activos=True),
+        idempotencia=request.form.get("idempotencia") or secrets.token_hex(16),
     )
 
 
@@ -607,20 +614,27 @@ def _procesar_compra(user):
     elif not Pedido.franja_disponible(hora):
         error = ("La hora elegida ya pasó o acaba de quedarse sin cupos. "
                  "Selecciona otra hora disponible; tu carrito seguirá guardado.")
-    elif medio_pago not in ("efectivo", "tarjeta", "yape", "plin"):
-        error = "Elige cómo deseas pagar al recoger: efectivo, tarjeta, Yape o Plin."
+    elif not any(m["codigo"] == medio_pago for m in MedioPago.listar(solo_activos=True)):
+        error = "Elige uno de los medios de pago disponibles."
 
     if error:
         return _recotizar(user, error)
 
     try:
         id_pedido, key = Pedido.crear_pedido_completo(
-            id_usuario, correo, nombres, telefono, hora, medio_pago, notas, items
+            id_usuario, correo, nombres, telefono, hora, medio_pago, notas, items,
+            request.form.get("idempotencia")
         )
     except StockInsuficiente as e:
         if e.disponible <= 0:
             return _recotizar(user, f"«{e.nombre}» se agotó. Quítalo del carrito para continuar.")
         return _recotizar(user, f"Solo quedan {e.disponible} de «{e.nombre}». Ajusta la cantidad.")
+    except StockInsumoInsuficiente as e:
+        return _recotizar(
+            user,
+            f"No hay suficiente {e.nombre} para preparar este pedido. "
+            "Prueba otra personalización o vuelve a intentarlo más tarde.",
+        )
     except LimitePedidos:
         return _recotizar(
             user,
@@ -651,11 +665,15 @@ def pedido_confirmado(id_pedido):
     if user is None or pedido.get("idUsuario") != user["idUsuario"]:
         return redirect(url_for("cliente.mis_pedidos"))
 
+    medio = MedioPago.por_codigo(pedido.get("medioPago"))
+    importes = MedioPago.calcular(medio, pedido["total"]) if medio else None
     return render_template(
         "client/pedido-confirmado.html",
         cliente=_cliente_nombre(),
         pedido=pedido,
         pago_digital=PAGO_DIGITAL,
+        medio_pago=medio,
+        pago_importes=importes,
     )
 # @cliente.route("/<tipo>")
 # def verMas(tipo):

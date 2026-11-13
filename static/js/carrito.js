@@ -100,7 +100,12 @@
       if (el.classList.contains("musa-tabbar__badge")) el.hidden = n === 0;
     });
     document.querySelectorAll("[data-carrito-total]").forEach(function (el) {
-      el.textContent = "S/ " + t.toFixed(2);
+      var importe = "S/ " + t.toFixed(2);
+      el.textContent = importe;
+      if (el.hasAttribute("data-carrito-total-label")) {
+        var enlace = el.closest("a");
+        if (enlace) enlace.setAttribute("aria-label", "Carrito, total " + importe);
+      }
     });
   }
 
@@ -173,39 +178,149 @@
 
   function toast(mensaje, opciones) {
     opciones = opciones || {};
+    var duracion = opciones.duracion || (opciones.deshacer ? 8000 : 4200);
     var el = document.createElement("div");
     el.className = "musa-toast";
+    el.setAttribute("role", "status");
+
+    var icono = document.createElement("span");
+    icono.className = "musa-toast__icono";
+    icono.innerHTML = '<i class="bi bi-check-lg"></i>';
+    el.appendChild(icono);
+
+    var cuerpo = document.createElement("div");
+    cuerpo.className = "musa-toast__cuerpo";
+    var titulo = document.createElement("strong");
+    titulo.textContent = opciones.titulo || (opciones.deshacer ? "Agregado al carrito" : "Listo");
     var texto = document.createElement("span");
-    texto.innerHTML = '<i class="bi bi-check-circle-fill"></i> ' + mensaje;
-    el.appendChild(texto);
+    texto.textContent = mensaje;
+    cuerpo.appendChild(titulo);
+    cuerpo.appendChild(texto);
+
+    var acciones = document.createElement("div");
+    acciones.className = "musa-toast__acciones";
+    if (typeof opciones.deshacer === "function") {
+      var deshacer = document.createElement("button");
+      deshacer.type = "button";
+      deshacer.className = "musa-toast__deshacer";
+      deshacer.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Deshacer';
+      acciones.appendChild(deshacer);
+    }
     if (opciones.href) {
       var a = document.createElement("a");
       a.href = opciones.href;
       a.className = "musa-toast__accion";
       a.textContent = opciones.accion || "Ver";
-      el.appendChild(a);
+      acciones.appendChild(a);
     }
+    if (acciones.children.length) cuerpo.appendChild(acciones);
+    el.appendChild(cuerpo);
+
+    var botonCerrar = document.createElement("button");
+    botonCerrar.type = "button";
+    botonCerrar.className = "musa-toast__cerrar";
+    botonCerrar.setAttribute("aria-label", "Cerrar aviso");
+    botonCerrar.innerHTML = '<i class="bi bi-x-lg"></i>';
+    el.appendChild(botonCerrar);
+
+    var tiempo = document.createElement("span");
+    tiempo.className = "musa-toast__tiempo";
+    tiempo.style.animationDuration = duracion + "ms";
+    el.appendChild(tiempo);
+
     contenedorToasts().appendChild(el);
     requestAnimationFrame(function () {
       el.classList.add("is-visible");
     });
+    var cerrado = false;
+    var timer = null;
+    var inicio = 0;
+    var restante = duracion;
     var cerrar = function () {
+      if (cerrado) return;
+      cerrado = true;
+      clearTimeout(timer);
       el.classList.remove("is-visible");
       setTimeout(function () {
         el.remove();
       }, 300);
     };
-    setTimeout(cerrar, opciones.duracion || 3600);
+    function iniciarTimer() {
+      inicio = Date.now();
+      timer = setTimeout(cerrar, restante);
+    }
+    function pausarTimer() {
+      clearTimeout(timer);
+      restante = Math.max(0, restante - (Date.now() - inicio));
+    }
+    botonCerrar.addEventListener("click", cerrar);
+    el.addEventListener("mouseenter", pausarTimer);
+    el.addEventListener("mouseleave", function () {
+      if (!cerrado && restante > 0) iniciarTimer();
+    });
+    if (deshacer) {
+      deshacer.addEventListener("click", function () {
+        if (cerrado) return;
+        var resultado = opciones.deshacer();
+        cerrar();
+        toast(resultado === false ? "El producto ya no estaba en el carrito." : "El producto fue retirado del carrito.", {
+          titulo: resultado === false ? "Sin cambios" : "Acción deshecha",
+          duracion: 2600,
+        });
+      });
+    }
+    iniciarTimer();
+    return el;
+  }
+
+  function cantidadDeLinea(items, item) {
+    for (var i = 0; i < items.length; i++) {
+      if (_mismaLinea(items[i], item)) return Math.max(0, Number(items[i].cantidad) || 0);
+    }
+    return 0;
+  }
+
+  function deshacerAgregado(item, cantidadAgregada) {
+    if (Number(cantidadAgregada) <= 0) return false;
+    var items = leer();
+    var indice = -1;
+    for (var i = 0; i < items.length; i++) {
+      if (_mismaLinea(items[i], item)) { indice = i; break; }
+    }
+    if (indice < 0) return false;
+    var agregadas = Math.max(1, Number(cantidadAgregada) || 1);
+    var actuales = Math.max(1, Number(items[indice].cantidad) || 1);
+    if (actuales > agregadas) items[indice].cantidad = actuales - agregadas;
+    else items.splice(indice, 1);
+    guardar(items);
+    window.dispatchEvent(new CustomEvent("musas:carrito-deshacer"));
+    return true;
   }
 
   function agregarConAnim(item, origen, opciones) {
     opciones = opciones || {};
+    var cantidadAntes = cantidadDeLinea(leer(), item);
     agregar(item);
+    var cantidadAgregada = Math.max(0, cantidadDeLinea(leer(), item) - cantidadAntes);
     volar(origen);
-    toast(opciones.mensaje || "Agregado al carrito", {
+    var opcionesAviso = {
       href: opciones.href || "/carrito",
       accion: opciones.accion || "Ver carrito",
-    });
+      duracion: opciones.duracion || (cantidadAgregada ? 8000 : 4200),
+    };
+    if (cantidadAgregada) {
+      opcionesAviso.deshacer = function () {
+        var ok = deshacerAgregado(item, cantidadAgregada);
+        if (ok && typeof opciones.onDeshacer === "function") opciones.onDeshacer();
+        return ok;
+      };
+    } else {
+      opcionesAviso.titulo = "Límite alcanzado";
+    }
+    toast(
+      cantidadAgregada ? (opciones.mensaje || "Agregado al carrito") : "Ya tienes 99 unidades de esta combinación.",
+      opcionesAviso
+    );
   }
 
   window.MusasCarrito = {

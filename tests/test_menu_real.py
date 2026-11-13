@@ -36,6 +36,10 @@ def test_hamburguesa_ofrece_salsas_papas_y_agregados(bd_limpia, cliente_client):
     assert 'type="radio"' in html and html.count('data-grupo="papas"') == 3
     assert html.count('data-grupo="salsa"') == 7 and html.count('data-grupo="agregado"') == 10
     assert "+ S/ 2.00" in html and "+ S/ 6.00" in html   # agregados con precio
+    assert html.count("data-dp-paso=") == 4
+    assert 'data-dp-siguiente="2"' in html and 'data-dp-siguiente="4"' in html
+    assert 'data-dp-resumen' in html and "Revisa tu personalización" in html
+    assert "detalle-producto.js?v=20261026-2" in html
 
 
 def test_plato_especial_no_se_personaliza(bd_limpia, cliente_client):
@@ -43,6 +47,8 @@ def test_plato_especial_no_se_personaliza(bd_limpia, cliente_client):
     assert 'data-admite-cremas="0"' in html
     assert "no se personaliza" in html
     assert 'class="crema-check"' not in html
+    assert "data-dp-paso=" not in html
+    assert "data-agregar" in html
 
 
 def test_precios_por_ids_solo_cremas_acepta_personalizacion_y_rechaza_hamburguesa(bd_limpia):

@@ -1,0 +1,72 @@
+{% extends "admin/base.html" %}
+{% block title %}Recetas y producción · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Gestión', None, 'bi-box-seam'), ('Inventario', url_for('admin.inventario.home'), 'bi-boxes'), ('Recetas y producción', None, 'bi-journal-check')] %}
+{% block content %}
+<div class="adm-head"><div><h1>Recetas y producción</h1><p>Define cuánto insumo consume cada producto y consulta la producción máxima estimada.</p></div>
+  {% if puede_modificar %}<button class="btn-brasa" data-receta-nueva data-bs-toggle="modal" data-bs-target="#recetaModal"><i class="bi bi-plus-lg"></i> Configurar receta</button>{% endif %}
+</div>
+<nav class="adm-filtros mb-3" aria-label="Secciones del inventario">
+  <a class="musa-chip" href="{{ url_for('admin.inventario.home') }}">Productos terminados</a>
+  <a class="musa-chip" href="{{ url_for('admin.inventario.insumos') }}">Insumos</a>
+  <a class="musa-chip is-active" href="{{ url_for('admin.inventario.recetas') }}" aria-current="page">Recetas y producción</a>
+  <a class="musa-chip" href="{{ url_for('admin.inventario.movimientos') }}">Movimientos</a>
+  <a class="musa-chip" href="{{ url_for('admin.inventario.kardex') }}">Kardex</a>
+</nav>
+<div class="musa-alert mb-4"><strong>Cómo leer la capacidad:</strong> se calcula usando la receta base y el ingrediente que primero se agotaría. Las salsas, papas o agregados elegidos por el cliente consumen sus recetas adicionales; por eso el máximo real puede bajar según la personalización.</div>
+<section class="adm-card">
+  <div class="adm-card__head"><div><h2>Capacidad estimada por producto</h2><p>Disponible = stock físico − reservado para pedidos.</p></div></div>
+  <form method="get" class="vbuscador mb-3"><label class="musa-field-label" for="recetaAlmacen">Calcular con existencias de</label><select class="musa-input" id="recetaAlmacen" name="almacen">{% for a in almacenes %}<option value="{{ a.id }}" {{ 'selected' if almacen_id == a.id }}>{{ a.nombre }}</option>{% endfor %}</select><button class="btn-contorno">Actualizar capacidad</button></form>
+  <div class="adm-search mb-3"><i class="bi bi-search"></i><input type="search" placeholder="Buscar hamburguesa o producto…" aria-label="Buscar producto" data-filtro-vivo="#capacidad-recetas" /></div>
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards" id="capacidad-recetas">
+    <thead><tr><th>Producto</th><th>Categoría</th><th>Receta base</th><th>Ingrediente limitante</th><th>Acción</th></tr></thead>
+    <tbody>{% for p in capacidades %}<tr data-filtro-item data-filtro-texto="{{ p.nombre }} {{ p.categoria }} {{ p.limitante }}">
+      <td data-label="Producto"><strong>{{ p.nombre }}</strong></td><td data-label="Categoría">{{ p.categoria }}</td>
+      <td data-label="Receta base">{% if p.limite is none %}<span class="text-muted">Sin receta configurada</span>{% else %}<strong>{{ p.limite }} unidades</strong>{% endif %}</td>
+      <td data-label="Ingrediente limitante">{{ p.limitante or '—' }}</td>
+      <td data-label="Acciones">{% if puede_modificar %}<button type="button" class="adm-btn-sm" data-receta-editar data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-tipo="producto" data-lineas='{{ (recetas|selectattr("producto.id", "equalto", p.idProducto)|selectattr("tipo", "equalto", "producto")|map(attribute="lineas")|first|default([], true))|tojson|forceescape }}' data-bs-toggle="modal" data-bs-target="#recetaModal"><i class="bi bi-pencil"></i> Editar receta</button>{% else %}<span class="text-muted">Consulta</span>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+<section class="adm-card mt-4">
+  <div class="adm-card__head"><div><h2>Recetas registradas</h2><p>Las recetas de personalización se suman cuando el cliente elige esa opción.</p></div></div>
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+    <thead><tr><th>Producto / opción</th><th>Uso</th><th>Insumos por unidad</th><th>Acciones</th></tr></thead>
+    <tbody>{% for r in recetas %}<tr>
+      <td data-label="Producto / opción"><strong>{{ r.producto.nombre }}</strong></td><td data-label="Uso">{{ 'Receta base' if r.tipo == 'producto' else 'Personalización elegible' }}</td>
+      <td data-label="Insumos por unidad">{% for l in r.lineas %}{{ l.nombre }}: {{ '%.3f'|format(l.cantidad) }} {{ l.unidad }}{% if not loop.last %}<br/>{% endif %}{% endfor %}</td>
+      <td data-label="Acciones">{% if puede_modificar %}<button type="button" class="adm-btn-sm" data-receta-editar data-id="{{ r.producto.id }}" data-nombre="{{ r.producto.nombre }}" data-tipo="{{ r.tipo }}" data-lineas='{{ r.lineas|tojson|forceescape }}' data-bs-toggle="modal" data-bs-target="#recetaModal"><i class="bi bi-pencil"></i> Editar</button>{% else %}<span class="text-muted">Consulta</span>{% endif %}</td>
+    </tr>{% else %}<tr><td colspan="4" class="adm-vacio">Todavía no hay recetas. Configura la receta base de cada producto y, cuando corresponda, las de sus opciones.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+{% if puede_modificar %}
+<div class="modal fade caja-modal" id="recetaModal" tabindex="-1" aria-labelledby="recetaTitulo" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><div><h2 class="modal-title" id="recetaTitulo">Configurar receta</h2><p class="mb-0 text-muted">Indica cuánto de cada insumo utiliza una unidad.</p></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <form method="post" action="{{ url_for('admin.inventario.guardar_receta') }}">{{ campo_csrf() }}
+    <div class="modal-body"><div class="row g-3 mb-3"><div class="col-md-8"><label class="musa-field-label" for="recetaProducto">Producto del menú</label><select class="musa-input" id="recetaProducto" name="idProducto" required>{% for p in productos %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}</select></div>
+      <div class="col-md-4"><label class="musa-field-label" for="recetaTipo">Esta receta se usa como</label><select class="musa-input" id="recetaTipo" name="tipoUso"><option value="producto">Receta base del producto</option><option value="opcion">Opción elegida (salsa, papa o agregado)</option></select></div></div>
+      <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><strong>Ingredientes de la receta</strong><button type="button" class="btn-contorno" id="recetaAgregarLinea"><i class="bi bi-plus-lg"></i> Agregar insumo</button></div>
+      <div id="recetaLineas" class="d-grid gap-2"></div>
+      <template id="recetaLineaTemplate"><div class="row g-2 align-items-end receta-insumo-linea"><div class="col-md-7"><label class="musa-field-label">Insumo</label><select class="musa-input" name="idInsumo[]" required>{% for i in insumos %}<option value="{{ i.id }}">{{ i.nombre }} ({{ i.unidad }})</option>{% endfor %}</select></div><div class="col-md-3"><label class="musa-field-label">Cantidad por unidad</label><input class="musa-input" type="number" name="cantidad[]" min="0.001" step="0.001" required /></div><div class="col-md-2"><button type="button" class="adm-btn-sm" data-receta-quitar>Quitar</button></div></div></template>
+      {% if not insumos %}<p class="musa-alert mt-3">Primero registra los insumos para poder armar una receta.</p>{% endif %}
+    </div><div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa" {{ 'disabled' if not insumos }}>Guardar receta</button></div>
+  </form>
+</div></div></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>
+(function(){
+  var box=document.getElementById('recetaLineas'),tpl=document.getElementById('recetaLineaTemplate');
+  var producto=document.getElementById('recetaProducto'),tipo=document.getElementById('recetaTipo'),titulo=document.getElementById('recetaTitulo');
+  function agregar(linea){var n=tpl.content.firstElementChild.cloneNode(true);if(linea){n.querySelector('[name="idInsumo[]"]').value=linea.id;n.querySelector('[name="cantidad[]"]').value=linea.cantidad;}box.appendChild(n);}
+  function vaciar(){box.replaceChildren();}
+  document.getElementById('recetaAgregarLinea')?.addEventListener('click',function(){agregar();});
+  box?.addEventListener('click',function(e){if(e.target.closest('[data-receta-quitar]')){e.target.closest('.receta-insumo-linea').remove();}});
+  document.querySelector('[data-receta-nueva]')?.addEventListener('click',function(){vaciar();agregar();titulo.textContent='Configurar receta';});
+  document.querySelectorAll('[data-receta-editar]').forEach(function(b){b.addEventListener('click',function(){
+    vaciar();producto.value=b.dataset.id;tipo.value=b.dataset.tipo;titulo.textContent='Editar receta · '+b.dataset.nombre;
+    try{JSON.parse(b.dataset.lineas||'[]').forEach(agregar);}catch(e){} if(!box.children.length)agregar();
+  });});
+})();
+</script>{% endblock %}

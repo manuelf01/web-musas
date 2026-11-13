@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <script>document.documentElement.classList.add("musa-js");</script>
+    <script>try { var t=localStorage.getItem("musa.tema"); if(t!=="claro"&&t!=="oscuro"&&t!=="sistema")t="sistema"; document.documentElement.dataset.theme=t==="sistema"?(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"):t==="oscuro"?"dark":"light"; document.documentElement.dataset.themePreference=t; } catch(e) { document.documentElement.dataset.theme="light"; document.documentElement.dataset.themePreference="sistema"; }</script>
     <title>{% block title %}{{ nombre_negocio }} — Burger Joint{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" />
 
@@ -19,16 +20,13 @@
     <meta property="og:image" content="{% block og_image %}{{ url_for('static', filename='img/hamburguesas/h-2.jpg', _external=True) }}{% endblock %}" />
     <meta property="og:url" content="{{ request.url }}" />
     <meta name="twitter:card" content="summary_large_image" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preload" href="{{ url_for('static', filename='fonts/inter-latin.woff2') }}" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="{{ url_for('static', filename='fonts/space-grotesk-latin.woff2') }}" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}" />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
       rel="stylesheet"
-    />
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
-      rel="stylesheet"
-      integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+      integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
       crossorigin="anonymous"
     />
     <link
@@ -37,7 +35,7 @@
     />
     <link
       rel="stylesheet"
-      href="{{ url_for('static', filename='css/musas-theme.css') }}"
+      href="{{ url_for('static', filename='css/musas-theme.css', v='20261106-13') }}"
     />
     {% block head %}{% endblock %}
   </head>
@@ -56,7 +54,12 @@
           <a href="{{ url_for('cliente.mis_pedidos') }}" class="{% block nav_pedidos %}{% endblock %}">Mis pedidos</a>
         </nav>
 
-        <div class="d-flex align-items-center gap-3">
+        <div class="musa-nav-actions d-flex align-items-center gap-3">
+          <label class="musa-theme-switch" title="Cambiar apariencia">
+            <span>Modo oscuro</span>
+            <input type="checkbox" role="switch" data-theme-switch aria-label="Activar modo oscuro">
+            <span class="musa-theme-switch__track" aria-hidden="true"><i class="bi bi-sun-fill"></i><i class="bi bi-moon-stars-fill"></i><span class="musa-theme-switch__thumb"></span></span>
+          </label>
           <a href="{{ url_for('cliente.pag_carrito') if cliente else url_for('cliente.auth.login', next=url_for('cliente.pag_carrito')) }}" class="musa-cart-pill">
             <span class="musa-cart-count" data-carrito-count>0</span>
             <span data-carrito-total>S/ 0.00</span>
@@ -113,13 +116,26 @@
       <a href="{{ url_for('cliente.carta') }}" class="{% block tab_carta %}{% endblock %}">
         <i class="bi bi-card-list"></i><span>Carta</span>
       </a>
-      <a href="{{ url_for('cliente.pag_carrito') if cliente else url_for('cliente.auth.login', next=url_for('cliente.pag_carrito')) }}" class="{% block tab_carrito %}{% endblock %}">
-        <i class="bi bi-bag"></i><span>Carrito</span>
+      <a href="{{ url_for('cliente.pag_carrito') if cliente else url_for('cliente.auth.login', next=url_for('cliente.pag_carrito')) }}" class="{% block tab_carrito %}{% endblock %}" aria-label="Carrito, total S/ 0.00" title="Ver carrito">
+        <i class="bi bi-bag"></i><span data-carrito-total data-carrito-total-label>S/ 0.00</span>
         <span class="musa-tabbar__badge" data-carrito-count hidden>0</span>
       </a>
       <a href="{{ url_for('cliente.mis_pedidos') }}" class="{% block tab_pedidos %}{% endblock %}">
         <i class="bi bi-receipt"></i><span>Pedidos</span>
       </a>
+      {% if cliente %}
+        <a href="{{ url_for('cliente.mi_cuenta') }}" class="{% block tab_cuenta %}{% endblock %}" aria-label="Mi cuenta">
+          <i class="bi bi-person-circle"></i><span>Mi cuenta</span>
+        </a>
+      {% elif admin_sesion %}
+        <a href="{{ url_for('admin.home') }}" aria-label="Ir al panel administrativo">
+          <i class="bi bi-speedometer2"></i><span>Panel</span>
+        </a>
+      {% else %}
+        <a href="{{ url_for('cliente.auth.login') }}" class="{% block tab_ingresar %}{% endblock %}" aria-label="Iniciar sesión">
+          <i class="bi bi-box-arrow-in-right"></i><span>Ingresar</span>
+        </a>
+      {% endif %}
     </nav>
 
     <footer class="musa-footer">
@@ -187,8 +203,8 @@
     {% include "client/_legal_modales.html" %}
 
     <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
       crossorigin="anonymous"
     ></script>
     <script>
@@ -196,8 +212,10 @@
       // Python: negocio.NOMBRE_NEGOCIO. No lo escribas de nuevo en los .js.
       window.NOMBRE_NEGOCIO = {{ nombre_negocio | tojson }};
     </script>
-    <script src="{{ url_for('static', filename='js/carrito.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/loader.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/carrito.js', v='20261026-2') }}"></script>
+    <script src="{{ url_for('static', filename='js/loader.js', v='20261106-2') }}"></script>
+    <script src="{{ url_for('static', filename='js/tema.js', v='20261031-2') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/nav-tienda.js', v='20261026-1') }}" defer></script>
     {% if session.pop('limpiar_carrito', False) %}
     <script>
       try {
@@ -206,10 +224,9 @@
       } catch (e) {}
     </script>
     {% endif %}
-    <script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='js/ui-comun.js') }}" defer></script>
-    <script src="{{ url_for('static', filename='js/estado-local.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='js/ui-comun.js', v='20261106-2') }}" defer></script>
     <script src="{{ url_for('static', filename='js/avisos.js') }}" defer></script>
+    {% block scripts_pagina_base %}{% endblock %}
     {% block scripts %}{% endblock %}
   </body>
 </html>

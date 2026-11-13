@@ -95,7 +95,8 @@ def actualizar():
     if err:
         error_en_formulario(err, "editar", request.form, id_cat, ("nombreCategoria",))
     else:
-        CategoriaProducto.cambiar_estado(id_cat, request.form.get("activo", "1") == "1")
+        if "activo" in request.form:
+            CategoriaProducto.cambiar_estado(id_cat, request.form.get("activo") == "1")
         mensaje = "Categoría actualizada." + (" Imagen cambiada." if imagen else "")
         if antes:
             ok_deshacer(mensaje, url_for("admin.categoria.actualizar"), {

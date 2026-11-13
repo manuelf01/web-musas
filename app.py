@@ -1,10 +1,11 @@
 import os
 from datetime import timedelta
 
-from flask import Flask, request, session, jsonify
+from flask import Flask, request, session, jsonify, flash, redirect, url_for
 import avisos
 from negocio import SEDE, NOMBRE_NEGOCIO, REDES, estado_local
 from model.Producto import CATEGORIAS_PERSONALIZACION
+from subidas import miniatura_imagen
 
 from controllers.admin import *
 from controllers.cliente import *
@@ -15,6 +16,11 @@ from controllers.admin_usuarios import *
 from controllers.admin_pedidos import *
 from controllers.admin_ventas import *
 from controllers.admin_pagos import *
+from controllers.admin_medios_pago import *
+from controllers.admin_caja import *
+from controllers.admin_inventario import *
+from controllers.admin_compras import *
+from controllers.admin_devoluciones import *
 from controllers.admin_perfil import perfil as admin_perfil
 from seguridad import (
     campo_csrf, token_csrf, csrf_valido, CAMPO_CSRF,
@@ -37,6 +43,10 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=COOKIE_SECURE,
     PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    MAX_CONTENT_LENGTH=6 * 1024 * 1024,
+    # En desarrollo los cambios de JS/CSS deben verse al recargar; producción
+    # conserva una semana de caché y versiona los assets críticos en plantilla.
+    SEND_FILE_MAX_AGE_DEFAULT=0 if DEBUG else 7 * 24 * 3600,
 )
 
 # --- CSRF ---------------------------------------------------------------
@@ -44,6 +54,14 @@ app.jinja_env.globals["campo_csrf"] = campo_csrf
 app.jinja_env.globals["csrf_token"] = token_csrf
 app.jinja_env.globals["REGLA_PASSWORD"] = REGLA_PASSWORD
 app.jinja_env.globals["PASSWORD_PATTERN"] = PASSWORD_PATTERN
+app.jinja_env.globals["miniatura_imagen"] = miniatura_imagen
+
+
+@app.errorhandler(413)
+def archivo_demasiado_grande(_error):
+    flash("El archivo supera el límite permitido de 5 MB.", "error")
+    destino = url_for("admin.home") if request.path.startswith("/admin/") else url_for("cliente.home")
+    return redirect(destino)
 
 # Content-types de formulario clásico. JSON se valida aparte por header.
 _FORM_CONTENT_TYPES = {
@@ -134,6 +152,17 @@ def _cabeceras_seguridad(resp):
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
     resp.headers.setdefault("Referrer-Policy", "same-origin")
+    # Primera etapa: informa incumplimientos en la consola sin bloquear todavía
+    # los scripts/estilos históricos inline. Se endurecerá después de migrarlos.
+    resp.headers.setdefault(
+        "Content-Security-Policy-Report-Only",
+        "default-src 'self'; img-src 'self' data: https:; "
+        "font-src 'self' https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+        "connect-src 'self'; frame-src https://www.google.com https://maps.google.com; "
+        "object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
+    )
     return resp
 
 
@@ -146,6 +175,12 @@ admin.register_blueprint(usuarios)
 admin.register_blueprint(pedidos)
 admin.register_blueprint(ventas)
 admin.register_blueprint(pagos)
+admin.register_blueprint(medios_pago)
+admin.register_blueprint(caja)
+admin.register_blueprint(inventario)
+admin.register_blueprint(proveedores)
+admin.register_blueprint(compras)
+admin.register_blueprint(devoluciones)
 admin.register_blueprint(admin_perfil)
 admin.register_blueprint(auth)          # auth_admin
 

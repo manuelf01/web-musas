@@ -81,9 +81,10 @@ def test_avance_de_cocina_se_puede_deshacer(bd_limpia, admin_client, csrf):
     id_pedido, _ = Pedido.crear_pedido_completo(
         CLIENTE_ID, "cliente@correo.com", "Cliente Prueba", "999888777",
         "20:00:00", "efectivo", None, ITEMS)
+    assert Pedido.enviar_a_cocina(id_pedido, 1) == "en_cocina"
     r = admin_client.post("/admin/pedidos/preparar", data={"_csrf": T, "idPedido": id_pedido},
                           follow_redirects=True)
     html = r.get_data(as_text=True)
     assert "Deshacer" in html and "/admin/pedidos/retroceder" in html
     admin_client.post("/admin/pedidos/retroceder", data={"_csrf": T, "idPedido": id_pedido})
-    assert Pedido.avanzar_preparacion(id_pedido) == "preparando"
+    assert Pedido.marcar_listo(id_pedido) is True

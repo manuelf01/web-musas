@@ -22,7 +22,7 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="prod-sug" autocomplete="off"
-           data-buscar-auto placeholder="Escribe para filtrar por nombre o categoría…" />
+           data-buscar-auto data-buscar-destino="#prod-lista" placeholder="Escribe para filtrar por nombre o categoría…" />
     <datalist id="prod-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
   <select class="musa-input adm-select-cat" name="cat" aria-label="Filtrar por categoría" onchange="this.form.submit()">
@@ -41,8 +41,8 @@
 
 <section class="adm-card" id="prod-lista">
   {% if productos %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
+    <div class="adm-tabla-wrap adm-tabla-wrap--cards">
+      <table class="adm-tabla adm-tabla--cards">
         <thead>
           <tr><th>Producto</th><th>Categoría</th><th class="num">Precio</th><th class="num">Stock</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
@@ -50,21 +50,29 @@
           {% for p in productos %}
             <tr
                 style="{{ 'opacity:.55;' if not p.activo }}">
-              <td>
+              <td data-label="Producto">
                 <div class="adm-prod-cel">
-                  {% if p.imagen %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="" />
+                  {% if p.imagen %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ miniatura_imagen(p.imagen)) }}" alt="" loading="lazy" decoding="async" />
                   {% else %}<span class="adm-thumb"><i class="bi bi-fire"></i></span>{% endif %}
                   <div><strong>{{ p.nombre }}</strong><p>{{ p.descripcion | truncate(64) }}</p></div>
                 </div>
               </td>
-              <td><span class="adm-badge-cat">{{ p.nombreCategoria }}</span></td>
-              <td class="num">S/ {{ '%.2f'|format(p.precio or 0) }}</td>
-              <td class="num"><span class="adm-badge-stock {{ 'cero' if not p.existencias }}">{{ p.existencias }}</span></td>
-              <td>
-                {% if p.activo %}<span class="adm-badge-rol cliente">En carta</span>
-                {% else %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
+              <td data-label="Categoría"><span class="adm-badge-cat">{{ p.nombreCategoria }}</span></td>
+              <td class="num" data-label="Precio">S/ {{ '%.2f'|format(p.precio or 0) }}</td>
+              <td class="num" data-label="Stock"><span class="adm-badge-stock {{ 'cero' if not p.existencias }}">{{ p.existencias }}</span></td>
+              <td data-label="Estado">
+                <form class="adm-switch" action="{{ url_for('admin.productos.estado') }}" method="POST"{% if p.activo %} data-confirm="«{{ p.nombre }}» dejará de aparecer en la carta y en el inicio. Podrás reactivarlo desde este mismo interruptor." data-confirm-titulo="Desactivar producto" data-confirm-ok="Desactivar" data-confirm-tono="peligro"{% endif %}>
+                  {{ campo_csrf() }}
+                  <input type="hidden" name="id" value="{{ p.idProducto }}" />
+                  <input type="hidden" name="activar" value="{{ '0' if p.activo else '1' }}" />
+                  <input type="hidden" name="volver" value="{{ estado }}" />
+                  <button type="submit" class="adm-switch__btn {{ 'is-on' if p.activo }}" role="switch" aria-checked="{{ 'true' if p.activo else 'false' }}" aria-label="{{ 'Desactivar' if p.activo else 'Activar' }} {{ p.nombre }}">
+                    <span class="adm-switch__track" aria-hidden="true"><span></span></span>
+                    <span class="adm-switch__estado">{{ 'En carta' if p.activo else 'De baja' }}</span>
+                  </button>
+                </form>
               </td>
-              <td>
+              <td data-label="Acciones">
                 <div class="acciones">
                   <button type="button" class="adm-btn-sm" data-panel-abrir data-modo="editar"
                     data-id="{{ p.idProducto }}" data-nombre="{{ p.nombre }}" data-descripcion="{{ p.descripcion }}"
@@ -73,24 +81,6 @@
                     data-activo="{{ 1 if p.activo else 0 }}">
                     <i class="bi bi-pencil"></i> Editar
                   </button>
-                  <form action="{{ url_for('admin.productos.estado') }}" method="POST">
-                    {{ campo_csrf() }}
-                    <input type="hidden" name="id" value="{{ p.idProducto }}" />
-                    <input type="hidden" name="activar" value="{{ '0' if p.activo else '1' }}" />
-                    <input type="hidden" name="volver" value="{{ estado }}" />
-                    {% if p.activo %}
-                      <button class="adm-btn-sm adm-btn-sm--danger"
-                        data-confirm="«{{ p.nombre }}» dejará de aparecer en la carta y en el inicio. Podrás reactivarlo cuando quieras."
-                        data-confirm-titulo="Eliminar de la carta"
-                        data-confirm-ok="Sí, eliminar" data-confirm-tono="peligro">
-                        <i class="bi bi-trash"></i> Eliminar</button>
-                    {% else %}
-                      <button class="adm-btn-sm"
-                        data-confirm="«{{ p.nombre }}» volverá a la carta (si tiene stock disponible)."
-                        data-confirm-titulo="Reactivar producto" data-confirm-ok="Sí, reactivar">
-                        <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
-                    {% endif %}
-                  </form>
                 </div>
               </td>
             </tr>
@@ -108,10 +98,10 @@
 
 {# ---------------- PANEL agregar / editar ---------------- #}
 <div class="adm-panel__backdrop" data-panel-cerrar></div>
-<aside class="adm-panel" id="panelProducto" aria-hidden="true">
-  <div class="adm-panel__head">
+<aside class="adm-panel adm-panel--xl" id="panelProducto" role="dialog" aria-modal="true" aria-labelledby="panel-producto-titulo" aria-hidden="true">
+  <div class="adm-panel__head" data-eyebrow="Gestión de carta">
     <button type="button" class="adm-panel__cerrar" data-panel-cerrar aria-label="Cerrar">&times;</button>
-    <h2 data-panel-titulo>Agregar producto</h2>
+    <h2 id="panel-producto-titulo" data-panel-titulo>Agregar producto</h2>
     <p>Datos para la carta nocturna.</p>
   </div>
   <form method="post" id="formProducto" enctype="multipart/form-data">
@@ -153,16 +143,12 @@
           <input class="musa-input" id="pp-precio" name="precio" inputmode="decimal" placeholder="S/ 0.00" required />
         </div>
         <div class="col-6 musa-field">
-          <label class="musa-field-label" for="pp-existencias">Existencias</label>
+          <label class="musa-field-label" for="pp-existencias">Stock físico inicial</label>
           <input class="musa-input" id="pp-existencias" name="existencias" inputmode="numeric" placeholder="25" required />
+          <small id="pp-stock-ayuda" class="musa-field-help">Después de crear el producto, el stock se controla desde Inventario.</small>
         </div>
       </div>
       <div class="musa-field mt-3">
-        <label class="musa-field-label" for="pp-activo">Estado</label>
-        <select class="musa-input" id="pp-activo" name="activo">
-          <option value="1">Activo · visible en la carta</option>
-          <option value="0">Inactivo · eliminado de la carta</option>
-        </select>
       </div>
     </div>
     <div class="adm-panel__foot">
@@ -199,6 +185,8 @@
   document.querySelectorAll("[data-panel-abrir]").forEach(function (b) {
     b.addEventListener("click", function () {
       form.reset(); limpiarPreview();
+      document.getElementById("pp-existencias").disabled = false;
+      document.getElementById("pp-stock-ayuda").textContent = "Después de crear el producto, el stock se controla desde Inventario.";
       if (b.dataset.modo === "editar") {
         titulo.textContent = "Editar producto";
         btnTxt.textContent = "Guardar cambios";
@@ -211,8 +199,9 @@
         document.getElementById("pp-descripcion").value = b.dataset.descripcion;
         document.getElementById("pp-precio").value = b.dataset.precio;
         document.getElementById("pp-existencias").value = b.dataset.existencias;
+        document.getElementById("pp-existencias").disabled = true;
+        document.getElementById("pp-stock-ayuda").textContent = "Usa Movimientos de inventario para modificar el stock con trazabilidad.";
         document.getElementById("pp-categoria").value = b.dataset.categoria;
-        document.getElementById("pp-activo").value = b.dataset.activo;
         if (b.dataset.imagen) mostrarPreview("/static/img/" + b.dataset.imagen);
       } else {
         titulo.textContent = "Agregar producto";
@@ -222,7 +211,6 @@
         submit.dataset.confirmTitulo = "Agregar producto";
         submit.dataset.confirmOk = "Guardar";
         document.getElementById("pp-id").value = "";
-        document.getElementById("pp-activo").value = "1";
       }
       abrir();
     });

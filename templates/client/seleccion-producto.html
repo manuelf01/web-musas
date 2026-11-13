@@ -29,7 +29,7 @@
     <div>
       <div class="dp-media">
         {% if producto.imagen %}
-          <img src="{{ url_for('static', filename='img/' ~ producto.imagen) }}" alt="{{ producto.nombre }}" />
+          <img src="{{ url_for('static', filename='img/' ~ producto.imagen) }}" alt="{{ producto.nombre }}" decoding="async" />
         {% else %}
           {% set _dp_ico = {
             "Hamburguesas Simples": "bi-fire", "Hamburguesas Royal": "bi-fire",
@@ -104,7 +104,7 @@
           {% macro opcion(item, grupo, tipo) %}
             <label class="crema-card">
               <span class="crema-card__info">
-                {% if item.imagen %}<img class="crema-card__img" src="{{ url_for('static', filename='img/' ~ item.imagen) }}" alt="" loading="lazy" />{% else %}<span class="crema-card__img"></span>{% endif %}
+                {% if item.imagen %}<img class="crema-card__img" src="{{ url_for('static', filename='img/' ~ miniatura_imagen(item.imagen)) }}" alt="" loading="lazy" decoding="async" />{% else %}<span class="crema-card__img"></span>{% endif %}
                 <span>
                   <span class="crema-card__nombre d-block">{{ item.nombre }}</span>
                   {% if item.precio %}<span class="crema-card__precio">+ S/ {{ '%.2f'|format(item.precio) }}</span>{% endif %}
@@ -122,54 +122,101 @@
             </label>
           {% endmacro %}
 
+          <ol class="dp-flujo" aria-label="Pasos para personalizar el pedido">
+            <li class="is-active" data-dp-indicador="1"><button type="button" data-dp-ir="1" aria-current="step"><span>1</span><small>Salsas</small></button></li>
+            <li data-dp-indicador="2"><button type="button" data-dp-ir="2" disabled><span>2</span><small>Papas</small></button></li>
+            <li data-dp-indicador="3"><button type="button" data-dp-ir="3" disabled><span>3</span><small>Agregados</small></button></li>
+            <li data-dp-indicador="4"><button type="button" data-dp-ir="4" disabled><span>4</span><small>Revisar</small></button></li>
+          </ol>
+
           <div class="dp-personaliza" data-personaliza>
-            <div class="dp-personaliza__grupo" data-grupo-req="salsa">
+            <section class="dp-personaliza__grupo dp-flujo__paso" data-grupo-req="salsa" data-dp-paso="1" aria-labelledby="dp-paso-salsas">
+              <h3 class="visually-hidden" id="dp-paso-salsas">Paso 1: elige tus salsas</h3>
               <p class="dp-card__sub">Elige tus salsas <span class="dp-obligatorio">Obligatorio · mínimo 1</span></p>
               <div class="crema-grid">
                 {% for item in salsas %}{{ opcion(item, 'salsa', 'checkbox') }}{% endfor %}
               </div>
               <p class="dp-personaliza__error" data-grupo-error="salsa" hidden>Elige al menos una salsa.</p>
-            </div>
+              <div class="dp-flujo__acciones dp-flujo__acciones--fin">
+                <button type="button" class="btn-brasa" data-dp-siguiente="2">Continuar <i class="bi bi-arrow-right"></i></button>
+              </div>
+            </section>
 
-            <div class="dp-personaliza__grupo" data-grupo-req="papas">
+            <section class="dp-personaliza__grupo dp-flujo__paso" data-grupo-req="papas" data-dp-paso="2" aria-labelledby="dp-paso-papas">
+              <h3 class="visually-hidden" id="dp-paso-papas">Paso 2: elige el tipo de papas</h3>
               <p class="dp-card__sub">Elige el tipo de papas <span class="dp-obligatorio">Obligatorio</span></p>
               <div class="crema-grid">
                 {% for item in papas %}{{ opcion(item, 'papas', 'radio') }}{% endfor %}
               </div>
               <p class="dp-personaliza__error" data-grupo-error="papas" hidden>Elige el tipo de papas.</p>
-            </div>
+              <div class="dp-flujo__acciones">
+                <button type="button" class="btn-contorno" data-dp-anterior="1"><i class="bi bi-arrow-left"></i> Anterior</button>
+                <button type="button" class="btn-brasa" data-dp-siguiente="3">Continuar <i class="bi bi-arrow-right"></i></button>
+              </div>
+            </section>
 
-            {% if agregados %}
-            <div class="dp-personaliza__grupo">
+            <section class="dp-personaliza__grupo dp-flujo__paso" data-dp-paso="3" aria-labelledby="dp-paso-agregados">
+              <h3 class="visually-hidden" id="dp-paso-agregados">Paso 3: elige agregados</h3>
               <p class="dp-card__sub">Agregados <span class="dp-opcional">Opcional</span></p>
+              {% if agregados %}
               <div class="crema-grid">
                 {% for item in agregados %}{{ opcion(item, 'agregado', 'checkbox') }}{% endfor %}
               </div>
-            </div>
-            {% endif %}
+              {% else %}
+              <p class="musa-field-hint">Este producto no tiene agregados disponibles.</p>
+              {% endif %}
+              <div class="dp-flujo__acciones">
+                <button type="button" class="btn-contorno" data-dp-anterior="2"><i class="bi bi-arrow-left"></i> Anterior</button>
+                <button type="button" class="btn-brasa" data-dp-siguiente="4">Revisar <i class="bi bi-arrow-right"></i></button>
+              </div>
+            </section>
+
+            <section class="dp-flujo__paso dp-revision" data-dp-paso="4" aria-labelledby="dp-paso-revision">
+              <h3 id="dp-paso-revision">Revisa tu personalización</h3>
+              <div class="dp-revision__lista" data-dp-resumen></div>
+              <div class="dp-accion">
+                <div class="dp-stepper">
+                  <button type="button" data-step="-1" aria-label="Quitar uno">−</button>
+                  <span id="dp-qty">1</span>
+                  <button type="button" data-step="1" aria-label="Agregar uno">+</button>
+                </div>
+                {% if not logueado %}
+                <a class="btn-brasa flex-grow-1" href="{{ url_for('cliente.auth.login', next=request.path) }}">
+                  <i class="bi bi-box-arrow-in-right"></i> Inicia sesión para pedir
+                </a>
+                {% else %}
+                <button type="button" class="btn-brasa flex-grow-1" data-agregar {{ 'disabled' if agotado }}>
+                  <i class="bi bi-bag-plus"></i>
+                  <span data-dp-btn-texto>Agregar al carrito — S/ {{ '%.2f'|format(producto.precio or 0) }}</span>
+                </button>
+                {% endif %}
+              </div>
+              <div class="dp-flujo__acciones dp-flujo__acciones--inicio">
+                <button type="button" class="btn-contorno" data-dp-anterior="3"><i class="bi bi-arrow-left"></i> Anterior</button>
+              </div>
+            </section>
           </div>
         {% else %}
           <p class="dp-card__sub mb-0">Este producto no se personaliza: ya viene armado.</p>
-        {% endif %}
-
-        <!-- Cantidad + agregar -->
-        <div class="dp-accion">
-          <div class="dp-stepper">
-            <button type="button" data-step="-1" aria-label="Quitar uno">−</button>
-            <span id="dp-qty">1</span>
-            <button type="button" data-step="1" aria-label="Agregar uno">+</button>
+          <!-- Los productos sin opciones pasan directamente a cantidad y carrito. -->
+          <div class="dp-accion">
+            <div class="dp-stepper">
+              <button type="button" data-step="-1" aria-label="Quitar uno">−</button>
+              <span id="dp-qty">1</span>
+              <button type="button" data-step="1" aria-label="Agregar uno">+</button>
+            </div>
+            {% if not logueado %}
+            <a class="btn-brasa flex-grow-1" href="{{ url_for('cliente.auth.login', next=request.path) }}">
+              <i class="bi bi-box-arrow-in-right"></i> Inicia sesión para pedir
+            </a>
+            {% else %}
+            <button type="button" class="btn-brasa flex-grow-1" data-agregar {{ 'disabled' if agotado }}>
+              <i class="bi bi-bag-plus"></i>
+              <span data-dp-btn-texto>Agregar al carrito — S/ {{ '%.2f'|format(producto.precio or 0) }}</span>
+            </button>
+            {% endif %}
           </div>
-          {% if not logueado %}
-          <a class="btn-brasa flex-grow-1" href="{{ url_for('cliente.auth.login', next=request.path) }}">
-            <i class="bi bi-box-arrow-in-right"></i> Inicia sesión para pedir
-          </a>
-          {% else %}
-          <button type="button" class="btn-brasa flex-grow-1" data-agregar {{ 'disabled' if agotado }}>
-            <i class="bi bi-bag-plus"></i>
-            <span data-dp-btn-texto>Agregar al carrito — S/ {{ '%.2f'|format(producto.precio or 0) }}</span>
-          </button>
-          {% endif %}
-        </div>
+        {% endif %}
 
         {% if logueado and not agotado %}
         <a href="{{ url_for('cliente.pag_carrito') }}" id="dp-ver-carrito" class="dp-ver-carrito" hidden>
@@ -202,5 +249,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/detalle-producto.js') }}"></script>
+<script src="{{ url_for('static', filename='js/detalle-producto.js', v='20261026-2') }}"></script>
 {% endblock %}

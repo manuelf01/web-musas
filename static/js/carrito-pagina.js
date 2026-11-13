@@ -12,6 +12,8 @@
   var elIgv = document.getElementById("resumen-igv");
   var elTotal = document.getElementById("resumen-total");
   var btnComprar = document.getElementById("carrito-continuar");
+  var solicitudSugeridos = 0;
+  var temporizadorEsqueletoSugeridos = null;
 
   function money(n) {
     return "S/ " + Number(n).toFixed(2);
@@ -67,16 +69,38 @@
       .map(function (it) { return it.idProducto; })
       .filter(function (x) { return x; })
       .join(",");
+    var solicitud = ++solicitudSugeridos;
+    clearTimeout(temporizadorEsqueletoSugeridos);
+    sec.setAttribute("aria-busy", "true");
+    temporizadorEsqueletoSugeridos = setTimeout(function () {
+      if (solicitud !== solicitudSugeridos) return;
+      sec.hidden = false;
+      lista.innerHTML = Array.from({ length: 3 }, function () {
+        return '<div class="cart-sug cart-sug--skeleton" aria-hidden="true">' +
+          '<span class="cart-sug__media musa-skeleton-block"></span>' +
+          '<span class="cart-sug__body"><i class="musa-skeleton-block"></i>' +
+          '<i class="musa-skeleton-block"></i><i class="musa-skeleton-block"></i></span>' +
+          '<i class="cart-sug__skeleton-accion musa-skeleton-block"></i></div>';
+      }).join("");
+    }, 180);
     fetch("/carrito/sugeridos?ids=" + encodeURIComponent(ids), { credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.json() : { sugeridos: [] }; })
       .then(function (d) {
+        if (solicitud !== solicitudSugeridos) return;
+        clearTimeout(temporizadorEsqueletoSugeridos);
         var sug = (d && d.sugeridos) || [];
+        sec.removeAttribute("aria-busy");
         if (!sug.length) { sec.hidden = true; return; }
         lista.innerHTML = "";
         sug.forEach(function (s) { lista.appendChild(tarjetaSugerida(s)); });
         sec.hidden = false;
       })
-      .catch(function () { sec.hidden = true; });
+      .catch(function () {
+        if (solicitud !== solicitudSugeridos) return;
+        clearTimeout(temporizadorEsqueletoSugeridos);
+        sec.removeAttribute("aria-busy");
+        sec.hidden = true;
+      });
   }
 
   function chip(txt) {
@@ -229,5 +253,6 @@
     });
   }
 
+  window.addEventListener("musas:carrito-deshacer", render);
   render();
 })();

@@ -1,0 +1,122 @@
+{% extends "admin/base.html" %}
+{% block title %}Apertura y cierre · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Ventas y caja', None, 'bi-cash-stack'), ('Apertura y cierre', None, 'bi-safe2')] %}
+
+{% block content %}
+<div class="adm-head caja-cabecera">
+  <div>
+    <h1>Apertura y cierre de caja</h1>
+    <p>Controla el turno, los movimientos y el cuadre desde ventanas rápidas.</p>
+  </div>
+  <button type="button" class="btn-contorno" onclick="location.reload()">
+    <i class="bi bi-arrow-clockwise"></i> Actualizar
+  </button>
+</div>
+
+<section class="adm-card caja-control">
+  <div class="caja-control__titulo">
+    <div><span class="caja-control__eyebrow">Punto de cobro</span><h2>Caja Principal</h2></div>
+    {% if caja_actual %}<span class="caja-estado caja-estado--abierta">Abierta</span>
+    {% else %}<span class="caja-estado caja-estado--cerrada">Cerrada</span>{% endif %}
+  </div>
+
+  {% if caja_actual and caja_operativa %}
+  <div class="caja-control__datos">
+    <div><small>Responsable</small><strong>{{ caja_operativa.abiertaPor }}</strong></div>
+    <div><small>Apertura</small><strong>{{ caja_operativa.fechaApertura.strftime('%d/%m/%Y · %H:%M') }}</strong></div>
+    <div><small>Fondo inicial</small><strong>S/ {{ '%.2f'|format(caja_operativa.fondoInicial) }}</strong></div>
+    <div><small>Efectivo esperado</small><strong>S/ {{ '%.2f'|format(caja_operativa.efectivoEsperado) }}</strong></div>
+  </div>
+  <div class="caja-control__acciones">
+    {% if caja and caja.id == caja_operativa.id %}
+    <button class="btn-brasa" type="button" data-bs-toggle="modal" data-bs-target="#cajaResumenModal"><i class="bi bi-bar-chart"></i> Ver resumen</button>
+    <a class="btn-contorno" href="{{ url_for('admin.caja.movimientos') }}"><i class="bi bi-arrow-left-right"></i> Aportes y gastos</a>
+    {% else %}
+    <a class="btn-brasa" href="{{ url_for('admin.caja.home', sesion=caja_operativa.id) }}"><i class="bi bi-gear"></i> Administrar caja actual</a>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="caja-control__vacia">
+    <span class="caja-control__icono"><i class="bi bi-lock"></i></span>
+    <div><strong>La caja está cerrada</strong><p>Ábrela antes de cobrar y entregar el primer pedido del turno.</p></div>
+    <button class="btn-brasa" type="button" data-bs-toggle="modal" data-bs-target="#cajaAbrirModal"><i class="bi bi-unlock"></i> Abrir caja</button>
+  </div>
+  {% endif %}
+</section>
+
+<section class="adm-card caja-historial">
+  <div class="adm-card__head"><div><h2>Historial de cajas</h2><p>Consulta turnos anteriores sin modificar su información.</p></div></div>
+  {% if historial %}
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+    <thead><tr><th>Apertura</th><th>Responsable</th><th>Estado</th><th class="num">Fondo</th><th class="num">Esperado</th><th class="num">Diferencia</th><th></th></tr></thead>
+    <tbody>{% for s in historial[:8] %}<tr>
+      <td data-label="Apertura">{{ s.apertura.strftime('%d/%m/%Y %H:%M') }}</td><td data-label="Responsable">{{ s.usuario }}</td>
+      <td data-label="Estado"><span class="caja-estado caja-estado--{{ s.estado }}">{{ s.estado|title }}</span></td>
+      <td class="num" data-label="Fondo">S/ {{ '%.2f'|format(s.fondo) }}</td>
+      <td class="num" data-label="Esperado">{{ 'S/ %.2f'|format(s.esperado) if s.esperado is not none else '—' }}</td>
+      <td class="num" data-label="Diferencia">{{ 'S/ %.2f'|format(s.diferencia) if s.diferencia is not none else '—' }}</td>
+      <td data-label="Acciones"><a class="adm-btn-sm" href="{{ url_for('admin.caja.home', sesion=s.id) }}"><i class="bi bi-eye"></i> Resumen</a></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="adm-vacio">Todavía no hay turnos de caja registrados.</p>{% endif %}
+</section>
+
+{# Apertura #}
+<div class="modal fade caja-modal" id="cajaAbrirModal" tabindex="-1" aria-labelledby="cajaAbrirTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><div><span class="caja-modal__eyebrow">Inicio del turno</span><h2 class="modal-title" id="cajaAbrirTitulo">Abrir Caja Principal</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <form method="post" action="{{ url_for('admin.caja.abrir') }}">
+      {{ campo_csrf() }}
+      <div class="modal-body">
+        <div class="caja-modal__aviso"><i class="bi bi-info-circle"></i><span>Registra el dinero físico disponible antes del primer cobro.</span></div>
+        <label class="musa-field-label" for="caja-fondo">Fondo inicial</label>
+        <div class="caja-monto-input"><span>S/</span><input class="musa-input" id="caja-fondo" type="number" name="fondo_inicial" min="0" step="0.01" placeholder="0.00" required /></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa" data-confirm="Se abrirá la Caja Principal con el fondo indicado.">Abrir caja</button></div>
+    </form>
+  </div></div>
+</div>
+
+{% if caja %}
+{# Resumen de caja actual o histórica #}
+<div class="modal fade caja-modal" id="cajaResumenModal" tabindex="-1" aria-labelledby="cajaResumenTitulo" aria-hidden="true" {% if request.args.get('sesion') %}data-caja-auto-resumen{% endif %}>
+  <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><div><span class="caja-modal__eyebrow">Caja Principal</span><h2 class="modal-title" id="cajaResumenTitulo">Resumen de caja</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <div class="modal-body">
+      <div class="caja-resumen-meta"><div><small>Usuario de apertura</small><strong>{{ caja.abiertaPor }}</strong></div><div><small>Fecha de apertura</small><strong>{{ caja.fechaApertura.strftime('%d/%m/%Y %H:%M') }}</strong></div><div><small>Estado</small><span class="caja-estado caja-estado--{{ caja.estado }}">{{ caja.estado|title }}</span></div></div>
+      <div class="caja-kpis">
+        <article><span>Fondo inicial</span><strong>S/ {{ '%.2f'|format(caja.fondoInicial) }}</strong></article>
+        <article><span>Efectivo esperado</span><strong>S/ {{ '%.2f'|format(caja.efectivoEsperado) }}</strong></article>
+        <article><span>Efectivo contado</span><strong>{{ 'S/ %.2f'|format(caja.efectivoContado) if caja.efectivoContado is not none else 'Pendiente' }}</strong></article>
+        <article class="{{ 'es-diferencia' if caja.diferencia }}"><span>Diferencia</span><strong>{{ 'S/ %.2f'|format(caja.diferencia) if caja.diferencia is not none else '—' }}</strong></article>
+      </div>
+      <div class="caja-medios"><h3><i class="bi bi-wallet2"></i> Cuadre por medio de pago</h3>{% for m in caja.medios %}<div class="caja-medio"><span>{{ m.nombre }} <small>{{ m.cantidad }} cobros</small></span><strong>S/ {{ '%.2f'|format(m.cobrado) }}</strong><em>Neto S/ {{ '%.2f'|format(m.neto) }}</em></div>{% endfor %}</div>
+      {% if caja.observaciones %}<div class="caja-modal__aviso mt-3"><i class="bi bi-chat-left-text"></i><span>{{ caja.observaciones }}</span></div>{% endif %}
+    </div>
+    <div class="modal-footer">
+      {% if caja.estado == 'abierta' %}<a class="btn-contorno" href="{{ url_for('admin.caja.movimientos') }}">Aportes y gastos</a><button type="button" class="btn-peligro" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#cajaCerrarModal">Cerrar caja</button>{% endif %}
+      <button type="button" class="btn-contorno" data-bs-dismiss="modal">Cerrar ventana</button>
+    </div>
+  </div></div>
+</div>
+
+{% if caja_operativa and caja.id == caja_operativa.id and caja.estado == 'abierta' %}
+<div class="modal fade caja-modal" id="cajaCerrarModal" tabindex="-1" aria-labelledby="cajaCerrarTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+    <div class="modal-header"><div><span class="caja-modal__eyebrow">Cuadre final</span><h2 class="modal-title" id="cajaCerrarTitulo">Cerrar Caja Principal</h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+    <form method="post" action="{{ url_for('admin.caja.cerrar') }}">
+      {{ campo_csrf() }}
+      <div class="modal-body">
+        <div class="caja-modal__esperado"><span>Efectivo esperado</span><strong>S/ {{ '%.2f'|format(caja.efectivoEsperado) }}</strong></div>
+        <label class="musa-field-label" for="caja-contado">Efectivo contado</label><div class="caja-monto-input"><span>S/</span><input class="musa-input" id="caja-contado" type="number" name="efectivo_contado" min="0" step="0.01" required /></div>
+        <label class="musa-field-label mt-3">Observaciones del cierre</label><textarea class="musa-input" name="observaciones" rows="3" maxlength="500"></textarea>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-peligro" data-confirm="La caja quedará cerrada y no podrá editarse." data-confirm-tono="peligro">Cerrar caja</button></div>
+    </form>
+  </div></div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}<script src="{{ url_for('static', filename='js/caja.js', v='20261025-1') }}" defer></script>{% endblock %}

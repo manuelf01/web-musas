@@ -3,7 +3,8 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, g
 from flask_paginate import Pagination, get_page_parameter
 
-from model.Pago import Pago, MEDIOS
+from model.Pago import Pago
+from model.MedioPago import MedioPago
 from negocio import ahora_peru
 
 pagos = Blueprint("pagos", __name__, url_prefix="/pagos")
@@ -27,8 +28,9 @@ def home():
     if desde and hasta and desde > hasta:
         desde, hasta = hasta, desde
     q = (request.args.get("q") or "").strip()
-    medio = (request.args.get("medio") or "").strip().capitalize()
-    if medio not in MEDIOS:
+    catalogo_medios = MedioPago.listar()
+    medio = (request.args.get("medio") or "").strip().lower()
+    if medio not in {m["codigo"] for m in catalogo_medios}:
         medio = ""
     estado = (request.args.get("estado") or "").strip().lower()
     if estado not in ("vigente", "anulado"):
@@ -42,7 +44,7 @@ def home():
                             record_name="pagos", css_framework="bootstrap5")
     contexto = dict(
         usuario=g.user, resumen=Pago.resumen(desde, hasta, q, estado), pagos=lista,
-        pagination=pagination, total=total, medios=MEDIOS,
+        pagination=pagination, total=total, medios=catalogo_medios,
         rango=((page - 1) * per_page + 1 if total else 0, min(page * per_page, total)),
         filtros={"q": q, "medio": medio, "estado": estado,
                  "desde": desde.isoformat() if desde else "", "hasta": hasta.isoformat() if hasta else ""},

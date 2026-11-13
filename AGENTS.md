@@ -75,6 +75,9 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
+Para preparar una base manual desechable para probar la aplicación sin tocar
+`db_musuas`, consulta `docs/PRUEBAS_COMPANERO.md`.
+
 ### Tests (`tests/`, pytest)
 - `tests/conftest.py` levanta una base **aparte** `db_musuas_test` a partir de
   `sql.sql` (le quita `CREATE DATABASE` / `USE` para no tocar la real) y apunta
@@ -140,6 +143,9 @@ controllers/
   admin_categoria_producto.py  # CRUD de CATEGORÍAS (modal)
   admin_usuarios.py    # CRUD de USUARIOS + roles (solo superusuario)
   admin_ventas.py      # VENTAS: KPIs, gráfico, lista de comprobantes, detalle
+  admin_inventario.py  # saldos, Kardex separado y movimientos manuales
+  admin_compras.py     # proveedores + compras y recepción de mercadería
+  admin_devoluciones.py # devoluciones de cliente/proveedor y reversiones
   admin_perfil.py      # /admin/perfil: el admin corrige sus propios datos
 
 model/                 # una clase por tabla, métodos estáticos, SQL a mano con pymysql
@@ -151,7 +157,7 @@ migrations/00N_*.sql   # cambios de esquema numerados (ya están todos en sql.sq
 ```
 
 **Sistema de diseño "Neo-brasa"**: brasa `#DB4200`, mostaza `#F5C842`, carbón
-`#1A1512`, crema `#FBF7F0`. Fuentes Space Grotesk + Inter. Bootstrap 5.2.3 por CDN
+`#1A1512`, crema `#FBF7F0`. Fuentes Space Grotesk + Inter. Bootstrap 5.3.8 por CDN
 (se usa la grilla y algún modal; el resto es CSS propio en `musas-theme.css`).
 
 **Sin dependencias JS nuevas.** El filtrado en vivo, el toggle de contraseña, el
@@ -190,17 +196,28 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   (`obtener_productos(solo_activos=True)`, `obtener_categorias(solo_activas=True)`,
   `precios_por_ids` bloquea inactivos). Un `usuario.activo = 0` no inicia sesión.
 - **Roles** (`usuario.rol`): `superusuario` | `administrador` | `usuario`.
+  Los códigos se conservan por compatibilidad, pero las etiquetas visibles son:
+  `superusuario` = **Administrador**, `administrador` = **Cajero** y
+  `usuario` = **Cliente**. No mostrar los nombres técnicos en la interfaz.
   `tipoUsuario` se mantiene sincronizado (0 = panel, 1 = cliente) por compat.
   - Solo el **superusuario** entra a `/admin/usuarios/*` y asigna roles.
   - Desde Gestión de usuarios **solo se puede cambiar el ROL y dar de baja** una
     cuenta (`Usuario.cambiar_rol`, `Usuario.cambiar_estado`). El correo / teléfono
     / contraseña los edita **cada persona** en `/mi-cuenta` o `/admin/perfil`.
-  - Un superusuario **no puede cambiarle el rol ni dar de baja a otro
-    superusuario** — solo crear uno nuevo. No puede darse de baja a sí mismo.
+  - El superusuario puede asignar el rol Administrador a una cuenta existente
+    si tiene DNI válido. No puede cambiar el rol ni dar de baja a otro
+    superusuario; tampoco puede darse de baja a sí mismo.
+  - DNI y correo son identificadores únicos. Puede haber varios usuarios con
+    cada rol; los teléfonos y nombres no son únicos.
 - **Estados del pedido** (`registroPedido.estadoPrep`): 0 recibido → 1 en
-  preparación → 2 listo. El cliente **solo puede cancelar mientras está
+  cocina → 2 listo. El cliente **solo puede cancelar mientras está
   "recibido"**. `model.Pedido.estado_pedido(recogido, cancelado, no_show, prep)`
   centraliza el estado canónico.
+- **Comanda de cocina**: el Cajero usa **Enviar a cocina e imprimir** para hacer
+  atómicamente `estadoPrep 0→1` y registrar `fechaEnvioCocina`, responsable y
+  primer intento. La vista `/admin/pedidos/comanda/<id>` imprime en 80 mm sin
+  precios ni datos sensibles. Reimprimir incrementa `impresionesComanda` sin
+  alterar el estado. La comanda no reemplaza el comprobante emitido al entregar.
 - **Auto no-show** (`Pedido._auto_no_show`): marca "no recogió" solo si el pedido
   estaba **listo** (`estadoPrep = 2`) y pasaron 45 min de la hora de recojo.
   Se salta con `MUSAS_DEMO=1`.
@@ -249,6 +266,14 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
   API `window.MusasCarrito`). El servidor **re-cotiza todo contra la BD** al
   hacer checkout (`Producto.precios_por_ids`) — nunca confía en los precios del
   cliente. Al cerrar sesión se limpia el carrito.
+- **Inventario/Kardex**: `inventarioSaldo` es la fuente de verdad por almacén.
+  `stockFisico - stockReservado = disponible`; `producto.existencias` solo es un
+  espejo temporal del disponible para compatibilidad con la tienda. Todo cambio
+  pasa por `model.Inventario` usando la misma transacción que su pedido, compra o
+  devolución. Al pedir se reserva; al cancelar se libera; al cobrar/entregar se
+  descuentan físico y reservado. El Kardex no se edita ni elimina: las correcciones
+  son nuevos movimientos/reversiones. Solo superusuario registra ajustes, compras,
+  proveedores o devoluciones; administrador puede consultar.
 - **keyPedido** se genera en la app y se comprueba contra pedidos activos.
   `idPedido` e `idDetalleOrden` son `AUTO_INCREMENT` desde la migración 011.
 
@@ -256,19 +281,31 @@ carrito, el checkout, etc. son vanilla JS. Autocompletado = `<datalist>` nativo.
 
 ## 5. Base de datos (resumen)
 
-`db_musuas`, InnoDB, utf8mb4. 8 tablas (todos los cambios de `migrations/001..013`
+`db_musuas`, InnoDB, utf8mb4. (Todos los cambios de `migrations/001..022`
 ya están en `sql.sql`):
 
 | Tabla | Rol |
 |---|---|
 | `usuario` | cuentas. correo único, DNI opcional para clientes, `rol`, `activo`, `tipoUsuario`, `noShows` |
 | `categoriaProducto` | secciones de la carta. `activo`. "Cremas" no se muestra en la carta pública |
-| `producto` | ítems de la carta + las cremas (según `idCategoria`). `activo`, `imagen`, `destacado`, `nota`, `precio FLOAT`, `existencias` |
-| `registroPedido` | cabecera. estados, clave, correo/teléfono y medio de pago elegido |
+| `producto` | ítems de la carta. `existencias` se conserva como espejo temporal del stock disponible |
+| `registroPedido` | cabecera, estados y clave de idempotencia para impedir pedidos duplicados |
 | `detalleOrden` | líneas del pedido (snapshot de nombre/precio) |
 | `detalleCremas` | cremas elegidas por línea |
 | `comprobante` / `detalleComprobante` | venta al entregar; boleta con DNI o factura con RUC/razón social |
+| `medioPago` | catálogo, tipo, imagen, estado, descuento, comisión y efecto sobre efectivo |
+| `sesionCaja` | apertura, fondo, cierre, efectivo esperado/contado y responsables |
+| `pagoVenta` | snapshot del medio, bruto, descuento, cobrado, comisión y neto por venta |
+| `movimientoCaja` | aportes, gastos, retiros, devoluciones y ajustes auditables por sesión; no son ventas |
+| `almacen` / `inventarioSaldo` | stock físico, reservado, disponible, costo promedio, versión y actualización por almacén |
+| `movimientoInventario` | Kardex inmutable: físico/reservado anterior/posterior, costo, origen, documento y reversión |
+| `proveedor` / `compra` / `detalleCompra` | abastecimiento; recibir actualiza stock y costo promedio ponderado |
+| `devolucionInventario` / `detalleDevolucionInventario` | devoluciones de cliente/proveedor/anulación y condición reincorporable/merma |
 
+- `insumo` / `saldoInsumo`: catálogo de ingredientes y existencias por almacén.
+- `recetaInsumo`: insumos y cantidades por producto o personalización.
+- `pedidoInsumo` / `movimientoInsumo`: reservas, consumos y Kardex auditable.
+- `detalleCompraInsumo`: ingredientes recibidos desde compras a proveedores.
 - FK: `producto→categoriaProducto`, `registroPedido→usuario` (nullable),
   `detalleOrden→(producto, registroPedido)`, `detalleCremas→(producto, detalleOrden)`,
   `comprobante→(registroPedido, usuario)`, `detalleComprobante→(comprobante, producto)`.
@@ -303,7 +340,10 @@ Todo esto está hecho y probado E2E en `Ramirez`:
   categoría, detalle de producto + cremas, carrito, checkout con franjas de
   recojo y cupo, confirmación con palabra clave, "mis pedidos" (historial +
   repetir + cancelar), "mi cuenta" (editar datos propios).
-- **Login unificado**: una puerta; clientes ingresan con correo y panel con DNI.
+- **Login unificado**: una puerta; clientes ingresan exclusivamente con correo y
+  el panel exclusivamente con DNI. El captcha se muestra localmente cuando el
+  texto tiene exactamente 8 dígitos; no existe una consulta `/login/tipo-dni`.
+  Los fallos de cuenta, contraseña o cuenta inactiva usan el mismo mensaje.
   Las cuentas del panel además resuelven captcha y van a `/admin`. Throttle anti
   fuerza-bruta en memoria. Cuenta dada de baja no entra.
 - **Panel**: dashboard con KPIs y gráfico; CRUD de pedidos con estados
@@ -311,7 +351,10 @@ Todo esto está hecho y probado E2E en `Ramirez`:
   cancelar; CRUD de productos y categorías (panel/modal, imagen archivo o URL,
   previsualización, dar de baja); CRUD de usuarios con 3 roles (solo
   superusuario); Ventas (KPIs, gráfico de barras, lista de comprobantes,
-  detalle tipo boleta con importe en letras y descarga PDF); Mi perfil.
+  detalle tipo boleta con importe en letras y descarga PDF); catálogo de medios
+  de pago; Caja (apertura, movimientos, cuadre y cierres); Inventario, Kardex y
+  movimientos en páginas separadas; proveedores, compras/recepción y devoluciones;
+  Mi perfil.
 - **Comprobante de cliente**: después del recojo aparece en Mis pedidos con vista
   y descarga PDF. El mismo archivo está disponible para caja desde Ventas.
 - **Seguridad**: CSRF propio en todos los formularios, cabeceras
@@ -349,3 +392,12 @@ falta**: `sql.sql` ya las incluye.
 | 011 | `registroPedido.idPedido` y `detalleOrden.idDetalleOrden` a **AUTO_INCREMENT** (antes `MAX(id)+1` en la app → colisión con dos pedidos a la vez) |
 | 012 | Importes a `DECIMAL`, comprobante único por pedido, medio de pago/cajero/snapshot, líneas configuradas y soporte PDF. |
 | 013 | Clientes sin DNI, correo único, snapshot de correo/medio elegido y boleta/factura capturada en caja con DNI o RUC. |
+| 014 | Anulación/restauración auditada de ventas. |
+| 015 | Foto de perfil del usuario. |
+| 016 | Menú real de categorías y productos. |
+| 017 | Rutas de fotografías del menú real. |
+| 018 | Catálogo de medios, descuentos/comisiones, pagos, sesiones/movimientos de caja y Kardex. |
+| 019 | Almacenes, físico/reservado/disponible, costo promedio, Kardex ampliado, idempotencia de pedidos, proveedores, compras/recepción y devoluciones. |
+| 020 | Comandas de cocina: hora/responsable de envío e historial de intentos de impresión. |
+| 021 | Insumos, existencias por almacén, recetas, capacidad estimada, compras de ingredientes y consumo transaccional al enviar a cocina. |
+| 022 | Restricción única de DNI en `usuario`; un cliente sin DNI puede mantener `NULL`. |

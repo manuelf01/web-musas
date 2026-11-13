@@ -1,6 +1,6 @@
 {% extends "admin/base.html" %}
 {% block title %}Usuarios · Backoffice {{ nombre_negocio }}{% endblock %}
-{% set _rol = {'superusuario': ' · Superusuarios', 'administrador': ' · Administradores', 'usuario': ' · Clientes'} %}
+{% set _rol = {'superusuario': ' · Administradores', 'administrador': ' · Cajeros', 'usuario': ' · Clientes'} %}
 {% set migas = [('Usuarios' ~ _rol.get(filtro, '') ~ (' · de baja' if estado == 'baja' else ''), None, 'bi-people')] %}
 {% block nav_usuarios %}is-active{% endblock %}
 
@@ -9,7 +9,7 @@
   <div class="adm-head" style="margin-bottom: 0;">
     <div>
       <h1>Usuarios <span class="adm-count-pill">{{ conteos.total }} cuentas</span></h1>
-      <p class="adm-sub">Gestión de accesos. Solo el superusuario entra aquí y asigna roles.</p>
+      <p class="adm-sub">Gestión de accesos. Solo el Administrador puede entrar aquí y asignar roles.</p>
     </div>
     <button type="button" class="btn-brasa" data-user-abrir data-modo="crear">
       <i class="bi bi-person-plus"></i> Agregar usuario
@@ -23,48 +23,62 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="usr-sug" autocomplete="off"
-           data-buscar-auto placeholder="Escribe para filtrar por nombre, DNI o correo…" />
+           data-buscar-auto data-buscar-destino="#usr-lista" placeholder="Escribe para filtrar por nombre, DNI o correo…" />
     <datalist id="usr-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
 
 <div class="adm-chips">
   <a class="adm-chip2 {{ 'is-active' if filtro == 'todos' }}" href="{{ url_for('admin.usuarios.home', estado=estado) }}">Todos <b>{{ conteos.total }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if filtro == 'superusuario' }}" href="{{ url_for('admin.usuarios.home', rol='superusuario', estado=estado) }}">Superusuario <b>{{ conteos.superusuario }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if filtro == 'administrador' }}" href="{{ url_for('admin.usuarios.home', rol='administrador', estado=estado) }}">Administrador <b>{{ conteos.administrador }}</b></a>
-  <a class="adm-chip2 {{ 'is-active' if filtro == 'usuario' }}" href="{{ url_for('admin.usuarios.home', rol='usuario', estado=estado) }}">Usuario <b>{{ conteos.usuario }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'superusuario' }}" href="{{ url_for('admin.usuarios.home', rol='superusuario', estado=estado) }}">Administrador <b>{{ conteos.superusuario }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'administrador' }}" href="{{ url_for('admin.usuarios.home', rol='administrador', estado=estado) }}">Cajero <b>{{ conteos.administrador }}</b></a>
+  <a class="adm-chip2 {{ 'is-active' if filtro == 'usuario' }}" href="{{ url_for('admin.usuarios.home', rol='usuario', estado=estado) }}">Cliente <b>{{ conteos.usuario }}</b></a>
   <span style="width:1px; background: var(--musa-borde); margin: 0 4px;"></span>
   <a class="adm-chip2 {{ 'is-active' if estado == 'baja' }}" href="{{ url_for('admin.usuarios.home', rol=filtro, estado='baja') }}">De baja <b>{{ conteos.de_baja }}</b></a>
 </div>
 
 <section class="adm-card" id="usr-lista">
   {% if usuarios %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
+    <div class="adm-tabla-wrap adm-tabla-wrap--cards">
+      <table class="adm-tabla adm-tabla--cards">
         <thead><tr><th>Usuario</th><th>Correo</th><th>Teléfono</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody>
           {% for u in usuarios %}
             {% set yo = (u.idUsuario|string == usuario.idUsuario|string) %}
             <tr
                 style="{{ 'opacity:.55;' if not u.activo }}">
-              <td>
+              <td data-label="Usuario">
                 <div class="adm-prod-cel">
                   <span class="adm-thumb" style="font-size:13px; font-family:'Space Grotesk',sans-serif; color:var(--musa-brasa);">{{ u.iniciales }}</span>
                   <div><strong>{{ u.nombreCompleto }}{% if yo %} <span style="color:var(--musa-texto-suave); font-weight:400;">(tú)</span>{% endif %}</strong>
                     <p>{% if u.dni %}DNI {{ u.dni }}{% else %}Cliente por correo{% endif %}{% if u.noShows %} · {{ u.noShows }} no-show(s){% endif %}</p></div>
                 </div>
               </td>
-              <td>{{ u.correo }}</td>
-              <td>{{ u.telefono }}</td>
-              <td>
+              <td data-label="Correo">{{ u.correo }}</td>
+              <td data-label="Teléfono">{{ u.telefono }}</td>
+              <td data-label="Rol">
                 <span class="adm-badge-rol {{ 'admin' if u.esPanel else 'cliente' }}"
                       style="{{ 'background: #7a3cd1; color:#fff;' if u.esSuper }}">{{ u.rolTexto }}</span>
               </td>
-              <td>
-                {% if u.activo %}<span class="adm-badge-rol cliente">Activo</span>
-                {% else %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
+              <td data-label="Estado">
+                {% if not u.esSuper and not yo %}
+                  <form class="adm-switch" action="{{ url_for('admin.usuarios.estado') }}" method="POST"{% if u.activo %} data-confirm="{{ u.nombreCompleto }} no podrá iniciar sesión hasta que vuelvas a activar su cuenta." data-confirm-titulo="Desactivar cuenta" data-confirm-ok="Desactivar" data-confirm-tono="peligro"{% endif %}>
+                    {{ campo_csrf() }}
+                    <input type="hidden" name="id" value="{{ u.idUsuario }}" />
+                    <input type="hidden" name="activar" value="{{ '0' if u.activo else '1' }}" />
+                    <button type="submit" class="adm-switch__btn {{ 'is-on' if u.activo }}" role="switch" aria-checked="{{ 'true' if u.activo else 'false' }}" aria-label="{{ 'Desactivar' if u.activo else 'Activar' }} cuenta de {{ u.nombreCompleto }}">
+                      <span class="adm-switch__track" aria-hidden="true"><span></span></span>
+                      <span class="adm-switch__estado">{{ 'Activa' if u.activo else 'De baja' }}</span>
+                    </button>
+                  </form>
+                {% else %}
+                  <button type="button" class="adm-switch__btn {{ 'is-on' if u.activo }}" role="switch" aria-checked="{{ 'true' if u.activo else 'false' }}" aria-label="Cuenta protegida, {{ 'activa' if u.activo else 'de baja' }}" disabled>
+                    <span class="adm-switch__track" aria-hidden="true"><span></span></span>
+                    <span class="adm-switch__estado">{{ 'Protegida' if u.esSuper else ('Activa' if u.activo else 'De baja') }}</span>
+                  </button>
+                {% endif %}
               </td>
-              <td>
+              <td data-label="Acciones">
                 {% if u.esSuper %}
                   {% if yo %}<a class="adm-btn-sm" href="{{ url_for('admin.perfil.home') }}"><i class="bi bi-person-gear"></i> Mi perfil</a>
                   {% else %}<span style="color: var(--musa-texto-suave); font-size: 12px;"><i class="bi bi-shield-lock"></i> Cuenta protegida</span>{% endif %}
@@ -77,25 +91,6 @@
                       data-activo="{{ 1 if u.activo else 0 }}">
                       <i class="bi bi-person-badge"></i> Editar
                     </button>
-                    {% if not yo %}
-                    <form action="{{ url_for('admin.usuarios.estado') }}" method="POST">
-                      {{ campo_csrf() }}
-                      <input type="hidden" name="id" value="{{ u.idUsuario }}" />
-                      <input type="hidden" name="activar" value="{{ '0' if u.activo else '1' }}" />
-                      {% if u.activo %}
-                        <button class="adm-btn-sm adm-btn-sm--danger"
-                          data-confirm="«{{ u.nombreCompleto }}» no podrá iniciar sesión hasta que la reactives."
-                          data-confirm-titulo="Dar de baja la cuenta"
-                          data-confirm-ok="Sí, dar de baja" data-confirm-tono="peligro">
-                          <i class="bi bi-slash-circle"></i> Dar de baja</button>
-                      {% else %}
-                        <button class="adm-btn-sm"
-                          data-confirm="«{{ u.nombreCompleto }}» volverá a poder iniciar sesión."
-                          data-confirm-titulo="Reactivar cuenta" data-confirm-ok="Sí, reactivar">
-                          <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
-                      {% endif %}
-                    </form>
-                    {% endif %}
                   </div>
                 {% endif %}
               </td>
@@ -113,10 +108,10 @@
 
 {# ---------------- PANEL usuario ---------------- #}
 <div class="adm-panel__backdrop" data-user-cerrar></div>
-<aside class="adm-panel" id="panelUsuario" aria-hidden="true">
-  <div class="adm-panel__head">
+<aside class="adm-panel" id="panelUsuario" role="dialog" aria-modal="true" aria-labelledby="panel-usuario-titulo" aria-hidden="true">
+  <div class="adm-panel__head" data-eyebrow="Gestión de accesos">
     <button type="button" class="adm-panel__cerrar" data-user-cerrar aria-label="Cerrar">&times;</button>
-    <h2 data-user-titulo>Agregar usuario</h2>
+    <h2 id="panel-usuario-titulo" data-user-titulo>Agregar usuario</h2>
     <p data-user-sub>Elige el rol y completa los datos de la cuenta.</p>
   </div>
   <form method="post" id="formUsuario">
@@ -128,20 +123,13 @@
         <select class="musa-input" id="pu-rol" name="rol" required>
           {% for valor, texto in roles %}<option value="{{ valor }}">{{ texto }}</option>{% endfor %}
         </select>
-        <span class="musa-field-hint">Superusuario = acceso total · Administrador = panel sin usuarios · Usuario = cliente</span>
+        <span class="musa-field-hint">Administrador = acceso total · Cajero = operación diaria del panel · Cliente = tienda</span>
       </div>
 
       <p class="musa-field-hint" data-solo-editar hidden style="margin-top: 14px;">
         <i class="bi bi-info-circle"></i> Puedes corregir los datos de la cuenta y cambiar su rol.
         La <b>contraseña</b> solo la cambia cada persona en <b>«Mi perfil»</b>.
       </p>
-      <div class="musa-field mt-3" data-solo-editar hidden>
-        <label class="musa-field-label" for="pu-activo">Estado</label>
-        <select class="musa-input" id="pu-activo" name="activo">
-          <option value="1">Activo</option>
-          <option value="0">De baja</option>
-        </select>
-      </div>
 
       <div class="musa-field mt-3">
         <label class="musa-field-label" for="pu-dni">DNI <span class="musa-field-hint">obligatorio para personal del panel</span></label>
@@ -231,7 +219,6 @@
       if (editar) {
         document.getElementById("pu-id").value = b.dataset.id;
         document.getElementById("pu-rol").value = b.dataset.rol;
-        document.getElementById("pu-activo").value = b.dataset.activo;
         document.getElementById("pu-dni").value = b.dataset.dni || "";
         document.getElementById("pu-nombres").value = b.dataset.nombres || "";
         document.getElementById("pu-apellidos").value = b.dataset.apellidos || "";

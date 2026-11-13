@@ -14,6 +14,22 @@
   var pedido = 0;
   var temporizador = null;
   var temporizadorSug = null;
+  var temporizadorEsqueleto = null;
+
+  function mostrarEsqueleto() {
+    destino.setAttribute("aria-busy", "true");
+    destino.innerHTML = '<div class="musa-skeleton-tabla" aria-hidden="true">' +
+      '<div class="musa-skeleton-tabla__head"><i></i><i></i><i></i><i></i></div>' +
+      Array.from({ length: 5 }, function () {
+        return '<div class="musa-skeleton-tabla__fila"><i></i><i></i><i></i><i></i></div>';
+      }).join("") +
+      '</div><span class="visually-hidden">Cargando comprobantes…</span>';
+  }
+
+  function quitarEstadoCarga() {
+    destino.removeAttribute("aria-busy");
+    destino.classList.remove("is-cargando");
+  }
 
   // La paginación se resuelve aquí: el loader global no debe taparla.
   function marcarEnlaces() {
@@ -39,21 +55,27 @@
 
   function cargar(url) {
     var mio = ++pedido;
+    clearTimeout(temporizadorEsqueleto);
     destino.classList.add("is-cargando");
+    temporizadorEsqueleto = setTimeout(function () {
+      if (mio === pedido) mostrarEsqueleto();
+    }, 180);
     fetch(url, { headers: { "X-Requested-With": "fetch" }, credentials: "same-origin" })
       .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
       .then(function (html) {
         if (mio !== pedido) return;
+        clearTimeout(temporizadorEsqueleto);
         destino.innerHTML = html;
         marcarEnlaces();
-        destino.classList.remove("is-cargando");
+        quitarEstadoCarga();
         if (limpiar) limpiar.hidden = !hayFiltros();
         var visible = new URL(url, location.href);
         history.replaceState(null, "", visible.pathname + (visible.search || ""));
       })
       .catch(function () {
         if (mio !== pedido) return;
-        destino.classList.remove("is-cargando");
+        clearTimeout(temporizadorEsqueleto);
+        quitarEstadoCarga();
         form.submit();
       });
   }

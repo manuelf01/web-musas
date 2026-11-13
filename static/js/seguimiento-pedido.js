@@ -18,7 +18,7 @@
 
   var BADGE = {
     recibido: ["pendiente", "bi-clock-fill", "Recibido"],
-    preparando: ["preparando", "bi-fire", "En preparación"],
+    preparando: ["preparando", "bi-fire", "En cocina"],
     listo: ["listo", "bi-bag-check-fill", "Listo para recojo"],
     recogido: ["recogido", "bi-check-circle-fill", "Recogido"],
     cancelado: ["cancelado", "bi-x-circle-fill", "Cancelado"],

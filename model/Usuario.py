@@ -5,10 +5,22 @@ from werkzeug.security import check_password_hash, generate_password_hash
 ROLES = ("superusuario", "administrador", "usuario")
 ROLES_PANEL = ("superusuario", "administrador")
 ETIQUETA_ROL = {
-    "superusuario": "Superusuario",
-    "administrador": "Administrador",
-    "usuario": "Usuario",
+    "superusuario": "Administrador",
+    "administrador": "Cajero",
+    "usuario": "Cliente",
 }
+
+
+def _error_clave_unica(exc):
+    """Traduce las restricciones de identidad a mensajes útiles para formularios."""
+    if getattr(exc, "args", [None])[0] != 1062:
+        return None
+    clave = str(exc).lower()
+    if "dni" in clave:
+        return "Ese DNI ya está registrado en otra cuenta."
+    if "correo" in clave:
+        return "Ese correo electrónico ya está registrado."
+    return "Ya existe una cuenta con uno de esos datos."
 
 
 def _tipo_de_rol(rol):
@@ -63,14 +75,19 @@ class Usuario:
             return "Ese correo electrónico ya tiene una cuenta."
         contra_hash = generate_password_hash(contra)
         conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute(
-                "INSERT INTO usuario(DNI, nombres, apellidos, correo, numTelf, contraseña, "
-                "tipoUsuario, rol, activo) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)",
-                (DNI, nombres, apellidos, correo, numTel, contra_hash, _tipo_de_rol(rol), rol),
-            )
-        conexion.commit()
-        conexion.close()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO usuario(DNI, nombres, apellidos, correo, numTelf, contraseña, "
+                    "tipoUsuario, rol, activo) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 1)",
+                    (DNI, nombres, apellidos, correo, numTel, contra_hash, _tipo_de_rol(rol), rol),
+                )
+            conexion.commit()
+        except Exception as exc:
+            conexion.rollback()
+            return _error_clave_unica(exc) or "No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo."
+        finally:
+            conexion.close()
         return None
 
     def obtener_usuarios():
@@ -167,16 +184,18 @@ class Usuario:
     @staticmethod
     def cambiar_rol(id, rol):
         """El superusuario cambia el rol de otra cuenta (no de un superusuario, y
-        no puede ascender a superusuario por aquí). Devuelve None o texto de error."""
+        puede ascender una cuenta de personal si ya tiene DNI válido)."""
         actual = Usuario.obtener_dict(id)
         if actual is None:
             return "La cuenta no existe."
         if actual["esSuper"]:
-            return "No puedes cambiarle el rol a otro superusuario."
+            return "No puedes cambiarle el rol a otro Administrador."
         if rol not in ROLES:
             return "Elige un rol válido."
-        if rol == "superusuario":
-            return "Para dar rol de superusuario, crea la cuenta desde «Agregar usuario»."
+        if rol == "superusuario" and (
+                not actual["dni"] or len(actual["dni"].strip()) != 8
+                or not actual["dni"].strip().isdigit()):
+            return "Para asignar el rol Administrador, registra primero un DNI válido de 8 dígitos."
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
             cursor.execute(
@@ -208,6 +227,9 @@ class Usuario:
                     (dni, nombres, apellidos, correo, telefono, id),
                 )
             conexion.commit()
+        except Exception as exc:
+            conexion.rollback()
+            return _error_clave_unica(exc) or "No se pudieron actualizar los datos de la cuenta."
         finally:
             conexion.close()
         return None
@@ -221,6 +243,7 @@ class Usuario:
         correo = (correo or actual["correo"]).strip().lower()
         if Usuario.existe_correo(correo, excepto_id=id):
             return "Ese correo electrónico ya está en uso por otra cuenta."
+        dni = (dni or "").strip() or None
         if dni and dni != actual["dni"] and Usuario.existe_dni(dni, excepto_id=id):
             return "Ese DNI ya está en uso por otra cuenta."
         sets = ["nombres=%s", "apellidos=%s", "correo=%s", "dni=%s", "numTelf=%s"]
@@ -231,10 +254,15 @@ class Usuario:
             vals.append(generate_password_hash(contra))
         vals.append(id)
         conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute("UPDATE usuario SET " + ", ".join(sets) + " WHERE idUsuario=%s", vals)
-        conexion.commit()
-        conexion.close()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute("UPDATE usuario SET " + ", ".join(sets) + " WHERE idUsuario=%s", vals)
+            conexion.commit()
+        except Exception as exc:
+            conexion.rollback()
+            return _error_clave_unica(exc) or "No se pudieron actualizar los datos de la cuenta."
+        finally:
+            conexion.close()
         return None
 
     def obtener_usuario_id(id):
@@ -350,13 +378,22 @@ class Usuario:
         identificador = (identificador or "").strip()
         conexion = obtener_conexion()
         with conexion.cursor() as cursor:
-            cursor.execute(
+            columnas = (
                 "SELECT idUsuario, dni, nombres, apellidos, correo, numTelf, contraseña, "
                 "tipoUsuario, rol, activo FROM usuario "
-                "WHERE LOWER(correo) = LOWER(%s) OR dni = %s "
-                "ORDER BY FIELD(rol,'superusuario','administrador','usuario')",
-                (identificador, identificador),
             )
+            if len(identificador) == 8 and identificador.isdigit():
+                cursor.execute(
+                    columnas + "WHERE dni=%s AND "
+                    "(rol IN ('superusuario','administrador') OR tipoUsuario=0)",
+                    (identificador,),
+                )
+            else:
+                cursor.execute(
+                    columnas + "WHERE LOWER(correo)=LOWER(%s) AND "
+                    "(rol='usuario' OR tipoUsuario=1)",
+                    (identificador,),
+                )
             filas = cursor.fetchall()
         conexion.close()
         return filas

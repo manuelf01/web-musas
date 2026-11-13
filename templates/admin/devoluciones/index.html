@@ -1,0 +1,45 @@
+{% extends "admin/base.html" %}
+{% block title %}Devoluciones · {{ nombre_negocio }}{% endblock %}
+{% set migas=[('Gestión',None,'bi-box-seam'),('Devoluciones',None,'bi-arrow-counterclockwise')] %}
+{% block content %}
+<div class="adm-head"><div><h1>Devoluciones</h1><p>Cliente, proveedor y anulación de venta con tratamiento físico explícito.</p></div>{% if puede_modificar %}<button class="btn-brasa" data-bs-toggle="modal" data-bs-target="#devolucionModal"><i class="bi bi-plus-lg"></i> Registrar devolución</button>{% endif %}</div>
+<div class="musa-alert mb-4">En alimentos, selecciona <strong>Merma</strong> salvo que el producto esté cerrado y sea apto para volver a venderse.</div>
+<section class="adm-card"><div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+  <thead><tr><th>Fecha</th><th>Tipo / origen</th><th>Producto</th><th class="num">Cantidad</th><th>Condición</th><th>Resolución</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody>{% for d in devoluciones %}<tr>
+    <td data-label="Fecha">{{ d.fecha.strftime('%d/%m/%Y %H:%M') }}</td><td data-label="Tipo / origen">{{ d.tipo.replace('_',' ')|title }}{% if d.pedido %}<br/><small>Pedido #{{ d.pedido }}</small>{% endif %}{% if d.proveedor %}<br/><small>{{ d.proveedor }}</small>{% endif %}</td><td data-label="Producto">{{ d.producto }}</td><td class="num" data-label="Cantidad">{{ d.cantidad }}</td><td data-label="Condici&#243;n">{{ d.condicion|title }}</td><td data-label="Resoluci&#243;n">{{ d.resolucion.replace('_',' ')|title }}</td><td data-label="Motivo">{{ d.motivo }}<br/><small>{{ d.usuario }}</small></td><td data-label="Estado">{{ d.estado|title }}</td>
+    <td data-label="Acciones">{% if puede_modificar and d.estado == 'confirmada' %}<button type="button" class="adm-btn-sm adm-btn-sm--danger" data-dev-revertir data-url="{{ url_for('admin.devoluciones.revertir', id_devolucion=d.id) }}" data-producto="{{ d.producto }}" data-bs-toggle="modal" data-bs-target="#reversionModal"><i class="bi bi-arrow-counterclockwise"></i> Revertir</button>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="9" class="adm-vacio">No hay devoluciones registradas.</td></tr>{% endfor %}</tbody>
+</table></div></section>
+
+{% if puede_modificar %}
+<div class="modal fade caja-modal" id="devolucionModal" tabindex="-1" aria-labelledby="devolucionModalTitulo" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><div><span class="caja-modal__eyebrow">Trazabilidad de inventario</span><h2 class="modal-title" id="devolucionModalTitulo">Registrar devolución</h2></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <form method="post" action="{{ url_for('admin.devoluciones.registrar') }}">{{ campo_csrf() }}<div class="modal-body"><div class="row g-3">
+    <div class="col-md-4"><label class="musa-field-label" for="devTipo">Tipo</label><select class="musa-input" id="devTipo" name="tipo"><option value="cliente">Cliente</option><option value="proveedor">Proveedor</option><option value="anulacion_venta">Anulación de venta</option></select></div>
+    <div class="col-md-3"><label class="musa-field-label" for="devPedido">Pedido entregado</label><input class="musa-input" id="devPedido" type="number" name="pedido" min="1" placeholder="N.º pedido"/></div>
+    <div class="col-md-3"><label class="musa-field-label" for="devProveedor">Proveedor</label><select class="musa-input" id="devProveedor" name="proveedor"><option value="">No corresponde</option>{% for p in proveedores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="musa-field-label" for="devCompra">Compra origen</label><input class="musa-input" id="devCompra" type="number" name="compra" min="1" placeholder="N.º"/></div>
+    <div class="col-md-7"><label class="musa-field-label" for="devProducto">Producto</label><select class="musa-input" id="devProducto" name="producto">{% for p in productos %}<option value="{{ p.idProducto }}">{{ p.nombre }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><label class="musa-field-label" for="devCantidad">Cantidad</label><input class="musa-input" id="devCantidad" type="number" name="cantidad" min="1" required/></div>
+    <div class="col-md-3"><label class="musa-field-label" for="devCondicion">Condición</label><select class="musa-input" id="devCondicion" name="condicion"><option value="merma">Merma / no vendible</option><option value="reincorporable">Reincorporable</option></select></div>
+    <div class="col-md-6"><label class="musa-field-label" for="devResolucion">Resolución</label><select class="musa-input" id="devResolucion" name="resolucion"><option value="reembolso">Reembolso</option><option value="cambio">Cambio</option><option value="sin_reembolso">Sin reembolso</option></select></div>
+    <div class="col-md-6"><label class="musa-field-label" for="devDocumento">Documento</label><input class="musa-input" id="devDocumento" name="documento"/></div>
+    <div class="col-12"><label class="musa-field-label" for="devMotivo">Motivo</label><textarea class="musa-input" id="devMotivo" name="motivo" minlength="5" required></textarea></div>
+  </div></div><div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa" data-confirm="La devolución y sus movimientos quedarán auditados.">Confirmar devolución</button></div></form>
+</div></div></div>
+
+<div class="modal fade caja-modal" id="reversionModal" tabindex="-1" aria-labelledby="reversionModalTitulo" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><div><span class="caja-modal__eyebrow">Corrección auditable</span><h2 class="modal-title" id="reversionModalTitulo">Revertir devolución</h2></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <form method="post" id="formReversion" action="">{{ campo_csrf() }}<div class="modal-body"><div class="musa-alert mb-3">El movimiento original no se borrará. Se registrará una reversión para conservar el historial.</div><p id="reversionProducto" class="fw-bold"></p><label class="musa-field-label" for="reversionMotivo">Motivo de la corrección</label><textarea class="musa-input" id="reversionMotivo" name="motivo" minlength="5" maxlength="255" required placeholder="Explica por qué se revierte este registro"></textarea></div><div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-peligro">Confirmar reversión</button></div></form>
+</div></div></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if puede_modificar %}<script>
+(function () {
+  document.querySelectorAll('[data-dev-revertir]').forEach(function (b) { b.addEventListener('click', function () {
+    document.getElementById('formReversion').action = b.dataset.url;
+    document.getElementById('reversionProducto').textContent = b.dataset.producto;
+  }); });
+})();
+</script>{% endif %}{% endblock %}

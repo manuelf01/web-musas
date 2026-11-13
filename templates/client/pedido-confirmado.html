@@ -22,20 +22,20 @@
     </div>
 
     <div class="conf-pago">
-      {% if pedido.medioPago in ('yape', 'plin') %}
+      {% if medio_pago and medio_pago.tipo == 'billetera' %}
         <i class="bi bi-qr-code"></i>
         <div>
-          <strong>Pagarás con {{ pedido.medioPago|capitalize }} al recoger.</strong>
-          Paga <b>S/ {{ '%.2f'|format(pedido.total) }}</b> antes de recibir el pedido.
+          <strong>Pagarás con {{ medio_pago.nombre }} al recoger.</strong>
+          Paga <b>S/ {{ '%.2f'|format(pago_importes.cobrado) }}</b> antes de recibir el pedido.{% if pago_importes.descuento %} Incluye un descuento de <b>S/ {{ '%.2f'|format(pago_importes.descuento) }}</b>.{% endif %}
           {% if pago_digital.numero %}<br />Número: <b>{{ pago_digital.numero }}</b> · {{ pago_digital.titular }}{% endif %}
           {% if pago_digital.qr %}<div class="mt-2"><img src="{{ pago_digital.qr if pago_digital.qr_externo else url_for('static', filename=pago_digital.qr) }}" alt="QR de pago de {{ pago_digital.titular }}" style="width:180px;max-width:100%;border-radius:12px;" /></div>{% endif %}
           {% if not pago_digital.numero or not pago_digital.qr %}<br /><small>El personal de caja te mostrará el número y QR verificados.</small>{% endif %}
         </div>
       {% else %}
-        <i class="bi {{ 'bi-credit-card' if pedido.medioPago == 'tarjeta' else 'bi-cash-coin' }}"></i>
+        <i class="bi {{ 'bi-credit-card' if medio_pago and medio_pago.tipo == 'tarjeta' else 'bi-cash-coin' }}"></i>
         <div>
-          <strong>Pagarás con {{ pedido.medioPago|capitalize }} al recoger.</strong>
-          Paga <b>S/ {{ '%.2f'|format(pedido.total) }}</b> en caja al momento de recoger tu pedido.
+          <strong>Pagarás con {{ medio_pago.nombre if medio_pago else pedido.medioPago|capitalize }} al recoger.</strong>
+          Paga <b>S/ {{ '%.2f'|format(pago_importes.cobrado if pago_importes else pedido.total) }}</b> en caja al momento de recoger tu pedido.{% if pago_importes and pago_importes.descuento %} Incluye un descuento de <b>S/ {{ '%.2f'|format(pago_importes.descuento) }}</b>.{% endif %}
         </div>
       {% endif %}
     </div>
@@ -57,9 +57,13 @@
             <td>S/ {{ '%.2f'|format(it.precioTotal) }}</td>
           </tr>
         {% endfor %}
+        {% if pago_importes and pago_importes.descuento %}
+        <tr><td>Subtotal de productos</td><td>S/ {{ '%.2f'|format(pago_importes.bruto) }}</td></tr>
+        <tr><td>Descuento por {{ medio_pago.nombre }}</td><td>− S/ {{ '%.2f'|format(pago_importes.descuento) }}</td></tr>
+        {% endif %}
         <tr>
-          <td><b>Total (IGV incluido)</b></td>
-          <td><b>S/ {{ '%.2f'|format(pedido.total) }}</b></td>
+          <td><b>Total a pagar (IGV incluido)</b></td>
+          <td><b>S/ {{ '%.2f'|format(pago_importes.cobrado if pago_importes else pedido.total) }}</b></td>
         </tr>
       </table>
     </details>

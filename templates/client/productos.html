@@ -1,4 +1,5 @@
 {% extends "client/base.html" %}
+{% block scripts_pagina_base %}<script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>{% endblock %}
 {% block title %}{{ categoria }} · Carta — {{ nombre_negocio }}{% endblock %}
 {% set migas = [('Carta', url_for('cliente.carta'), 'bi-card-list'), (categoria, None)] %}
 {% block nav_carta %}active{% endblock %}{% block tab_carta %}active{% endblock %}

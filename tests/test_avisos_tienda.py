@@ -37,17 +37,18 @@ def test_login_exitoso_solo_dice_inicio_de_sesion_exitoso(bd_limpia, client, csr
     assert "aviso__form" not in html and "data-ver-donde" not in html          # sin Deshacer ni «Ver dónde»
 
 
-def test_login_con_clave_incorrecta_senala_la_contrasena(bd_limpia, client, csrf):
+def test_login_con_clave_incorrecta_no_revela_que_campo_fallo(bd_limpia, client, csrf):
     html = _login(client, "cliente@correo.com", "Equivocada1").get_data(as_text=True)
-    assert "La contraseña no es correcta" in html and "data-ver-donde" in html
-    info = _info(html)
-    assert info["campo"] == "contraseña" and info["modo"] == "pagina"
+    assert "No pudimos iniciar sesión con esos datos" in html
+    assert "data-ver-donde" not in html
+    assert "contraseña no es correcta" not in html
     assert "Equivocada1" not in html                                            # la clave nunca se guarda
 
 
-def test_login_con_cuenta_inexistente_senala_el_usuario(bd_limpia, client, csrf):
+def test_login_con_cuenta_inexistente_usa_el_mismo_mensaje(bd_limpia, client, csrf):
     html = _login(client, "nadie@correo.com", "Musas2026").get_data(as_text=True)
-    assert _info(html)["campo"] == "usuario"
+    assert "No pudimos iniciar sesión con esos datos" in html
+    assert "data-ver-donde" not in html
     html = _login(client, "esto no es un correo", "x").get_data(as_text=True)
     assert _info(html)["campo"] == "usuario"
     html = _login(client, "cliente@correo.com", "").get_data(as_text=True)

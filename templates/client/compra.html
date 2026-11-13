@@ -27,12 +27,24 @@
   </div>
 
   <div id="ck-contenido" hidden>
-    <form method="post" id="checkout-form" class="ck-grid">
+    <form method="post" id="checkout-form" class="ck-flujo">
       {{ campo_csrf() }}
       <input type="hidden" name="carrito_json" id="carrito_json" value="[]" />
+      <input type="hidden" name="idempotencia" value="{{ idempotencia }}" />
 
-      <!-- Columna izquierda -->
-      <div>
+      <ol class="ck-stepper" aria-label="Pasos para finalizar el pedido">
+        <li class="is-active" data-ck-indicador="1">
+          <button type="button" data-ck-ir="1" aria-current="step"><span>1</span><small>Recojo</small></button>
+        </li>
+        <li data-ck-indicador="2">
+          <button type="button" data-ck-ir="2" disabled><span>2</span><small>Pago</small></button>
+        </li>
+        <li data-ck-indicador="3">
+          <button type="button" data-ck-ir="3" disabled><span>3</span><small>Revisar</small></button>
+        </li>
+      </ol>
+
+      <div class="ck-flujo__cuerpo">
         <div class="ck-modo">
           <i class="bi bi-shop"></i>
           <div>
@@ -43,8 +55,8 @@
         </div>
 
         <!-- Datos de quien recoge -->
-        <div class="ck-card">
-          <h2><span class="ck-num">1</span> Datos de quien recoge</h2>
+        <section class="ck-card ck-paso" data-ck-paso="1" aria-labelledby="ck-titulo-paso-1">
+          <h2 id="ck-titulo-paso-1"><span class="ck-num">1</span> Datos de quien recoge</h2>
 
           {% if sesion %}
             <div class="musa-alert musa-alert--ok d-flex gap-2 mb-3">
@@ -116,11 +128,17 @@
               </div>
             {% endif %}
           </div>
-        </div>
+          <p class="ck-paso__error" data-ck-error="1" role="alert" hidden></p>
+          <div class="ck-paso__acciones ck-paso__acciones--fin">
+            <button type="button" class="btn-brasa" data-ck-siguiente="2" {% if not libres %}disabled{% endif %}>
+              Continuar al pago <i class="bi bi-arrow-right"></i>
+            </button>
+          </div>
+        </section>
 
         <!-- Forma de pago -->
-        <div class="ck-card">
-          <h2><span class="ck-num">2</span> Forma de pago</h2>
+        <section class="ck-card ck-paso" data-ck-paso="2" aria-labelledby="ck-titulo-paso-2">
+          <h2 id="ck-titulo-paso-2"><span class="ck-num">2</span> Forma de pago</h2>
           <div class="musa-alert d-flex gap-2 mb-3">
             <i class="bi bi-receipt mt-1"></i>
             <div class="small">Al entregar el pedido, caja te preguntará si necesitas boleta o factura y solicitará el DNI o RUC correspondiente.</div>
@@ -128,32 +146,24 @@
 
           <p class="musa-field-label mt-3 mb-2">Forma de pago</p>
           <p class="musa-field-hint mb-2">El pago siempre es al recoger en el local. Elige cómo prefieres pagar:</p>
+          {% set iconos_pago = {'efectivo':'bi-cash-coin','tarjeta':'bi-credit-card','billetera':'bi-phone','transferencia':'bi-bank'} %}
+          {% for m in medios_pago %}
           <label class="ck-opcion">
-            <i class="bi bi-cash-coin"></i>
+            {% if m.imagen %}<img src="{{ url_for('static', filename='img/' ~ miniatura_imagen(m.imagen)) }}" alt="" width="28" height="28" loading="lazy" />
+            {% else %}<i class="bi {{ iconos_pago.get(m.tipo, 'bi-wallet2') }}"></i>{% endif %}
             <div>
-              <strong>Efectivo</strong>
-              <span>Pagas en caja al recoger</span>
+              <strong>{{ m.nombre }}</strong>
+              <span>
+                {% if m.descuentoPct %}{{ '%.2f'|format(m.descuentoPct) }}% de descuento al cobrar
+                {% elif m.tipo == 'efectivo' %}Pagas en caja al recoger
+                {% elif m.tipo == 'billetera' %}Pagas al recoger usando el número o QR
+                {% else %}Pagas al recoger{% endif %}
+              </span>
             </div>
-            <input type="radio" name="pago" value="efectivo" {{ 'checked' if not form or form.pago == 'efectivo' }} />
+            <input type="radio" name="pago" value="{{ m.codigo }}" data-tipo="{{ m.tipo }}"
+                   {{ 'checked' if (form and form.pago == m.codigo) or (not form and loop.first) }} />
           </label>
-          <label class="ck-opcion">
-            <i class="bi bi-credit-card"></i>
-            <div>
-              <strong>Tarjeta</strong>
-              <span>Pagas con tarjeta en caja</span>
-            </div>
-            <input type="radio" name="pago" value="tarjeta" {{ 'checked' if form and form.pago == 'tarjeta' }} />
-          </label>
-          <label class="ck-opcion">
-            <i class="bi bi-phone"></i>
-            <div><strong>Yape</strong><span>Pagas al recoger usando el número o QR</span></div>
-            <input type="radio" name="pago" value="yape" {{ 'checked' if form and form.pago == 'yape' }} />
-          </label>
-          <label class="ck-opcion">
-            <i class="bi bi-qr-code"></i>
-            <div><strong>Plin</strong><span>Pagas al recoger usando el número o QR</span></div>
-            <input type="radio" name="pago" value="plin" {{ 'checked' if form and form.pago == 'plin' }} />
-          </label>
+          {% endfor %}
           <div class="ck-yape" id="ck-yape-info" hidden>
             {% if pago_digital.numero %}<strong>{{ pago_digital.titular }}:</strong> {{ pago_digital.numero }}<br />{% endif %}
             <span style="color: var(--musa-texto-suave);">El número y el QR también aparecerán al confirmar el pedido.</span>
@@ -164,13 +174,15 @@
             <textarea class="musa-input" id="notas" name="notas" rows="2"
               placeholder="Ej. sin cebolla en la smash, empaque separado.">{{ form.notas if form else '' }}</textarea>
           </div>
-        </div>
+          <p class="ck-paso__error" data-ck-error="2" role="alert" hidden></p>
+          <div class="ck-paso__acciones">
+            <button type="button" class="btn-contorno" data-ck-anterior="1"><i class="bi bi-arrow-left"></i> Anterior</button>
+            <button type="button" class="btn-brasa" data-ck-siguiente="3">Revisar pedido <i class="bi bi-arrow-right"></i></button>
+          </div>
+        </section>
 
-      </div>
-
-      <!-- Columna derecha: resumen -->
-      <aside class="ck-summary">
-        <h2>Tu pedido para llevar <span id="ck-conteo">0 ítems</span></h2>
+        <section class="ck-summary ck-paso" data-ck-paso="3" aria-labelledby="ck-titulo-paso-3">
+        <h2 id="ck-titulo-paso-3"><span class="ck-summary__titulo"><b class="ck-num">3</b> Revisa tu pedido</span><span class="ck-summary__conteo" id="ck-conteo">0 ítems</span></h2>
         <div id="ck-items"></div>
         <p id="ck-aviso-precio" class="ck-aviso-precio" hidden></p>
         <div class="ck-tot">
@@ -179,19 +191,23 @@
           <div class="ck-tot__row"><span>Preparación y recojo</span><span style="color: var(--musa-exito); font-weight: 600;">Gratis</span></div>
           <div class="ck-tot__row total"><span>Total a pagar</span><strong id="ck-total">S/ 0.00</strong></div>
         </div>
-        <button type="submit" class="btn-brasa w-100 mt-3">
-          <span id="ck-btn-texto">Confirmar pedido</span> <i class="bi bi-arrow-right"></i>
-        </button>
+        <div class="ck-paso__acciones mt-3">
+          <button type="button" class="btn-contorno" data-ck-anterior="2"><i class="bi bi-arrow-left"></i> Anterior</button>
+          <button type="submit" class="btn-brasa">
+            <span id="ck-btn-texto">Confirmar pedido</span> <i class="bi bi-check2-circle"></i>
+          </button>
+        </div>
         <p class="small text-center mt-3 mb-0" style="color: var(--musa-texto-suave);">
           <i class="bi bi-shield-check" style="color: var(--musa-exito);"></i>
           Usaremos tu celular si necesitamos contactarte por alguna demora.
         </p>
-      </aside>
+        </section>
+      </div>
     </form>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/checkout.js') }}"></script>
+<script src="{{ url_for('static', filename='js/checkout.js', v='20261026-1') }}"></script>
 {% endblock %}

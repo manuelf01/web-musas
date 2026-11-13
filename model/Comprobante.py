@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 
 from bd import obtener_conexion
 from negocio import SEDE, NOMBRE_NEGOCIO, ahora_peru
+from model.Inventario import Inventario
 
 
 MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto",
@@ -40,6 +41,25 @@ def _armar_serie(items, titulo, subtitulo):
 
 
 class Comprobante:
+
+    @staticmethod
+    def resumen_productos_dia(fecha=None):
+        """Unidades e ingreso por producto de comprobantes cobrados en la fecha."""
+        fecha = fecha or ahora_peru().date()
+        conexion = obtener_conexion()
+        try:
+            with conexion.cursor() as cursor:
+                cursor.execute(
+                    "SELECT d.idProducto,d.nombreProducto,SUM(d.cantidad) "
+                    "FROM detalleComprobante d JOIN comprobante c ON c.idComprobante=d.idComprobante "
+                    "WHERE c.fechaComprobante=%s AND c.anulado=0 "
+                    "GROUP BY d.idProducto,d.nombreProducto ORDER BY SUM(d.cantidad) DESC,d.nombreProducto",
+                    (fecha,))
+                filas = cursor.fetchall()
+            return [{"idProducto": f[0], "nombre": f[1], "unidades": int(f[2] or 0)}
+                    for f in filas]
+        finally:
+            conexion.close()
 
     @staticmethod
     def anios_disponibles():
@@ -303,9 +323,12 @@ class Comprobante:
                     "idAnulador = %s, stockDevuelto = %s WHERE idComprobante = %s",
                     (motivo[:255], ahora_peru().replace(tzinfo=None), id_usuario,
                      1 if devolver_stock else 0, id_comprobante))
+                cursor.execute("UPDATE pagoVenta SET anulado=1 WHERE idComprobante=%s", (id_comprobante,))
                 if devolver_stock:
                     from model.Pedido import Pedido
-                    Pedido._devolver_stock(cursor, fila[0])
+                    Pedido._devolver_stock(
+                        cursor, fila[0], "devolucion_anulacion",
+                        "Stock devuelto al anular la venta", id_usuario)
             conexion.commit()
             return "ok"
         finally:
@@ -328,19 +351,20 @@ class Comprobante:
                     return "no_anulado"
                 if fila[2]:
                     cursor.execute(
-                        "SELECT dor.idProducto, SUM(dor.cantidad), p.existencias FROM detalleOrden dor "
-                        "LEFT JOIN producto p ON p.idProducto = dor.idProducto "
-                        "WHERE dor.idPedido = %s GROUP BY dor.idProducto, p.existencias", (fila[0],))
+                        "SELECT dor.idProducto, SUM(dor.cantidad) FROM detalleOrden dor "
+                        "WHERE dor.idPedido = %s GROUP BY dor.idProducto", (fila[0],))
                     lineas = cursor.fetchall()
-                    if any(disp is None or disp < cant for _, cant, disp in lineas):
+                    try:
+                        for id_prod, cant in lineas:
+                            Inventario.salida(
+                                cursor, id_prod, cant, "salida_restauracion", "comprobante",
+                                id_comprobante, "Stock descontado al restaurar la venta", None)
+                    except ValueError:
                         return "sin_stock"
-                    for id_prod, cant, _ in lineas:
-                        cursor.execute(
-                            "UPDATE producto SET existencias = existencias - %s WHERE idProducto = %s",
-                            (cant, id_prod))
                 cursor.execute(
                     "UPDATE comprobante SET anulado = 0, motivoAnulacion = NULL, fechaAnulacion = NULL, "
                     "idAnulador = NULL, stockDevuelto = 0 WHERE idComprobante = %s", (id_comprobante,))
+                cursor.execute("UPDATE pagoVenta SET anulado=0 WHERE idComprobante=%s", (id_comprobante,))
             conexion.commit()
             return "ok"
         finally:
@@ -467,6 +491,8 @@ class Comprobante:
             "tipoComprobante": tipo_comprobante,
             "subTotal": float(snapshot.get("subTotal", cabecera[5]) or 0),
             "igv": float(snapshot.get("igv", cabecera[6]) or 0),
+            "montoBruto": float(snapshot.get("montoBruto", snapshot.get("montoTotal", cabecera[7])) or 0),
+            "descuento": float(snapshot.get("descuento", 0) or 0),
             "montoTotal": float(snapshot.get("montoTotal", cabecera[7]) or 0),
             "idPedido": int(snapshot.get("idPedido") or cabecera[8]),
             "cliente": nombre,

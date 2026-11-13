@@ -87,6 +87,10 @@ def bd_limpia(_bd_sesion):
     _reconstruir_bd()
     import bd
     bd.db = TEST_DB
+    # Los cobros reales exigen una sesión abierta. Las pruebas parten de una
+    # caja con fondo cero para ejercitar el mismo flujo que producción.
+    from model.Caja import Caja
+    assert Caja.abrir(0, SUPER_ID) == "ok"
     return None
 
 

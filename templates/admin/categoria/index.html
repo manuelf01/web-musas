@@ -22,7 +22,7 @@
   <div class="adm-search">
     <i class="bi bi-search"></i>
     <input type="search" name="q" value="{{ q }}" list="cat-sug" autocomplete="off"
-           data-buscar-auto placeholder="Escribe para filtrar por nombre o descripción…" />
+           data-buscar-auto data-buscar-destino="#cat-lista" placeholder="Escribe para filtrar por nombre o descripción…" />
     <datalist id="cat-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </div>
 </form>
@@ -35,8 +35,8 @@
 
 <section class="adm-card" id="cat-lista">
   {% if categorias %}
-    <div class="adm-tabla-wrap">
-      <table class="adm-tabla">
+    <div class="adm-tabla-wrap adm-tabla-wrap--cards">
+      <table class="adm-tabla adm-tabla--cards">
         <thead>
           <tr><th>Categoría</th><th class="num">Productos</th><th>Estado</th><th>Acciones</th></tr>
         </thead>
@@ -44,43 +44,33 @@
           {% for c in categorias %}
             {% set activa = (c|length <= 4) or c[4] %}
             <tr style="{{ 'opacity:.55;' if not activa }}">
-              <td>
+              <td data-label="Categoría">
                 <div class="adm-prod-cel">
-                  {% if c[3] %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ c[3]) }}" alt="" />
+                  {% if c[3] %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ miniatura_imagen(c[3])) }}" alt="" loading="lazy" decoding="async" />
                   {% else %}<span class="adm-thumb"><i class="bi bi-tags"></i></span>{% endif %}
                   <div><strong>{{ c[1] }}</strong><p>{{ (c[2] or 'Sin descripción.') | truncate(72) }}</p></div>
                 </div>
               </td>
-              <td class="num"><span class="adm-badge-stock">{{ totales.get(c[0], 0) }}</span></td>
-              <td>
-                {% if activa %}<span class="adm-badge-rol cliente">En carta</span>
-                {% else %}<span class="adm-badge-rol" style="background: rgba(196,51,29,.12); color: var(--musa-peligro);">De baja</span>{% endif %}
+              <td class="num" data-label="Productos"><span class="adm-badge-stock">{{ totales.get(c[0], 0) }}</span></td>
+              <td data-label="Estado">
+                <form class="adm-switch" action="{{ url_for('admin.categoria.estado') }}" method="POST"{% if activa %} data-confirm="La categoría «{{ c[1] }}» y sus productos dejarán de mostrarse en la carta. Podrás reactivarla desde este mismo interruptor." data-confirm-titulo="Desactivar categoría" data-confirm-ok="Desactivar" data-confirm-tono="peligro"{% endif %}>
+                  {{ campo_csrf() }}
+                  <input type="hidden" name="idCategoria" value="{{ c[0] }}" />
+                  <input type="hidden" name="activar" value="{{ '0' if activa else '1' }}" />
+                  <input type="hidden" name="volver" value="{{ estado }}" />
+                  <button type="submit" class="adm-switch__btn {{ 'is-on' if activa }}" role="switch" aria-checked="{{ 'true' if activa else 'false' }}" aria-label="{{ 'Desactivar' if activa else 'Activar' }} categoría {{ c[1] }}">
+                    <span class="adm-switch__track" aria-hidden="true"><span></span></span>
+                    <span class="adm-switch__estado">{{ 'En carta' if activa else 'De baja' }}</span>
+                  </button>
+                </form>
               </td>
-              <td>
+              <td data-label="Acciones">
                 <div class="acciones">
                   <button type="button" class="adm-btn-sm" data-cat-abrir data-modo="editar"
                     data-id="{{ c[0] }}" data-nombre="{{ c[1] }}" data-descripcion="{{ c[2] or '' }}"
                     data-imagen="{{ c[3] or '' }}" data-activo="{{ 1 if activa else 0 }}">
                     <i class="bi bi-pencil"></i> Editar
                   </button>
-                  <form action="{{ url_for('admin.categoria.estado') }}" method="POST">
-                    {{ campo_csrf() }}
-                    <input type="hidden" name="idCategoria" value="{{ c[0] }}" />
-                    <input type="hidden" name="activar" value="{{ '0' if activa else '1' }}" />
-                    <input type="hidden" name="volver" value="{{ estado }}" />
-                    {% if activa %}
-                      <button class="adm-btn-sm adm-btn-sm--danger"
-                        data-confirm="La categoría «{{ c[1] }}» y sus {{ totales.get(c[0], 0) }} producto(s) dejarán de mostrarse en la carta y el inicio."
-                        data-confirm-titulo="Eliminar de la carta"
-                        data-confirm-ok="Sí, eliminar" data-confirm-tono="peligro">
-                        <i class="bi bi-trash"></i> Eliminar</button>
-                    {% else %}
-                      <button class="adm-btn-sm"
-                        data-confirm="«{{ c[1] }}» y sus productos activos volverán a la carta."
-                        data-confirm-titulo="Reactivar categoría" data-confirm-ok="Sí, reactivar">
-                        <i class="bi bi-arrow-counterclockwise"></i> Reactivar</button>
-                    {% endif %}
-                  </form>
                 </div>
               </td>
             </tr>
@@ -98,10 +88,10 @@
 
 {# ---------------- PANEL agregar / editar ---------------- #}
 <div class="adm-panel__backdrop" data-cat-cerrar></div>
-<aside class="adm-panel" id="panelCategoria" aria-hidden="true">
-  <div class="adm-panel__head">
+<aside class="adm-panel" id="panelCategoria" role="dialog" aria-modal="true" aria-labelledby="panel-categoria-titulo" aria-hidden="true">
+  <div class="adm-panel__head" data-eyebrow="Organización de carta">
     <button type="button" class="adm-panel__cerrar" data-cat-cerrar aria-label="Cerrar">&times;</button>
-    <h2><i class="bi bi-tags" style="color: var(--musa-brasa);"></i> <span data-cat-titulo>Nueva categoría</span></h2>
+    <h2 id="panel-categoria-titulo"><i class="bi bi-tags" style="color: var(--musa-brasa);"></i> <span data-cat-titulo>Nueva categoría</span></h2>
     <p>Crea o edita una sección para ordenar los platos de la carta.</p>
   </div>
   <form method="post" id="formCategoria" enctype="multipart/form-data">
@@ -129,13 +119,6 @@
           <div class="adm-foto-url-row">o pega un enlace</div>
           <input class="musa-input" id="mc-url" name="imagen_url" type="url"
                  placeholder="https://… (enlace directo a la imagen)" />
-        </div>
-        <div class="musa-field mt-3">
-          <label class="musa-field-label" for="mc-activo">Estado</label>
-          <select class="musa-input" id="mc-activo" name="activo">
-            <option value="1">Activa · visible en la carta</option>
-            <option value="0">Inactiva · eliminada de la carta</option>
-          </select>
         </div>
     </div>
     <div class="adm-panel__foot">
@@ -190,7 +173,6 @@
         document.getElementById("mc-id").value = b.dataset.id;
         document.getElementById("mc-nombre").value = b.dataset.nombre;
         document.getElementById("mc-descripcion").value = b.dataset.descripcion;
-        document.getElementById("mc-activo").value = b.dataset.activo;
         if (b.dataset.imagen) mostrar("/static/img/" + b.dataset.imagen);
       } else {
         titulo.textContent = "Nueva categoría";
@@ -200,7 +182,6 @@
         submit.dataset.confirmTitulo = "Nueva categoría";
         submit.dataset.confirmOk = "Guardar";
         document.getElementById("mc-id").value = "";
-        document.getElementById("mc-activo").value = "1";
       }
       abrir();
     });

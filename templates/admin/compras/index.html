@@ -1,0 +1,54 @@
+{% extends "admin/base.html" %}
+{% block title %}Compras · {{ nombre_negocio }}{% endblock %}
+{% set migas=[('Gestión',None,'bi-box-seam'),('Compras',None,'bi-bag-check')] %}
+{% block content %}
+<div class="adm-head"><div><h1>Compras y recepción</h1><p>La recepción actualiza stock, costo promedio ponderado y Kardex en una transacción.</p></div>{% if puede_modificar and proveedores %}<button class="btn-brasa" data-bs-toggle="modal" data-bs-target="#compraModal"><i class="bi bi-plus-lg"></i> Registrar compra</button>{% endif %}</div>
+{% if not proveedores %}<div class="musa-alert mb-4">Primero registra un proveedor activo.</div>{% endif %}
+<section class="adm-card"><div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+  <thead><tr><th>Documento / fecha</th><th>Proveedor</th><th>Almacén</th><th class="num">Productos</th><th class="num">Total</th><th>Estado</th><th>Acción</th></tr></thead>
+  <tbody>{% for c in compras %}<tr>
+    <td data-label="Documento / fecha"><strong>{{ c.documento }}</strong><br/><small>{{ c.fecha.strftime('%d/%m/%Y') }}</small></td><td data-label="Proveedor">{{ c.proveedor }}</td><td data-label="Almacén">{{ c.almacen }}</td><td class="num" data-label="Productos">{{ c.lineas }}</td><td class="num" data-label="Total">S/ {{ '%.2f'|format(c.total) }}</td><td data-label="Estado"><span class="caja-estado caja-estado--{{ 'abierta' if c.estado == 'recibida' else 'cerrada' }}">{{ c.estado|title }}</span></td>
+    <td data-label="Acción">{% if puede_modificar and c.estado == 'borrador' %}<button type="button" class="adm-btn-sm" data-compra-recibir data-url="{{ url_for('admin.compras.recibir', id_compra=c.id) }}" data-documento="{{ c.documento }}" data-proveedor="{{ c.proveedor }}" data-almacen="{{ c.almacen }}" data-lineas="{{ c.lineas }}" data-total="{{ '%.2f'|format(c.total) }}" data-bs-toggle="modal" data-bs-target="#recepcionModal"><i class="bi bi-box-arrow-in-down"></i> Recibir mercadería</button>{% else %}—{% endif %}</td>
+  </tr>{% else %}<tr><td colspan="7" class="adm-vacio">Todavía no hay compras.</td></tr>{% endfor %}</tbody>
+</table></div></section>
+
+{% if puede_modificar and proveedores %}
+<div class="modal fade caja-modal" id="compraModal" tabindex="-1" aria-labelledby="compraModalTitulo" aria-hidden="true"><div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><div><span class="caja-modal__eyebrow">Documento de origen</span><h2 class="modal-title" id="compraModalTitulo">Registrar compra</h2></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <form method="post" action="{{ url_for('admin.compras.crear') }}">{{ campo_csrf() }}<div class="modal-body">
+    <div class="row g-3"><div class="col-md-4"><label class="musa-field-label">Proveedor</label><select class="musa-input" name="proveedor">{% for p in proveedores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}</select></div><div class="col-md-3"><label class="musa-field-label">Documento</label><input class="musa-input" name="documento" required placeholder="F001-123"/></div><div class="col-md-3"><label class="musa-field-label">Fecha</label><input class="musa-input" type="date" name="fecha" required/></div><div class="col-md-2"><label class="musa-field-label">Almacén</label><select class="musa-input" name="almacen">{% for a in almacenes %}<option value="{{ a.id }}">{{ a.nombre }}</option>{% endfor %}</select></div></div>
+        <h3 class="mt-4">Productos terminados</h3><p class="text-muted">Bebidas y artículos listos para vender.</p>
+    <div id="compra-lineas"><div class="compra-linea row g-2 mb-2"><div class="col-md-6"><select class="musa-input" name="producto[]"><option value="">No agregar producto</option>{% for p in productos %}<option value="{{ p.idProducto }}">{{ p.nombre }}</option>{% endfor %}</select></div><div class="col-md-2"><input class="musa-input" type="number" name="cantidad[]" min="1" step="1" placeholder="Cantidad" /></div><div class="col-md-3"><input class="musa-input" type="number" name="costo[]" min="0" step="0.0001" placeholder="Costo unitario" /></div><div class="col-md-1"><button type="button" class="adm-btn-sm" data-quitar-linea aria-label="Quitar línea">×</button></div></div></div>
+    <button type="button" class="btn-contorno mt-2" id="agregar-linea">+ Otro producto</button>
+    <hr class="my-4" />
+    <h3>Insumos</h3><p class="text-muted">Ingredientes y materiales que se usarán en recetas.</p>
+    <div id="compra-insumos"><div class="compra-linea row g-2 mb-2"><div class="col-md-6"><select class="musa-input" name="insumo[]"><option value="">No agregar insumo</option>{% for i in insumos %}<option value="{{ i.id }}">{{ i.nombre }} ({{ i.unidad }})</option>{% endfor %}</select></div><div class="col-md-2"><input class="musa-input" type="number" name="cantidad_insumo[]" min="0.001" step="0.001" placeholder="Cantidad" /></div><div class="col-md-3"><input class="musa-input" type="number" name="costo_insumo[]" min="0" step="0.0001" placeholder="Costo por unidad" /></div><div class="col-md-1"><button type="button" class="adm-btn-sm" data-quitar-insumo aria-label="Quitar línea">×</button></div></div></div>
+    <button type="button" class="btn-contorno mt-2" id="agregar-insumo-linea">+ Otro insumo</button><label class="musa-field-label mt-3">Observaciones</label><textarea class="musa-input" name="observaciones"></textarea>
+  </div><div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa">Guardar borrador</button></div></form>
+</div></div></div>
+{% endif %}
+
+{% if puede_modificar %}
+<div class="modal fade caja-modal" id="recepcionModal" tabindex="-1" aria-labelledby="recepcionModalTitulo" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><div><span class="caja-modal__eyebrow">Ingreso definitivo</span><h2 class="modal-title" id="recepcionModalTitulo">Confirmar recepción</h2></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <form method="post" id="formRecepcion" action="">{{ campo_csrf() }}<div class="modal-body"><div class="musa-alert mb-3">Esta operación ingresará existencias y recalculará su costo promedio. No se puede editar después de recibir.</div><dl class="modal-resumen"><div><dt>Documento</dt><dd data-rec-documento></dd></div><div><dt>Proveedor</dt><dd data-rec-proveedor></dd></div><div><dt>Almacén</dt><dd data-rec-almacen></dd></div><div><dt>Productos</dt><dd data-rec-lineas></dd></div><div><dt>Total</dt><dd data-rec-total></dd></div></dl></div><div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa">Confirmar recepción</button></div></form>
+</div></div></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>
+(function(){
+  function configurarLista(id,botonId,selectorQuitar){
+    var cont=document.getElementById(id),add=document.getElementById(botonId);
+    if(!cont||!add)return;
+    add.addEventListener('click',function(){var n=cont.firstElementChild.cloneNode(true);n.querySelectorAll('input').forEach(function(i){i.value='';});n.querySelectorAll('select').forEach(function(s){s.selectedIndex=0;});cont.appendChild(n);});
+    cont.addEventListener('click',function(e){var b=e.target.closest(selectorQuitar);if(b&&cont.children.length>1)b.closest('.compra-linea').remove();});
+  }
+  configurarLista('compra-lineas','agregar-linea','[data-quitar-linea]');
+  configurarLista('compra-insumos','agregar-insumo-linea','[data-quitar-insumo]');
+  document.querySelectorAll('[data-compra-recibir]').forEach(function(b){b.addEventListener('click',function(){
+    document.getElementById('formRecepcion').action=b.dataset.url;
+    ['documento','proveedor','almacen','lineas'].forEach(function(k){document.querySelector('[data-rec-'+k+']').textContent=b.dataset[k];});
+    document.querySelector('[data-rec-total]').textContent='S/ '+b.dataset.total;
+  });});
+})();
+</script>{% endblock %}

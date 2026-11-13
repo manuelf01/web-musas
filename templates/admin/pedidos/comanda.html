@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Comanda #{{ pedido.idPedido }} · {{ nombre_negocio }}</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #ece8e2; color: #111; font-family: Arial, Helvetica, sans-serif; }
+    .acciones { display: flex; justify-content: center; gap: 10px; padding: 18px; }
+    .acciones a, .acciones button { border: 1px solid #1a1512; border-radius: 9px; background: #fff; color: #1a1512; padding: 10px 14px; font: 700 14px Arial, sans-serif; text-decoration: none; cursor: pointer; }
+    .acciones button { border-color: #db4200; background: #db4200; color: #fff; }
+    .ticket { width: 80mm; min-height: 120mm; margin: 0 auto 24px; padding: 6mm 5mm; background: #fff; box-shadow: 0 12px 32px rgba(0,0,0,.15); }
+    .marca { display: flex; align-items: center; justify-content: center; gap: 8px; padding-bottom: 3mm; border-bottom: 1px dashed #111; }
+    .marca img { width: 12mm; height: 12mm; }
+    .marca strong { display: block; font-size: 14px; text-transform: uppercase; }
+    .marca span { display: block; margin-top: 2px; font-size: 9px; letter-spacing: .08em; }
+    h1 { margin: 4mm 0 1mm; text-align: center; font-size: 20px; letter-spacing: .08em; }
+    .reimpresion { margin: 0 0 3mm; text-align: center; font-size: 10px; font-weight: 800; }
+    .numero { margin: 0; text-align: center; font-size: 38px; line-height: 1; }
+    .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; margin: 4mm 0; padding: 3mm 0; border-top: 1px dashed #111; border-bottom: 1px dashed #111; }
+    .meta div { min-width: 0; }
+    .meta span { display: block; font-size: 8px; font-weight: 700; text-transform: uppercase; }
+    .meta strong { display: block; margin-top: 1mm; font-size: 12px; overflow-wrap: anywhere; }
+    .linea { padding: 3mm 0; border-bottom: 1px dashed #777; }
+    .linea__nombre { display: grid; grid-template-columns: auto 1fr; gap: 2mm; font-size: 14px; line-height: 1.25; }
+    .linea__cantidad { min-width: 8mm; font-size: 17px; font-weight: 900; }
+    .personalizacion { margin: 2mm 0 0 10mm; padding: 0; list-style: none; font-size: 10px; line-height: 1.45; }
+    .personalizacion b { text-transform: uppercase; }
+    .notas { margin-top: 4mm; padding: 3mm; border: 2px solid #111; }
+    .notas strong { display: block; margin-bottom: 1mm; font-size: 10px; text-transform: uppercase; }
+    .notas p { margin: 0; font-size: 13px; font-weight: 800; line-height: 1.35; white-space: pre-wrap; }
+    .pie { margin: 5mm 0 0; text-align: center; font-size: 8px; }
+    @page { size: 80mm auto; margin: 0; }
+    @media print {
+      body { width: 80mm; background: #fff; }
+      .no-print { display: none !important; }
+      .ticket { width: 80mm; min-height: 0; margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="acciones no-print" aria-label="Acciones de la comanda">
+    <a href="{{ url_for('admin.pedidos.home', estado='pendiente') }}">Volver a pedidos</a>
+    <form method="post" action="{{ url_for('admin.pedidos.reimprimir_comanda', id_pedido=pedido.idPedido) }}">
+      {{ campo_csrf() }}<button type="submit">Reimprimir comanda</button>
+    </form>
+  </nav>
+
+  <main class="ticket">
+    <header class="marca">
+      <img src="{{ url_for('static', filename='img/marca/v1/simbolo.svg') }}" alt=""/>
+      <div><strong>{{ nombre_negocio }}</strong><span>HAMBURGUESAS A LA BRASA</span></div>
+    </header>
+
+    <h1>COMANDA DE COCINA</h1>
+    {% if pedido.impresionesComanda > 1 %}<p class="reimpresion">REIMPRESIÓN N.º {{ pedido.impresionesComanda }}</p>{% endif %}
+    <p class="numero">#{{ pedido.idPedido }}</p>
+
+    <section class="meta" aria-label="Datos operativos">
+      <div><span>Recojo programado</span><strong>{{ pedido.horaRecojo }}</strong></div>
+      <div><span>Enviado a cocina</span><strong>{{ pedido.fechaEnvioCocinaTexto }}</strong></div>
+      <div><span>Cliente</span><strong>{{ pedido.nombreCorto }}</strong></div>
+      <div><span>Estado</span><strong>{{ 'LISTO' if pedido.estado == 'listo' else ('ENTREGADO' if pedido.estado == 'recogido' else 'EN COCINA') }}</strong></div>
+    </section>
+
+    <section aria-label="Productos">
+      {% for linea in pedido.lineas %}
+      <article class="linea">
+        <div class="linea__nombre"><span class="linea__cantidad">{{ linea.cantidad }}×</span><strong>{{ linea.nombre }}</strong></div>
+        {% set pers = linea.personalizacion %}
+        {% if pers.salsas or pers.papas or pers.agregados %}
+        <ul class="personalizacion">
+          {% if pers.salsas %}<li><b>Salsas:</b> {{ pers.salsas|join(', ') }}</li>{% endif %}
+          {% if pers.papas %}<li><b>Papas:</b> {{ pers.papas|join(', ') }}</li>{% endif %}
+          {% if pers.agregados %}<li><b>Agregados:</b> {{ pers.agregados|join(', ') }}</li>{% endif %}
+        </ul>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </section>
+
+    {% if pedido.notas %}<aside class="notas"><strong>Indicaciones especiales</strong><p>{{ pedido.notas }}</p></aside>{% endif %}
+    <p class="pie">Documento interno de producción · No es comprobante de pago</p>
+  </main>
+
+  {% if autoimprimir %}<script>window.addEventListener('load', function () { window.setTimeout(function () { window.print(); }, 180); });</script>{% endif %}
+</body>
+</html>

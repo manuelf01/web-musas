@@ -36,7 +36,7 @@ def test_cliente_sube_foto_cuadrada_y_se_ve_en_la_cabecera(bd_limpia, cliente_cl
     html = r.get_data(as_text=True)
     assert "foto de perfil se actualizó" in html
     ruta = Usuario.obtener_dict(CLIENTE_ID)["foto"]
-    assert ruta.startswith("perfiles/u%d-" % CLIENTE_ID) and ruta.endswith(".jpg")
+    assert ruta.startswith("perfiles/u%d-" % CLIENTE_ID) and ruta.endswith(".webp")
     with Image.open(carpeta_fotos / ruta) as img:
         assert img.size == (320, 320)                       # recortada al centro, cuadrada
     cabecera = cliente_client.get("/carta").get_data(as_text=True)

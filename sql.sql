@@ -1,7 +1,7 @@
 -- =====================================================================
 --  Las Musas — Base de datos completa (crear desde cero)
 -- =====================================================================
---  Este archivo YA incluye todos los cambios de migrations/001..013.
+--  Este archivo YA incluye todos los cambios de migrations/001..022.
 --  Para levantar el proyecto desde cero:
 --    1. Abre phpMyAdmin (XAMPP) → pestaña "SQL"
 --    2. Copia y pega TODO este archivo y ejecútalo.
@@ -23,6 +23,18 @@ USE `db_musuas`;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS `detalleDevolucionInventario`;
+DROP TABLE IF EXISTS `devolucionInventario`;
+DROP TABLE IF EXISTS `detalleCompra`;
+DROP TABLE IF EXISTS `compra`;
+DROP TABLE IF EXISTS `proveedor`;
+DROP TABLE IF EXISTS `movimientoInventario`;
+DROP TABLE IF EXISTS `inventarioSaldo`;
+DROP TABLE IF EXISTS `almacen`;
+DROP TABLE IF EXISTS `movimientoCaja`;
+DROP TABLE IF EXISTS `pagoVenta`;
+DROP TABLE IF EXISTS `sesionCaja`;
+DROP TABLE IF EXISTS `medioPago`;
 DROP TABLE IF EXISTS `detalleCremas`;
 DROP TABLE IF EXISTS `detalleComprobante`;
 DROP TABLE IF EXISTS `comprobante`;
@@ -51,7 +63,8 @@ CREATE TABLE `usuario` (
   `activo`      tinyint(1)   NOT NULL DEFAULT 1,
   `fotoPerfil`  varchar(255) DEFAULT NULL,      -- p. ej. perfiles/ab12.jpg (static/img/)
   PRIMARY KEY (`idUsuario`),
-  UNIQUE KEY `uq_usuario_correo` (`correo`)
+  UNIQUE KEY `uq_usuario_correo` (`correo`),
+  UNIQUE KEY `uq_usuario_dni` (`dni`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ---------------------------------------------------------------------
@@ -95,7 +108,7 @@ CREATE TABLE `producto` (
 --    estadoRecojo 0/1  = pendiente / entregado
 --    cancelado    0/1  = lo canceló el cliente o el admin
 --    noShow       0/1  = el cliente no vino a recogerlo
---    estadoPrep   0/1/2 = recibido / en preparación / listo para recojo
+--    estadoPrep   0/1/2 = recibido / en cocina / listo para recojo
 --    keyPedido    = palabra clave de 4 dígitos que el cliente da al recoger
 --    medioPagoElegido = efectivo / tarjeta / yape / plin
 --    correoRecojo / nombres / numeroTelefono = snapshot de la cuenta
@@ -118,10 +131,18 @@ CREATE TABLE `registroPedido` (
   `medioPagoElegido` varchar(20) NOT NULL DEFAULT 'efectivo',
   `keyPedido`        smallint(6) NOT NULL,
   `notas`            varchar(255) DEFAULT NULL,
+  `idempotencia`     varchar(64) DEFAULT NULL,
   `estadoPrep`       tinyint(4)  NOT NULL DEFAULT 0,
+  `fechaEnvioCocina` datetime     DEFAULT NULL,
+  `idUsuarioComanda` int(11)      DEFAULT NULL,
+  `impresionesComanda` int(11)    NOT NULL DEFAULT 0,
+  `fechaUltimaImpresion` datetime DEFAULT NULL,
   PRIMARY KEY (`idPedido`),
+  UNIQUE KEY `uq_pedido_idempotencia` (`idempotencia`),
   KEY `FKregistroPe851289` (`idUsuario`),
-  CONSTRAINT `FKregistroPe851289` FOREIGN KEY (`idUsuario`) REFERENCES `usuario` (`idUsuario`)
+  KEY `idx_pedido_comanda_usuario` (`idUsuarioComanda`),
+  CONSTRAINT `FKregistroPe851289` FOREIGN KEY (`idUsuario`) REFERENCES `usuario` (`idUsuario`),
+  CONSTRAINT `fk_pedido_comanda_usuario` FOREIGN KEY (`idUsuarioComanda`) REFERENCES `usuario` (`idUsuario`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- ---------------------------------------------------------------------
@@ -160,6 +181,8 @@ CREATE TABLE `comprobante` (
   `subTotal`          decimal(12,2) NOT NULL,
   `montoTotal`        decimal(12,2) NOT NULL,
   `igv`               decimal(12,2) NOT NULL,
+  `montoBruto`        decimal(12,2) NOT NULL,
+  `descuento`         decimal(12,2) NOT NULL DEFAULT 0,
   `numeroComprobante` varchar(25)  DEFAULT NULL,
   `medioPago`         varchar(20)  NOT NULL DEFAULT 'No registrado',
   `idCajero`          int(11)      DEFAULT NULL,
@@ -211,6 +234,229 @@ CREATE TABLE `detalleCremas` (
   CONSTRAINT `FKdetalleCre999352` FOREIGN KEY (`idDetalleOrden`,`idPedido`)  REFERENCES `detalleOrden` (`idDetalleOrden`,`idPedido`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- Catálogo administrable. Los porcentajes se copian al pago para conservar
+-- el cálculo histórico aunque después cambie la configuración.
+CREATE TABLE `medioPago` (
+  `idMedioPago` smallint NOT NULL AUTO_INCREMENT,
+  `codigo` varchar(20) NOT NULL,
+  `nombre` varchar(60) NOT NULL,
+  `tipo` varchar(20) NOT NULL,
+  `descuentoPorcentaje` decimal(5,2) NOT NULL DEFAULT 0,
+  `comisionPorcentaje` decimal(5,2) NOT NULL DEFAULT 0,
+  `comisionFija` decimal(12,2) NOT NULL DEFAULT 0,
+  `imagen` varchar(255) DEFAULT NULL,
+  `afectaEfectivo` tinyint(1) NOT NULL DEFAULT 0,
+  `activo` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`idMedioPago`),
+  UNIQUE KEY `uq_medio_pago_codigo` (`codigo`),
+  UNIQUE KEY `uq_medio_pago_nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `sesionCaja` (
+  `idSesionCaja` int NOT NULL AUTO_INCREMENT,
+  `fechaApertura` datetime NOT NULL,
+  `idUsuarioApertura` int NOT NULL,
+  `fondoInicial` decimal(12,2) NOT NULL DEFAULT 0,
+  `fechaCierre` datetime DEFAULT NULL,
+  `idUsuarioCierre` int DEFAULT NULL,
+  `efectivoEsperado` decimal(12,2) DEFAULT NULL,
+  `efectivoContado` decimal(12,2) DEFAULT NULL,
+  `diferencia` decimal(12,2) DEFAULT NULL,
+  `observaciones` varchar(500) DEFAULT NULL,
+  `estado` varchar(10) NOT NULL DEFAULT 'abierta',
+  PRIMARY KEY (`idSesionCaja`),
+  KEY `idx_sesion_caja_estado` (`estado`,`fechaApertura`),
+  CONSTRAINT `fk_sesion_caja_apertura` FOREIGN KEY (`idUsuarioApertura`) REFERENCES `usuario` (`idUsuario`),
+  CONSTRAINT `fk_sesion_caja_cierre` FOREIGN KEY (`idUsuarioCierre`) REFERENCES `usuario` (`idUsuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `pagoVenta` (
+  `idPago` int NOT NULL AUTO_INCREMENT,
+  `idComprobante` int NOT NULL,
+  `idSesionCaja` int DEFAULT NULL,
+  `idMedioPago` smallint NOT NULL,
+  `medioNombre` varchar(60) NOT NULL,
+  `montoBruto` decimal(12,2) NOT NULL,
+  `descuento` decimal(12,2) NOT NULL DEFAULT 0,
+  `montoCobrado` decimal(12,2) NOT NULL,
+  `comision` decimal(12,2) NOT NULL DEFAULT 0,
+  `montoNeto` decimal(12,2) NOT NULL,
+  `porcentajeDescuento` decimal(5,2) NOT NULL DEFAULT 0,
+  `porcentajeComision` decimal(5,2) NOT NULL DEFAULT 0,
+  `comisionFija` decimal(12,2) NOT NULL DEFAULT 0,
+  `referencia` varchar(100) DEFAULT NULL,
+  `fechaHora` datetime NOT NULL,
+  `idCajero` int DEFAULT NULL,
+  `anulado` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`idPago`),
+  UNIQUE KEY `uq_pago_venta_comprobante` (`idComprobante`),
+  KEY `idx_pago_venta_sesion` (`idSesionCaja`,`idMedioPago`),
+  CONSTRAINT `fk_pago_venta_comprobante` FOREIGN KEY (`idComprobante`) REFERENCES `comprobante` (`idComprobante`),
+  CONSTRAINT `fk_pago_venta_sesion` FOREIGN KEY (`idSesionCaja`) REFERENCES `sesionCaja` (`idSesionCaja`),
+  CONSTRAINT `fk_pago_venta_medio` FOREIGN KEY (`idMedioPago`) REFERENCES `medioPago` (`idMedioPago`),
+  CONSTRAINT `fk_pago_venta_cajero` FOREIGN KEY (`idCajero`) REFERENCES `usuario` (`idUsuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `movimientoCaja` (
+  `idMovimientoCaja` int NOT NULL AUTO_INCREMENT,
+  `idSesionCaja` int NOT NULL,
+  `tipo` varchar(20) NOT NULL,
+  `idMedioPago` smallint DEFAULT NULL,
+  `monto` decimal(12,2) NOT NULL,
+  `categoria` varchar(60) NOT NULL DEFAULT 'General',
+  `concepto` varchar(255) NOT NULL,
+  `documento` varchar(100) DEFAULT NULL,
+  `evidencia` varchar(255) DEFAULT NULL,
+  `idUsuario` int NOT NULL,
+  `fechaHora` datetime NOT NULL,
+  `anulado` tinyint(1) NOT NULL DEFAULT 0,
+  `motivoAnulacion` varchar(255) DEFAULT NULL,
+  `fechaAnulacion` datetime DEFAULT NULL,
+  `idAnulador` int DEFAULT NULL,
+  PRIMARY KEY (`idMovimientoCaja`),
+  KEY `idx_movimiento_caja_sesion` (`idSesionCaja`,`fechaHora`),
+  CONSTRAINT `fk_movimiento_caja_sesion` FOREIGN KEY (`idSesionCaja`) REFERENCES `sesionCaja` (`idSesionCaja`),
+  CONSTRAINT `fk_movimiento_caja_medio` FOREIGN KEY (`idMedioPago`) REFERENCES `medioPago` (`idMedioPago`),
+  CONSTRAINT `fk_movimiento_caja_usuario` FOREIGN KEY (`idUsuario`) REFERENCES `usuario` (`idUsuario`),
+  CONSTRAINT `fk_movimiento_caja_anulador` FOREIGN KEY (`idAnulador`) REFERENCES `usuario` (`idUsuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `almacen` (
+  `idAlmacen` smallint NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) NOT NULL,
+  `direccion` varchar(200) DEFAULT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`idAlmacen`),
+  UNIQUE KEY `uq_almacen_nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `inventarioSaldo` (
+  `idProducto` int NOT NULL,
+  `idAlmacen` smallint NOT NULL,
+  `stockFisico` int NOT NULL DEFAULT 0,
+  `stockReservado` int NOT NULL DEFAULT 0,
+  `costoPromedio` decimal(12,4) NOT NULL DEFAULT 0,
+  `version` int NOT NULL DEFAULT 0,
+  `fechaActualizacion` datetime NOT NULL,
+  PRIMARY KEY (`idProducto`,`idAlmacen`),
+  CONSTRAINT `fk_saldo_producto` FOREIGN KEY (`idProducto`) REFERENCES `producto` (`idProducto`),
+  CONSTRAINT `fk_saldo_almacen` FOREIGN KEY (`idAlmacen`) REFERENCES `almacen` (`idAlmacen`),
+  CONSTRAINT `chk_saldo_no_negativo` CHECK (`stockFisico` >= 0 AND `stockReservado` >= 0 AND `stockReservado` <= `stockFisico`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `movimientoInventario` (
+  `idMovimientoInventario` bigint NOT NULL AUTO_INCREMENT,
+  `idProducto` int NOT NULL,
+  `idAlmacen` smallint NOT NULL DEFAULT 1,
+  `tipo` varchar(30) NOT NULL,
+  `cantidad` int NOT NULL,
+  `stockAnterior` int NOT NULL,
+  `stockPosterior` int NOT NULL,
+  `stockReservadoAnterior` int NOT NULL DEFAULT 0,
+  `stockReservadoPosterior` int NOT NULL DEFAULT 0,
+  `costoUnitario` decimal(12,4) DEFAULT NULL,
+  `costoTotal` decimal(12,2) DEFAULT NULL,
+  `referenciaTipo` varchar(30) DEFAULT NULL,
+  `idReferencia` int DEFAULT NULL,
+  `documento` varchar(100) DEFAULT NULL,
+  `claveOperacion` varchar(120) DEFAULT NULL,
+  `idMovimientoReversion` bigint DEFAULT NULL,
+  `motivo` varchar(255) DEFAULT NULL,
+  `idUsuario` int DEFAULT NULL,
+  `fechaHora` datetime NOT NULL,
+  PRIMARY KEY (`idMovimientoInventario`),
+  KEY `idx_kardex_producto_fecha` (`idProducto`,`fechaHora`),
+  KEY `idx_kardex_referencia` (`referenciaTipo`,`idReferencia`),
+  KEY `idx_kardex_almacen_fecha` (`idAlmacen`,`fechaHora`),
+  UNIQUE KEY `uq_kardex_operacion` (`claveOperacion`),
+  CONSTRAINT `fk_kardex_producto` FOREIGN KEY (`idProducto`) REFERENCES `producto` (`idProducto`),
+  CONSTRAINT `fk_kardex_usuario` FOREIGN KEY (`idUsuario`) REFERENCES `usuario` (`idUsuario`),
+  CONSTRAINT `fk_kardex_almacen` FOREIGN KEY (`idAlmacen`) REFERENCES `almacen` (`idAlmacen`),
+  CONSTRAINT `fk_kardex_reversion` FOREIGN KEY (`idMovimientoReversion`) REFERENCES `movimientoInventario` (`idMovimientoInventario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `proveedor` (
+  `idProveedor` int NOT NULL AUTO_INCREMENT,
+  `ruc` char(11) DEFAULT NULL,
+  `razonSocial` varchar(180) NOT NULL,
+  `contacto` varchar(150) DEFAULT NULL,
+  `telefono` varchar(20) DEFAULT NULL,
+  `correo` varchar(150) DEFAULT NULL,
+  `direccion` varchar(220) DEFAULT NULL,
+  `activo` tinyint(1) NOT NULL DEFAULT 1,
+  `fechaRegistro` datetime NOT NULL,
+  PRIMARY KEY (`idProveedor`),
+  UNIQUE KEY `uq_proveedor_ruc` (`ruc`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `compra` (
+  `idCompra` bigint NOT NULL AUTO_INCREMENT,
+  `idProveedor` int NOT NULL,
+  `idAlmacen` smallint NOT NULL,
+  `documento` varchar(100) NOT NULL,
+  `fechaDocumento` date NOT NULL,
+  `fechaRecepcion` datetime DEFAULT NULL,
+  `total` decimal(12,2) NOT NULL DEFAULT 0,
+  `estado` varchar(20) NOT NULL DEFAULT 'borrador',
+  `observaciones` varchar(500) DEFAULT NULL,
+  `idUsuarioRegistro` int NOT NULL,
+  `idUsuarioRecepcion` int DEFAULT NULL,
+  PRIMARY KEY (`idCompra`),
+  UNIQUE KEY `uq_compra_proveedor_documento` (`idProveedor`,`documento`),
+  CONSTRAINT `fk_compra_proveedor` FOREIGN KEY (`idProveedor`) REFERENCES `proveedor` (`idProveedor`),
+  CONSTRAINT `fk_compra_almacen` FOREIGN KEY (`idAlmacen`) REFERENCES `almacen` (`idAlmacen`),
+  CONSTRAINT `fk_compra_usuario_reg` FOREIGN KEY (`idUsuarioRegistro`) REFERENCES `usuario` (`idUsuario`),
+  CONSTRAINT `fk_compra_usuario_rec` FOREIGN KEY (`idUsuarioRecepcion`) REFERENCES `usuario` (`idUsuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `detalleCompra` (
+  `idDetalleCompra` bigint NOT NULL AUTO_INCREMENT,
+  `idCompra` bigint NOT NULL,
+  `idProducto` int NOT NULL,
+  `cantidad` int NOT NULL,
+  `costoUnitario` decimal(12,4) NOT NULL,
+  `subtotal` decimal(12,2) NOT NULL,
+  PRIMARY KEY (`idDetalleCompra`),
+  UNIQUE KEY `uq_compra_producto` (`idCompra`,`idProducto`),
+  CONSTRAINT `fk_detalle_compra` FOREIGN KEY (`idCompra`) REFERENCES `compra` (`idCompra`),
+  CONSTRAINT `fk_detalle_compra_producto` FOREIGN KEY (`idProducto`) REFERENCES `producto` (`idProducto`),
+  CONSTRAINT `chk_detalle_compra_positivo` CHECK (`cantidad` > 0 AND `costoUnitario` >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `devolucionInventario` (
+  `idDevolucion` bigint NOT NULL AUTO_INCREMENT,
+  `tipo` varchar(30) NOT NULL,
+  `idPedido` int DEFAULT NULL,
+  `idCompra` bigint DEFAULT NULL,
+  `idProveedor` int DEFAULT NULL,
+  `resolucion` varchar(30) NOT NULL,
+  `documento` varchar(100) DEFAULT NULL,
+  `motivo` varchar(500) NOT NULL,
+  `estado` varchar(20) NOT NULL DEFAULT 'confirmada',
+  `idUsuario` int NOT NULL,
+  `fechaHora` datetime NOT NULL,
+  PRIMARY KEY (`idDevolucion`),
+  CONSTRAINT `fk_devolucion_pedido` FOREIGN KEY (`idPedido`) REFERENCES `registroPedido` (`idPedido`),
+  CONSTRAINT `fk_devolucion_compra` FOREIGN KEY (`idCompra`) REFERENCES `compra` (`idCompra`),
+  CONSTRAINT `fk_devolucion_proveedor` FOREIGN KEY (`idProveedor`) REFERENCES `proveedor` (`idProveedor`),
+  CONSTRAINT `fk_devolucion_usuario` FOREIGN KEY (`idUsuario`) REFERENCES `usuario` (`idUsuario`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE `detalleDevolucionInventario` (
+  `idDetalleDevolucion` bigint NOT NULL AUTO_INCREMENT,
+  `idDevolucion` bigint NOT NULL,
+  `idProducto` int NOT NULL,
+  `cantidad` int NOT NULL,
+  `condicionProducto` varchar(20) NOT NULL,
+  `costoUnitario` decimal(12,4) NOT NULL DEFAULT 0,
+  `idMovimientoInventario` bigint DEFAULT NULL,
+  PRIMARY KEY (`idDetalleDevolucion`),
+  CONSTRAINT `fk_detalle_devolucion` FOREIGN KEY (`idDevolucion`) REFERENCES `devolucionInventario` (`idDevolucion`),
+  CONSTRAINT `fk_detalle_devolucion_producto` FOREIGN KEY (`idProducto`) REFERENCES `producto` (`idProducto`),
+  CONSTRAINT `fk_detalle_devolucion_mov` FOREIGN KEY (`idMovimientoInventario`) REFERENCES `movimientoInventario` (`idMovimientoInventario`),
+  CONSTRAINT `chk_detalle_devolucion_positivo` CHECK (`cantidad` > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- =====================================================================
@@ -223,6 +469,13 @@ INSERT INTO `usuario`
   (1,'12345678','Piero','Ramirez','superadmin@lasmusas.pe','987654321','pbkdf2:sha256:260000$vxtBrOTidMwkCp4V$dab206ee6109184d8e1c8c4eb65e8678aa8d13a7ebe150b2cef577f55cef51b3',0,0,'superusuario',1),
   (2,'87654321','Admin','Prueba','admin@lasmusas.pe','987654322','pbkdf2:sha256:260000$vxtBrOTidMwkCp4V$dab206ee6109184d8e1c8c4eb65e8678aa8d13a7ebe150b2cef577f55cef51b3',0,0,'administrador',1),
   (3,'12345679','Cliente','Prueba','cliente@correo.com','912345678','pbkdf2:sha256:260000$vxtBrOTidMwkCp4V$dab206ee6109184d8e1c8c4eb65e8678aa8d13a7ebe150b2cef577f55cef51b3',1,0,'usuario',1);
+
+INSERT INTO `medioPago`
+  (`idMedioPago`,`codigo`,`nombre`,`tipo`,`afectaEfectivo`,`activo`) VALUES
+  (1,'efectivo','Efectivo','efectivo',1,1),
+  (2,'tarjeta','Tarjeta','tarjeta',0,1),
+  (3,'yape','Yape','billetera',0,1),
+  (4,'plin','Plin','billetera',0,1);
 
 -- Categorías (la 6 "Cremas" no se muestra en la carta pública)
 -- Categorías y productos: menú real del negocio (verificado en su
@@ -308,4 +561,125 @@ INSERT INTO `producto` (`idProducto`,`idCategoria`,`nombre`,`descripcion`,`preci
   (59,13,'Huevo','Agrega un huevo frito a tu hamburguesa.',2.00,999,NULL,NULL,NULL,1),
   (60,13,'Presa de Pollo','Agrega una presa de pollo a tu hamburguesa.',6.00,999,NULL,NULL,NULL,1);
 
+INSERT INTO `almacen` (`idAlmacen`,`nombre`,`direccion`,`activo`) VALUES
+  (1,'Almacén principal','Av. José Balta Sur 006, Chiclayo',1);
+
+INSERT INTO `inventarioSaldo`
+  (`idProducto`,`idAlmacen`,`stockFisico`,`stockReservado`,`costoPromedio`,`version`,`fechaActualizacion`)
+SELECT idProducto,1,existencias,0,0,0,NOW() FROM producto;
+
+INSERT INTO `movimientoInventario`
+  (`idProducto`,`idAlmacen`,`tipo`,`cantidad`,`stockAnterior`,`stockPosterior`,
+   `stockReservadoAnterior`,`stockReservadoPosterior`,`referenciaTipo`,`motivo`,`fechaHora`)
+SELECT idProducto,1,'saldo_inicial',existencias,0,existencias,0,0,'carga_inicial',
+       'Saldo inicial del catálogo',NOW()
+FROM producto;
+
 -- (sin pedidos ni comprobantes: se generan probando la tienda y el panel)
+
+
+-- Esquema integrado de la migracion 021: insumos y recetas.
+-- Inventario de ingredientes y recetas para calcular produccion y consumo.
+-- Aplicar despues de 020_comandas_cocina.sql. No asigna existencias ficticias:
+-- el stock inicial se registra mediante conteo fisico desde el panel.
+
+CREATE TABLE IF NOT EXISTS insumo (
+  idInsumo INT NOT NULL AUTO_INCREMENT,
+  nombre VARCHAR(120) NOT NULL,
+  categoria VARCHAR(80) NOT NULL DEFAULT 'General',
+  unidad VARCHAR(12) NOT NULL DEFAULT 'unidad',
+  stockMinimo DECIMAL(12,3) NOT NULL DEFAULT 0,
+  activo TINYINT(1) NOT NULL DEFAULT 1,
+  fechaRegistro DATETIME NOT NULL,
+  PRIMARY KEY (idInsumo),
+  UNIQUE KEY uq_insumo_nombre (nombre),
+  CONSTRAINT chk_insumo_minimo CHECK (stockMinimo >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS saldoInsumo (
+  idInsumo INT NOT NULL,
+  idAlmacen SMALLINT NOT NULL,
+  stockFisico DECIMAL(12,3) NOT NULL DEFAULT 0,
+  stockReservado DECIMAL(12,3) NOT NULL DEFAULT 0,
+  costoPromedio DECIMAL(12,4) NOT NULL DEFAULT 0,
+  version INT NOT NULL DEFAULT 0,
+  fechaActualizacion DATETIME NOT NULL,
+  PRIMARY KEY (idInsumo,idAlmacen),
+  CONSTRAINT fk_saldo_insumo FOREIGN KEY (idInsumo) REFERENCES insumo(idInsumo),
+  CONSTRAINT fk_saldo_insumo_almacen FOREIGN KEY (idAlmacen) REFERENCES almacen(idAlmacen),
+  CONSTRAINT chk_saldo_insumo_no_negativo CHECK
+    (stockFisico >= 0 AND stockReservado >= 0 AND stockReservado <= stockFisico)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS recetaInsumo (
+  idRecetaInsumo BIGINT NOT NULL AUTO_INCREMENT,
+  idProducto INT NOT NULL,
+  tipoUso VARCHAR(12) NOT NULL DEFAULT 'producto',
+  idInsumo INT NOT NULL,
+  cantidad DECIMAL(12,3) NOT NULL,
+  PRIMARY KEY (idRecetaInsumo),
+  UNIQUE KEY uq_receta_producto_insumo (idProducto,tipoUso,idInsumo),
+  KEY idx_receta_insumo (idInsumo),
+  CONSTRAINT fk_receta_producto FOREIGN KEY (idProducto) REFERENCES producto(idProducto),
+  CONSTRAINT fk_receta_insumo FOREIGN KEY (idInsumo) REFERENCES insumo(idInsumo),
+  CONSTRAINT chk_receta_tipo CHECK (tipoUso IN ('producto','opcion')),
+  CONSTRAINT chk_receta_cantidad CHECK (cantidad > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS pedidoInsumo (
+  idPedido INT NOT NULL,
+  idInsumo INT NOT NULL,
+  idAlmacen SMALLINT NOT NULL,
+  cantidad DECIMAL(12,3) NOT NULL,
+  costoUnitario DECIMAL(12,4) NOT NULL DEFAULT 0,
+  estado VARCHAR(12) NOT NULL DEFAULT 'reservado',
+  PRIMARY KEY (idPedido,idInsumo,idAlmacen),
+  CONSTRAINT fk_pedido_insumo_pedido FOREIGN KEY (idPedido) REFERENCES registroPedido(idPedido),
+  CONSTRAINT fk_pedido_insumo_insumo FOREIGN KEY (idInsumo) REFERENCES insumo(idInsumo),
+  CONSTRAINT fk_pedido_insumo_almacen FOREIGN KEY (idAlmacen) REFERENCES almacen(idAlmacen),
+  CONSTRAINT chk_pedido_insumo_cantidad CHECK (cantidad > 0),
+  CONSTRAINT chk_pedido_insumo_estado CHECK (estado IN ('reservado','consumido','liberado'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS movimientoInsumo (
+  idMovimientoInsumo BIGINT NOT NULL AUTO_INCREMENT,
+  idInsumo INT NOT NULL,
+  idAlmacen SMALLINT NOT NULL,
+  tipo VARCHAR(30) NOT NULL,
+  cantidad DECIMAL(12,3) NOT NULL,
+  stockAnterior DECIMAL(12,3) NOT NULL,
+  stockPosterior DECIMAL(12,3) NOT NULL,
+  reservadoAnterior DECIMAL(12,3) NOT NULL DEFAULT 0,
+  reservadoPosterior DECIMAL(12,3) NOT NULL DEFAULT 0,
+  costoUnitario DECIMAL(12,4) DEFAULT NULL,
+  costoTotal DECIMAL(12,2) DEFAULT NULL,
+  referenciaTipo VARCHAR(30) DEFAULT NULL,
+  idReferencia BIGINT DEFAULT NULL,
+  documento VARCHAR(100) DEFAULT NULL,
+  claveOperacion VARCHAR(140) DEFAULT NULL,
+  motivo VARCHAR(255) DEFAULT NULL,
+  idUsuario INT DEFAULT NULL,
+  fechaHora DATETIME NOT NULL,
+  PRIMARY KEY (idMovimientoInsumo),
+  UNIQUE KEY uq_mov_insumo_operacion (claveOperacion),
+  KEY idx_mov_insumo_fecha (idInsumo,idAlmacen,fechaHora),
+  KEY idx_mov_insumo_referencia (referenciaTipo,idReferencia),
+  CONSTRAINT fk_mov_insumo FOREIGN KEY (idInsumo) REFERENCES insumo(idInsumo),
+  CONSTRAINT fk_mov_insumo_almacen FOREIGN KEY (idAlmacen) REFERENCES almacen(idAlmacen),
+  CONSTRAINT fk_mov_insumo_usuario FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario),
+  CONSTRAINT chk_mov_insumo_cantidad CHECK (cantidad > 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS detalleCompraInsumo (
+  idDetalleCompraInsumo BIGINT NOT NULL AUTO_INCREMENT,
+  idCompra BIGINT NOT NULL,
+  idInsumo INT NOT NULL,
+  cantidad DECIMAL(12,3) NOT NULL,
+  costoUnitario DECIMAL(12,4) NOT NULL,
+  subtotal DECIMAL(12,2) NOT NULL,
+  PRIMARY KEY (idDetalleCompraInsumo),
+  UNIQUE KEY uq_compra_insumo (idCompra,idInsumo),
+  CONSTRAINT fk_det_compra_insumo_compra FOREIGN KEY (idCompra) REFERENCES compra(idCompra),
+  CONSTRAINT fk_det_compra_insumo FOREIGN KEY (idInsumo) REFERENCES insumo(idInsumo),
+  CONSTRAINT chk_det_compra_insumo CHECK (cantidad > 0 AND costoUnitario >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

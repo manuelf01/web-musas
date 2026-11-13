@@ -25,22 +25,22 @@
 <!-- KPIs -->
 <div class="adm-kpis">
   <div class="adm-kpi">
-    <div class="adm-kpi__ico" style="background: rgba(219,66,0,.12); color: var(--musa-brasa);"><i class="bi bi-fire"></i></div>
+    <div class="adm-kpi__ico adm-kpi__ico--brasa"><i class="bi bi-fire"></i></div>
     <strong>{{ resumen.pedidos_hoy }}</strong>
     <span>Pedidos de hoy</span>
   </div>
   <div class="adm-kpi">
-    <div class="adm-kpi__ico" style="background: rgba(245,200,66,.25); color: #8a6d00;"><i class="bi bi-bag"></i></div>
+    <div class="adm-kpi__ico adm-kpi__ico--mostaza"><i class="bi bi-bag"></i></div>
     <strong>{{ resumen.pendientes }}</strong>
     <span>Pendientes de recojo</span>
   </div>
   <div class="adm-kpi">
-    <div class="adm-kpi__ico" style="background: rgba(46,125,91,.14); color: var(--musa-exito);"><i class="bi bi-cash-stack"></i></div>
+    <div class="adm-kpi__ico adm-kpi__ico--exito"><i class="bi bi-cash-stack"></i></div>
     <strong>S/ {{ '%.2f'|format(resumen.ventas_hoy) }}</strong>
     <span>Ventas de hoy</span>
   </div>
   <div class="adm-kpi">
-    <div class="adm-kpi__ico" style="background: var(--musa-crema-baja); color: var(--musa-carbon);"><i class="bi bi-receipt"></i></div>
+    <div class="adm-kpi__ico adm-kpi__ico--neutral"><i class="bi bi-receipt"></i></div>
     <strong>S/ {{ '%.2f'|format(resumen.venta_maxima) }}</strong>
     <span>Venta más alta de hoy</span>
   </div>
@@ -94,7 +94,7 @@
             <div class="adm-top__row">
               <span class="adm-top__rank">{{ loop.index }}</span>
               {% if t.imagen %}
-                <img src="{{ url_for('static', filename='img/' ~ t.imagen) }}" alt="" />
+                <img src="{{ url_for('static', filename='img/' ~ miniatura_imagen(t.imagen)) }}" alt="" loading="lazy" decoding="async" />
               {% else %}
                 <span class="adm-top__ph"><i class="bi bi-fire"></i></span>
               {% endif %}

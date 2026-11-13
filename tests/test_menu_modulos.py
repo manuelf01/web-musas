@@ -14,22 +14,34 @@ def _activos(menu):
 def test_el_menu_solo_lista_pantallas(admin_client):
     menu = _menu(admin_client.get("/admin/").get_data(as_text=True))
     assert menu.count('data-grupo=') == 2                     # solo módulos con 2 o más pantallas
-    for texto in ("Resumen", "Pedidos", "Gestión", "Productos", "Categorías", "Ventas y caja",
-                  "Ventas", "Pagos", "Usuarios", "Mi perfil"):
+    for texto in ("Resumen", "Pedidos", "Gestión", "Productos", "Categorías", "Inventario",
+                  "Kardex", "Movimientos", "Proveedores", "Compras", "Devoluciones",
+                  "Ventas y caja", "Ventas", "Pagos", "Caja", "Aportes y gastos", "Medios de pago",
+                  "Usuarios", "Mi perfil"):
         assert texto in menu, texto
     # Filtros y botones NO van en el menú.
     for sobra in ("Control de stock", "Sin stock", "Por entregar", "Listos para cobrar", "Entregados",
                   "Todos los pedidos", "Anulaciones", "Agregar usuario", "Clientes", "Personal del panel",
                   "estado=", "rol=", "nuevo="):
         assert sobra not in menu, sobra
+    assert menu.index("Ventas y caja") < menu.index("Gestión")
 
 
 def test_el_modulo_y_la_pantalla_activa_se_marcan(admin_client):
     casos = {
         "/admin/productos/?estado=sin_stock": ("gestion", "Productos"),   # el filtro no cambia el ítem
         "/admin/categorias/": ("gestion", "Categorías"),
+        "/admin/inventario/": ("gestion", "Inventario"),
+        "/admin/inventario/kardex/": ("gestion", "Kardex"),
+        "/admin/inventario/movimientos/": ("gestion", "Movimientos"),
+        "/admin/proveedores/": ("gestion", "Proveedores"),
+        "/admin/compras/": ("gestion", "Compras"),
+        "/admin/devoluciones/": ("gestion", "Devoluciones"),
         "/admin/ventas/?estado=anulado": ("ventas", "Ventas"),
         "/admin/pagos/": ("ventas", "Pagos"),
+        "/admin/caja/": ("ventas", "Caja"),
+        "/admin/caja/movimientos/": ("ventas", "Aportes y gastos"),
+        "/admin/medios-pago/": ("ventas", "Medios de pago"),
     }
     for url, (modulo, item) in casos.items():
         menu = _menu(admin_client.get(url).get_data(as_text=True))

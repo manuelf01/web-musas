@@ -1,22 +1,19 @@
-from bd import obtener_conexion
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
+
 from model.Usuario import Usuario
 
 
 class Autenticacion:
+    """Autenticación unificada sin consultas auxiliares que enumeren cuentas."""
 
-    diccionario_tipo = {
-        "cliente.auth": {
-            "tipoUsuario": True
-        },
-        "admin.auth": {
-            "tipoUsuario": False
-        }
-    }
+    ERROR_CREDENCIALES = "Credenciales inválidas."
+    # Se verifica este hash cuando la cuenta no existe para reducir diferencias
+    # de tiempo frente al caso de contraseña incorrecta.
+    _HASH_FICTICIO = (
+        "pbkdf2:sha256:260000$vxtBrOTidMwkCp4V$"
+        "dab206ee6109184d8e1c8c4eb65e8678aa8d13a7ebe150b2cef577f55cef51b3"
+    )
 
-    # ------------------------------------------------------------------
-    # Verificación de contraseña (hash con werkzeug)
-    # ------------------------------------------------------------------
     @staticmethod
     def verificar_password(guardada, ingresada):
         if not guardada:
@@ -24,107 +21,30 @@ class Autenticacion:
         try:
             return check_password_hash(guardada, ingresada)
         except Exception:
-            # Contraseña antigua guardada en texto plano (datos previos a la
-            # migración a hash). Se acepta una sola vez para no bloquear al
-            # usuario; hay que recrear esas cuentas.
+            # Compatibilidad temporal con cuentas antiguas en texto plano.
             return guardada == ingresada
-
-    # ------------------------------------------------------------------
-    # Login unificado: una sola puerta, decide por tipoUsuario
-    # ------------------------------------------------------------------
-    @staticmethod
-    def dni_es_admin(dni):
-        """True si el DNI corresponde a una cuenta de panel (superusuario o admin)."""
-        conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute(
-                "SELECT COUNT(*) FROM usuario WHERE dni = %s "
-                "AND (rol IN ('superusuario','administrador') OR tipoUsuario = 0)",
-                (dni,),
-            )
-            total = cursor.fetchone()[0]
-        conexion.close()
-        return total > 0
-
-    @staticmethod
-    def identificador_es_admin(identificador):
-        """Indica si el DNI/correo corresponde a una cuenta de panel."""
-        conexion = obtener_conexion()
-        with conexion.cursor() as cursor:
-            cursor.execute(
-                "SELECT COUNT(*) FROM usuario WHERE (dni = %s OR LOWER(correo) = LOWER(%s)) "
-                "AND (rol IN ('superusuario','administrador') OR tipoUsuario = 0)",
-                (identificador, identificador),
-            )
-            total = cursor.fetchone()[0]
-        conexion.close()
-        return total > 0
 
     @staticmethod
     def login_unificado(identificador, contraseña):
-        """
-        Devuelve (fila_usuario, tipo) con tipo 'admin' o 'cliente',
-        o un string con el mensaje de error.
-        fila_usuario = idUsuario, dni, nombres, apellidos, correo, numTelf,
-                       contraseña, tipoUsuario, rol, activo
-        """
+        """Devuelve ``(usuario, tipo)`` o siempre el mismo error público."""
         filas = Usuario.login_por_identificador(identificador)
         if not filas:
-            return "No encontramos una cuenta con ese correo o DNI."
+            Autenticacion.verificar_password(Autenticacion._HASH_FICTICIO, contraseña)
+            return Autenticacion.ERROR_CREDENCIALES
 
         for fila in filas:
             if Autenticacion.verificar_password(fila[6], contraseña):
                 if len(fila) > 9 and fila[9] == 0:
-                    return "Esta cuenta está dada de baja. Contacta al administrador."
+                    return Autenticacion.ERROR_CREDENCIALES
                 rol = fila[8] or ("usuario" if fila[7] in (1, True) else "administrador")
-                tipo = "cliente" if rol == "usuario" else "admin"
-                return (fila, tipo)
+                return fila, ("cliente" if rol == "usuario" else "admin")
 
-        return "La contraseña no es correcta."
-
-    # ------------------------------------------------------------------
-    # Login clásico por tipo (se mantiene por compatibilidad)
-    # ------------------------------------------------------------------
-    @staticmethod
-    def login(dni, contraseña, tipo_blueprint):
-        conexion = obtener_conexion()
-        error = None
-
-        tipoUsuario = Autenticacion.diccionario_tipo[tipo_blueprint]["tipoUsuario"]
-
-        with conexion.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM usuario WHERE dni = %s and tipoUsuario = %s",
-                (dni, tipoUsuario),
-            )
-            user = cursor.fetchall()
-        conexion.close()
-
-        if user is None or len(user) == 0:
-            error = "Usuario incorrecto"
-        elif not Autenticacion.verificar_password(user[0][6], contraseña):
-            error = "Contraseña incorrecta"
-        else:
-            error = user
-
-        return error
+        return Autenticacion.ERROR_CREDENCIALES
 
     @staticmethod
     def registro(nombres, apellidos, correo, numTelf, contraseña):
         if not nombres or not apellidos or not correo or not numTelf or not contraseña:
             return "Campos obligatorios"
-        # insertar_usuario hace el hash de la contraseña.
-        return Usuario.insertar_usuario(None, nombres, apellidos, correo, numTelf, contraseña, True)
-
-    @staticmethod
-    def sesionRegistrada(blueprint_name, dni):
-        conexion = obtener_conexion()
-        tipoUsuario = Autenticacion.diccionario_tipo[blueprint_name]["tipoUsuario"]
-        with conexion.cursor() as cursor:
-            cursor.execute(
-                "SELECT * FROM usuario WHERE dni = %s and tipoUsuario = %s",
-                (dni, tipoUsuario),
-            )
-            user = cursor.fetchall()
-        conexion.close()
-        return user[0]
+        return Usuario.insertar_usuario(
+            None, nombres, apellidos, correo, numTelf, contraseña, True
+        )

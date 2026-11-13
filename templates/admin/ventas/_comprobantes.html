@@ -1,7 +1,7 @@
 {% set hay_filtros = filtros.q or filtros.tipo or filtros.medio or filtros.desde or filtros.hasta or filtros.estado %}
 {% if comprobantes %}
-  <div class="adm-tabla-wrap">
-    <table class="adm-tabla">
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards">
+    <table class="adm-tabla adm-tabla--cards">
       <thead>
         <tr>
           <th>Comprobante</th><th>Cliente</th><th>Forma de pago</th>
@@ -11,28 +11,28 @@
       <tbody>
         {% for c in comprobantes %}
           <tr class="{{ 'fila-anulada' if c.anulado }}">
-            <td>
+            <td data-label="Comprobante">
               <strong style="font-family: 'Space Grotesk', sans-serif;">{{ c.numero }}</strong>
               {% if c.anulado %}<span class="vbadge-anulado"><i class="bi bi-slash-circle-fill"></i> Anulada</span>{% endif %}
               <span class="adm-badge-cat" style="margin-left: 6px;">{{ 'Factura' if c.tipoComprobante == 'factura' else 'Boleta' }}</span><br />
               <span style="color: var(--musa-texto-suave); font-size: 12px;">{{ c.fecha }} · {{ c.hora }}</span>
             </td>
-            <td>
+            <td data-label="Cliente">
               <div class="adm-prod-cel">
                 <span class="adm-thumb adm-avatar--sm" style="font-size:11px; color: var(--musa-brasa); font-family:'Space Grotesk',sans-serif; width:34px; height:34px;">{{ c.iniciales }}</span>
                 <div><strong style="font-size:13px;">{{ c.cliente }}</strong>
                   <p>{% if c.dni %}{{ 'RUC' if c.tipoComprobante == 'factura' else 'DNI' }} {{ c.dni }}{% else %}Sin documento{% endif %}</p></div>
               </div>
             </td>
-            <td>
+            <td data-label="Forma de pago">
               <span class="adm-badge-pago {{ 'digital' if c.formaPago != 'Efectivo' else 'efectivo' }}">
                 <i class="bi {{ 'bi-qr-code' if c.formaPago != 'Efectivo' else 'bi-cash' }}"></i> {{ c.formaPago }}
               </span>
             </td>
-            <td class="num">S/ {{ '%.2f'|format(c.subTotal) }}</td>
-            <td class="num">S/ {{ '%.2f'|format(c.igv) }}</td>
-            <td class="num" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(c.montoTotal) }}</td>
-            <td>
+            <td class="num" data-label="Subtotal">S/ {{ '%.2f'|format(c.subTotal) }}</td>
+            <td class="num" data-label="IGV (18%)">S/ {{ '%.2f'|format(c.igv) }}</td>
+            <td class="num" data-label="Total" style="color: var(--musa-brasa); font-weight: 700;">S/ {{ '%.2f'|format(c.montoTotal) }}</td>
+            <td data-label="Acciones">
               <a class="adm-btn-sm" href="{{ url_for('admin.ventas.show_detalle', idComprobante=c.idComprobante) }}">
                 <i class="bi bi-eye"></i> Ver detalle
               </a>

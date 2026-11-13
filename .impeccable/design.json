@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-06",
+  "title": "Las de Siempre — Neo-brasa",
+  "extensions": {
+    "narrative": {
+      "northStar": "Neo-brasa nocturna: calidez de brasa y claridad operativa",
+      "overview": "La interfaz toma la calidez de una hamburguesería a la brasa y la convierte en una herramienta cotidiana, fácil de leer tanto para quien pide desde el teléfono como para quien atiende caja, cocina e inventario. La marca se expresa con crema, carbón cálido, brasa tostada y mostaza; las superficies y controles redondeados hacen que las acciones se sientan accesibles sin quitarle precisión al trabajo.\n\nLa tienda y el panel comparten tipografía, acentos, bordes y comportamiento de controles. La tienda dispone de más espacio para producto y fotografía; el panel prioriza lectura rápida, tablas y datos operativos. El tema oscuro conserva matices de carbón y café para que el cambio de tema no se sienta como una inversión brusca ni dependa de negro absoluto. Los documentos de comanda y comprobantes destinados a impresión mantienen su presentación clara.",
+      "keyCharacteristics": [
+        "Cálido y artesanal, con lectura operativa directa.",
+        "Una sola identidad para tienda y panel, adaptada a tareas distintas.",
+        "Superficies crema en claro y carbón cálido en oscuro.",
+        "Brasa para acciones y selección; mostaza para énfasis puntuales.",
+        "Controles cómodos, foco visible y diseño adaptable a móvil."
+      ],
+      "rules": [
+        { "name": "The Warm Contrast Rule", "body": "El modo oscuro usa carbón cálido y superficies diferenciadas; no reemplaces la paleta por negro absoluto ni por texto blanco de bajo contraste sobre tarjetas claras.", "section": "colors" },
+        { "name": "The Accent-as-Action Rule", "body": "La brasa señala acciones y selecciones importantes. Mantén la mostaza para énfasis pequeños y evita convertir ambos acentos en decoración dominante.", "section": "colors" },
+        { "name": "The Two-Font Rule", "body": "Usa Space Grotesk para jerarquía y énfasis; usa Inter para lectura continua. No añadas una tercera fuente para resolver una variación de estilo.", "section": "typography" },
+        { "name": "The Task-Width Rule", "body": "Usa el ancho amplio para explorar y operar, pero conserva una columna de lectura acotada para confirmaciones, historial y documentos.", "section": "layout" },
+        { "name": "The Warm Layer Rule", "body": "Separa contenido con tono y borde primero; eleva con sombra suave cuando una tarjeta necesita distinguirse o responde al puntero.", "section": "elevation" },
+        { "name": "The Touch-and-Read Rule", "body": "Los controles deben ofrecer áreas cómodas y estados perceptibles; el acento guía la acción mientras el texto comunica su propósito.", "section": "components" }
+      ],
+      "dos": [
+        "Mantén la marca Las de Siempre y su símbolo de hamburguesa vectorial.",
+        "Usa la pareja local Inter + Space Grotesk y los tokens existentes antes de crear variantes.",
+        "Comprueba texto, controles, navegación, modales y estados en tema claro y oscuro.",
+        "Conserva bordes visibles, foco perceptible y alternativas textuales a los indicadores por color.",
+        "Diseña la tienda para uso móvil y el panel para lectura y operación rápida.",
+        "Usa la elevación como respuesta o separación sutil, no como decoración constante."
+      ],
+      "donts": [
+        "No uses negro absoluto como base del tema oscuro ni inviertas colores de forma automática sin revisar cada superficie.",
+        "No coloques texto blanco pálido sobre tarjetas blancas o crema, ni texto carbón sobre superficies carbón.",
+        "No inventes nuevas familias tipográficas, radios o sombras si los tokens actuales resuelven el patrón.",
+        "No uses la brasa para colorear todo el contenido; resérvala para acciones y selección.",
+        "No hagas que un estado dependa únicamente del color ni ocultes el foco del teclado."
+      ]
+    },
+    "responsive": {
+      "breakpointsObserved": ["480px", "560px", "640px", "720px", "768px", "900px", "1050px", "1100px"],
+      "containerWidths": { "store": "1440px", "admin": "1600px", "productDetail": "1200px", "reading": "900px" },
+      "gutter": "clamp(16px, 4vw, 40px)",
+      "sectionSpacing": "clamp(52px, 8vw, 96px)"
+    },
+    "shadows": {
+      "card": "0 8px 24px rgba(26, 21, 18, 0.08)",
+      "cardHover": "0 12px 32px rgba(26, 21, 18, 0.12)",
+      "darkCard": "0 8px 24px rgba(16, 12, 9, .22)",
+      "darkCardHover": "0 12px 32px rgba(16, 12, 9, .3)"
+    },
+    "components": [
+      {
+        "name": "Primary button",
+        "html": "<button class=\"ds-btn-primary\" type=\"button\">Agregar al carrito</button>",
+        "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:12px 20px;border:1px solid var(--musa-brasa);border-radius:var(--musa-radio-control);background:var(--musa-brasa);color:#fff;font:600 15px 'Space Grotesk',sans-serif;text-decoration:none;box-shadow:0 8px 20px rgba(219,66,0,.22);transition:background-color .15s ease,box-shadow .15s ease,transform .1s ease}.ds-btn-primary:hover,.ds-btn-primary:focus-visible{background:var(--musa-brasa-oscuro);border-color:var(--musa-brasa-oscuro);color:#fff;box-shadow:0 12px 28px rgba(219,66,0,.3)}.ds-btn-primary:focus-visible{outline:2px solid var(--musa-mostaza);outline-offset:3px}.ds-btn-primary:active{background:var(--musa-brasa-press);transform:translateY(1px)}"
+      },
+      {
+        "name": "Outline button",
+        "html": "<button class=\"ds-btn-outline\" type=\"button\">Cancelar</button>",
+        "css": ".ds-btn-outline{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:11px 18px;border:1px solid var(--musa-borde);border-radius:var(--musa-radio-control);background:transparent;color:var(--musa-carbon);font:600 15px 'Space Grotesk',sans-serif;text-decoration:none;transition:background-color .15s ease,box-shadow .15s ease}.ds-btn-outline:hover{background:var(--musa-superficie);box-shadow:var(--musa-sombra)}.ds-btn-outline:focus-visible{outline:2px solid var(--musa-brasa);outline-offset:3px}.ds-btn-outline:active{transform:translateY(1px)}"
+      },
+      {
+        "name": "Text input",
+        "html": "<label class=\"ds-field\"><span>Correo electrónico</span><input class=\"ds-input\" type=\"email\" placeholder=\"tu@correo.com\"></label>",
+        "css": ".ds-field{display:flex;flex-direction:column;gap:6px;color:var(--musa-carbon);font:600 14px 'Space Grotesk',sans-serif}.ds-input{width:100%;height:48px;padding:0 14px;border:1px solid var(--musa-borde);border-radius:var(--musa-radio-control);background:var(--musa-superficie);color:var(--musa-carbon);font:400 15px 'Inter',sans-serif}.ds-input::placeholder{color:#b3a99d}.ds-input:focus-visible{outline:none;border-color:var(--musa-brasa);box-shadow:0 0 0 3px rgba(219,66,0,.15)}"
+      },
+      {
+        "name": "Navigation",
+        "html": "<nav class=\"ds-nav\" aria-label=\"Principal\"><a href=\"#\">Inicio</a><a class=\"ds-is-active\" href=\"#\" aria-current=\"page\">Carta</a><a href=\"#\">Mis pedidos</a></nav>",
+        "css": ".ds-nav{display:flex;align-items:center;gap:24px;min-height:56px;padding:0 20px;border-bottom:1px solid var(--musa-borde);background:var(--musa-crema);font:600 14px 'Space Grotesk',sans-serif}.ds-nav a{display:inline-flex;align-items:center;min-height:48px;border-bottom:2px solid transparent;color:var(--musa-texto-suave);text-decoration:none;transition:color .15s ease,border-color .15s ease}.ds-nav a:hover,.ds-nav a:focus-visible{color:var(--musa-brasa)}.ds-nav a:focus-visible{outline:2px solid var(--musa-brasa);outline-offset:2px}.ds-nav a.ds-is-active{border-bottom-color:var(--musa-brasa);color:var(--musa-brasa)}"
+      },
+      {
+        "name": "Category chip",
+        "html": "<a class=\"ds-chip ds-is-active\" href=\"#\" aria-current=\"true\">🍔 Hamburguesas simples</a>",
+        "css": ".ds-chip{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:8px 14px;border:1px solid var(--musa-borde);border-radius:999px;background:var(--musa-superficie);color:var(--musa-carbon);font:600 14px 'Space Grotesk',sans-serif;text-decoration:none;white-space:nowrap;transition:color .15s ease,border-color .15s ease,background-color .15s ease}.ds-chip:hover,.ds-chip:focus-visible{border-color:var(--musa-brasa);color:var(--musa-brasa)}.ds-chip:focus-visible{outline:2px solid var(--musa-brasa);outline-offset:2px}.ds-chip.ds-is-active{border-color:var(--musa-brasa);background:var(--musa-brasa);color:#fff}"
+      },
+      {
+        "name": "Content card",
+        "html": "<article class=\"ds-card\"><h2>Resumen del pedido</h2><p>Revisa los productos y continúa cuando estés listo.</p><button class=\"ds-btn-primary\" type=\"button\">Continuar</button></article>",
+        "css": ".ds-card{padding:24px;border:1px solid var(--musa-borde);border-radius:var(--musa-radio-card);background:var(--musa-superficie);color:var(--musa-carbon);box-shadow:var(--musa-sombra);transition:box-shadow .18s ease,transform .18s ease}.ds-card:hover{box-shadow:var(--musa-sombra-hover)}.ds-card h2{margin:0 0 8px;font:700 20px/1.3 'Space Grotesk',sans-serif}.ds-card p{margin:0 0 18px;color:var(--musa-texto-suave);font:400 15px/1.55 'Inter',sans-serif}.ds-card .ds-btn-primary{margin-top:4px}"
+      }
+    ]
+  }
+}

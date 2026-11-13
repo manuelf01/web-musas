@@ -125,6 +125,20 @@
   {{ grafico(serie_horas, 'Ventas cobradas por hora, ' ~ serie_horas.titulo) }}
 </section>
 
+{# ---------------------- Resumen vendido del día ---------------------- #}
+<section class="adm-card" style="margin-top: 24px;">
+  <div class="adm-card__head"><div><h2>Resumen de productos vendidos</h2><p>Unidades vendidas en pedidos cobrados el {{ dia | replace('-', '/') }}. Las ventas anuladas no se incluyen.</p></div><span class="adm-chip-total">Total cobrado: <strong>S/ {{ '%.2f'|format(serie_horas.total) }}</strong></span></div>
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+    <thead><tr><th>Producto</th><th class="num">Unidades vendidas</th></tr></thead>
+    {% set resumen = namespace(unidades=0) %}
+    <tbody>{% for producto in resumen_productos %}{% set resumen.unidades = resumen.unidades + producto.unidades %}<tr>
+      <td data-label="Producto"><strong>{{ producto.nombre }}</strong></td>
+      <td class="num" data-label="Unidades vendidas">{{ producto.unidades }}</td>
+    </tr>{% else %}<tr><td colspan="2" class="adm-vacio">Todavía no hay pedidos cobrados para este día.</td></tr>{% endfor %}
+    {% if resumen_productos %}<tr class="adm-tabla__total"><th>Total de productos</th><th class="num">{{ resumen.unidades }} unidades</th></tr>{% endif %}</tbody>
+  </table></div>
+</section>
+
 {# ------------------------- Comprobantes ------------------------- #}
 <section class="adm-card" style="margin-top: 24px;">
   <div class="adm-card__head">
@@ -171,5 +185,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/ventas.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/ventas.js', v='20261106-1') }}" defer></script>
 {% endblock %}

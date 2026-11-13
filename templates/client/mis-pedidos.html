@@ -1,4 +1,5 @@
 {% extends "client/base.html" %}
+{% block scripts_pagina_base %}<script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>{% endblock %}
 {% block title %}Mis pedidos · {{ nombre_negocio }}{% endblock %}
 {% set migas = [('Mis pedidos', None, 'bi-receipt')] %}
 {% block nav_pedidos %}active{% endblock %}{% block tab_pedidos %}active{% endblock %}
@@ -9,7 +10,7 @@
     'cancelado':  ('cancelado', 'bi-x-circle-fill',           'Cancelado'),
     'no_show':    ('cancelado', 'bi-exclamation-circle-fill', 'No recogido'),
     'listo':      ('listo',     'bi-bag-check-fill',          'Listo para recojo'),
-    'preparando': ('preparando','bi-fire',                    'En preparación'),
+    'preparando': ('preparando','bi-fire',                    'En cocina'),
     'recibido':   ('pendiente', 'bi-clock-fill',              'Recibido')
   } -%}
   {%- set b = m.get(estado, m['recibido']) -%}
@@ -46,7 +47,7 @@
       <input type="hidden" name="estado" value="{{ estado }}" />
       <div class="adm-search">
         <i class="bi bi-search"></i>
-        <input type="search" name="q" value="{{ q }}" autocomplete="off" data-buscar-auto
+        <input type="search" name="q" value="{{ q }}" autocomplete="off" data-buscar-auto data-buscar-destino="#mp-lista"
                placeholder="Buscar pedido o producto…" />
       </div>
       <label class="mp-fecha">Desde

@@ -1,5 +1,6 @@
 {% extends "client/base.html" %}
 {% block title %}Iniciar sesión · {{ nombre_negocio }}{% endblock %}
+{% block tab_ingresar %}active{% endblock %}
 {% block flash %}{% endblock %}
 
 {% block content %}
@@ -7,7 +8,7 @@
   <!-- Hero editorial (solo desktop) -->
   <section
     class="auth-visual"
-    style="background-image: url('{{ url_for('static', filename='img/hamburguesas/ha-1.jpg') }}');"
+    style="--auth-bg-desktop: url('{{ url_for('static', filename='img/hamburguesas/ha-1-desktop.webp') }}'); --auth-bg-mobile: url('{{ url_for('static', filename='img/hamburguesas/ha-1-mobile.webp') }}');"
   >
     <div class="d-flex justify-content-between align-items-center">
       <div
@@ -73,7 +74,7 @@
       </p>
       <h2 class="fw-bold mb-2">Iniciar sesión</h2>
       <p style="color: var(--musa-texto-suave);">
-        Accede con tu DNI y contraseña para ver tu historial y repetir tus
+        Accede con tu correo electrónico y contraseña para ver tu historial y repetir tus
         pedidos favoritos.
       </p>
 
@@ -81,12 +82,9 @@
         {{ campo_csrf() }}
         <input type="hidden" name="next" value="{{ next or '' }}" />
         <div class="musa-field">
-          <label for="usuario" class="musa-field-label">
-            Correo electrónico o DNI administrativo
-            <span class="musa-field-hint">Clientes: usa tu correo</span>
-          </label>
+          <label for="usuario" class="musa-field-label">Correo electrónico</label>
           <div class="musa-input-icon">
-            <i class="bi bi-person-vcard"></i>
+            <i class="bi bi-envelope"></i>
             <input
               type="text"
               class="musa-input"
@@ -127,7 +125,7 @@
           </div>
         </div>
 
-        <!-- Verificación (solo aparece para DNI de administrador) -->
+        <!-- Verificación (solo aparece para DNI del personal) -->
         <div class="musa-field" id="bloque-captcha" hidden>
           <label for="captcha" class="musa-field-label">
             Verificación de seguridad
@@ -214,24 +212,13 @@
     if (mostrar === captchaVisible) return;
     captchaVisible = mostrar;
     bloque.hidden = !mostrar;
-    eyebrow.textContent = mostrar ? "Acceso administrador" : "Área clientes";
+    eyebrow.textContent = mostrar ? "Acceso del personal" : "Área clientes";
     if (mostrar) cargarCaptcha();
   }
 
-  var timer = null;
   identificador.addEventListener("input", function () {
-    clearTimeout(timer);
     var valor = this.value.trim();
-    if (!valor || (!valor.includes("@") && valor.length !== 8)) {
-      mostrarCaptcha(false);
-      return;
-    }
-    timer = setTimeout(function () {
-      fetch("{{ url_for('cliente.auth.login_tipo_dni') }}?identificador=" + encodeURIComponent(valor))
-        .then(function (r) { return r.json(); })
-        .then(function (d) { mostrarCaptcha(!!d.admin); })
-        .catch(function () { mostrarCaptcha(false); });
-    }, 250);
+    mostrarCaptcha(/^\d{8}$/.test(valor));
   });
 
   document.getElementById("captcha-refresh").addEventListener("click", cargarCaptcha);

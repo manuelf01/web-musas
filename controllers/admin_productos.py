@@ -96,6 +96,7 @@ def guardar():
     error = Producto.insertar_producto(
         request.form.get("nombre"), request.form.get("descripcion"), request.form.get("precio"),
         request.form.get("existencias"), request.form.get("categorias"), imagen,
+        g.user["idUsuario"],
     )
     if error:
         error_en_formulario(error, "crear", request.form, obligatorios=obligatorios)
@@ -117,11 +118,13 @@ def actualizar():
     error = Producto.actualizar_producto(
         request.form.get("nombre"), request.form.get("descripcion"), request.form.get("precio"),
         request.form.get("existencias"), id, request.form.get("categorias"), imagen,
+        g.user["idUsuario"],
     )
     if error:
         error_en_formulario(error, "editar", request.form, id, obligatorios)
     else:
-        Producto.cambiar_estado(id, request.form.get("activo", "1") == "1")
+        if "activo" in request.form:
+            Producto.cambiar_estado(id, request.form.get("activo") == "1")
         mensaje = "Producto actualizado." + (" Imagen cambiada." if imagen else "")
         if antes:
             ok_deshacer(mensaje, url_for("admin.productos.actualizar"), {

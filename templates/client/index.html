@@ -1,6 +1,10 @@
 {% extends "client/base.html" %}
 {% block title %}{{ nombre_negocio }} — Burger Joint nocturno en Chiclayo{% endblock %}
 {% block nav_inicio %}active{% endblock %}{% block tab_inicio %}active{% endblock %}
+{% block scripts_pagina_base %}
+<script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>
+<script src="{{ url_for('static', filename='js/estado-local.js') }}" defer></script>
+{% endblock %}
 
 {% set emojis = {
   "Hamburguesas": "🍔", "Salchipapas": "🍟", "Bebidas": "🍹",

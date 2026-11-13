@@ -1,13 +1,13 @@
 {% extends "admin/base.html" %}
 {% block title %}Pedidos · Backoffice {{ nombre_negocio }}{% endblock %}
-{% set _est = {'pendiente': 'Por entregar', 'todos': 'Todos los pedidos', 'recibido': 'Recibidos', 'preparando': 'En preparación', 'listo': 'Listos para cobrar', 'recogido': 'Entregados'} %}
+{% set _est = {'pendiente': 'Por entregar', 'todos': 'Todos los pedidos', 'recibido': 'Recibidos', 'preparando': 'En cocina', 'listo': 'Listos para cobrar', 'recogido': 'Entregados'} %}
 {% set migas = [('Pedidos', None, 'bi-receipt'), (_est.get(estado, 'Por entregar'), None)] %}
 {% block nav_pedidos %}is-active{% endblock %}
 
 {% macro linea(l) %}
   <div class="ped-linea">
     <div class="ped-linea__img">
-      {% if l.imagen %}<img src="{{ url_for('static', filename='img/' ~ l.imagen) }}" alt="" />
+      {% if l.imagen %}<img src="{{ url_for('static', filename='img/' ~ miniatura_imagen(l.imagen)) }}" alt="" loading="lazy" decoding="async" />
       {% else %}<span class="producto-card__ph"><i class="bi bi-fire"></i></span>{% endif %}
     </div>
     <div class="ped-linea__info">
@@ -54,7 +54,7 @@
     <input type="hidden" name="estado" value="{{ estado }}" />
     <i class="bi bi-search"></i>
     <input type="search" name="q" id="ped-buscar" value="{{ q }}" list="ped-sug"
-           data-buscar-auto placeholder="Filtra por cliente, correo, documento o N° de pedido…" autocomplete="off" />
+           data-buscar-auto data-buscar-destino="#ped-lista" placeholder="Filtra por cliente, correo, documento o N° de pedido…" autocomplete="off" />
     <datalist id="ped-sug">{% for s in sugerencias %}<option value="{{ s }}"></option>{% endfor %}</datalist>
   </form>
   <div class="adm-filtros" id="ped-chips">
@@ -106,64 +106,67 @@
           {% if p.notas %}<p class="ped-notas"><i class="bi bi-sticky"></i> {{ p.notas }}</p>{% endif %}
 
           <div class="ped-card__resumen">
-            <strong>Total: S/ {{ '%.2f'|format(p.total) }}</strong>
+            <strong>{% if p.descuentoPago %}<s>S/ {{ '%.2f'|format(p.total) }}</s> · {% endif %}Cobrar: S/ {{ '%.2f'|format(p.totalCobrar) }}</strong>
             <span>
-              <i class="bi {{ 'bi-qr-code' if p.medioPago in ('yape','plin') else 'bi-cash-coin' }}"></i>
-              Pago elegido: {{ p.medioPago|capitalize }}
+              <i class="bi {{ 'bi-qr-code' if p.medioTipo == 'billetera' else ('bi-credit-card' if p.medioTipo == 'tarjeta' else 'bi-cash-coin') }}"></i>
+              Pago elegido: {{ p.medioNombre }}{% if p.descuentoPago %} · descuento S/ {{ '%.2f'|format(p.descuentoPago) }}{% endif %}
             </span>
           </div>
 
-          {% if p.puede_avanzar %}
+          {% if p.prep == 0 %}
+          <form method="post" action="{{ url_for('admin.pedidos.enviar_cocina') }}" class="ped-avanzar">
+            {{ campo_csrf() }}<input type="hidden" name="idPedido" value="{{ p.idPedido }}"/><input type="hidden" name="estado" value="{{ estado }}"/>
+            <button type="submit" class="btn-contorno w-100"
+              data-confirm="Se generará la comanda del pedido #{{ p.idPedido }}, se abrirá la impresión y el pedido pasará a En cocina. Desde ese momento el cliente ya no podrá cancelarlo."
+              data-confirm-titulo="Enviar pedido a cocina" data-confirm-ok="Enviar e imprimir">
+              <i class="bi bi-printer"></i> Enviar a cocina e imprimir</button>
+          </form>
+          {% elif p.prep == 1 %}
           <form method="post" action="{{ url_for('admin.pedidos.preparar') }}" class="ped-avanzar">
+            {{ campo_csrf() }}<input type="hidden" name="idPedido" value="{{ p.idPedido }}"/><input type="hidden" name="estado" value="{{ estado }}"/>
+            <button type="submit" class="btn-contorno w-100"
+              data-confirm="Se marcará el pedido #{{ p.idPedido }} como listo y a la espera de que el cliente lo recoja."
+              data-confirm-titulo="Marcar listo para recojo" data-confirm-ok="Marcar listo">
+              <i class="bi bi-bag-check"></i> Marcar listo para recojo</button>
+          </form>
+          {% endif %}
+
+          {% if p.tieneComanda %}
+          <form method="post" action="{{ url_for('admin.pedidos.reimprimir_comanda', id_pedido=p.idPedido) }}" class="ped-comanda">
             {{ campo_csrf() }}
-            <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
-            <input type="hidden" name="estado" value="{{ estado }}" />
-            {% if p.prep == 0 %}
-              <button type="submit" class="btn-contorno w-100"
-                data-confirm="La cocina empieza a preparar el pedido #{{ p.idPedido }}. A partir de ahora el cliente ya NO podrá cancelarlo."
-                data-confirm-titulo="Empezar preparación" data-confirm-ok="Sí, a cocina">
-                <i class="bi bi-fire"></i> Empezar preparación</button>
-            {% else %}
-              <button type="submit" class="btn-contorno w-100"
-                data-confirm="Se marcará el pedido #{{ p.idPedido }} como listo y a la espera de que el cliente lo recoja."
-                data-confirm-titulo="Marcar listo para recojo" data-confirm-ok="Marcar listo">
-                <i class="bi bi-bag-check"></i> Marcar listo para recojo</button>
-            {% endif %}
+            <button type="submit" class="ped-link-btn"><i class="bi bi-printer"></i> Reimprimir comanda{% if p.impresionesComanda > 1 %} ({{ p.impresionesComanda }}){% endif %}</button>
+          </form>
+          {% elif p.prep > 0 %}
+          <form method="post" action="{{ url_for('admin.pedidos.enviar_cocina') }}" class="ped-comanda">
+            {{ campo_csrf() }}<input type="hidden" name="idPedido" value="{{ p.idPedido }}"/><input type="hidden" name="estado" value="{{ estado }}"/>
+            <button type="submit" class="ped-link-btn"><i class="bi bi-printer"></i> Generar comanda pendiente</button>
           </form>
           {% endif %}
 
           {% if p.estado == 'listo' %}
-          <form method="post" action="{{ url_for('admin.pedidos.confirmar') }}" class="ped-confirmar">
-            {{ campo_csrf() }}
-            <input type="hidden" name="idPedido" value="{{ p.idPedido }}" />
-            <input type="hidden" name="estado" value="{{ estado }}" />
-            <label>Palabra clave del cliente</label>
-            <p class="ped-confirmar__hint">Verifica la clave y elige el comprobante. El pago es el que eligió el cliente ({{ p.medioPago|capitalize }}).</p>
-            <select name="tipo_comprobante" required aria-label="Tipo de comprobante">
-              <option value="boleta_simple">Boleta simple (sin DNI)</option>
-              <option value="boleta_dni">Boleta con DNI</option>
-              <option value="factura">Factura (con RUC)</option>
-            </select>
-            <div data-doc-wrap hidden>
-              <input type="text" name="documento" inputmode="numeric" maxlength="8"
-                     pattern="[0-9]{8}" placeholder="DNI (8 dígitos)" autocomplete="off" disabled
-                     aria-label="DNI o RUC para el comprobante" />
-            </div>
-            <div data-razon-social hidden>
-              <input type="text" name="razon_social" maxlength="200" placeholder="Razón social"
-                     aria-label="Razón social" disabled />
-            </div>
-            <div class="ped-confirmar__row">
-              {% set clave_mala = request.args.get('clave_error') == p.idPedido|string %}
-              <input type="text" name="key" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" data-solo-numeros
-                     placeholder="0000" required autocomplete="off" aria-label="Palabra clave"
-                     class="{{ 'is-invalida' if clave_mala }}" {{ 'data-enfocar aria-invalid=true' if clave_mala }} />
-              <button type="submit" class="btn-brasa"
-                data-confirm="Se registrará el pago, se entregará el pedido #{{ p.idPedido }} y se emitirá un comprobante para el cliente y caja."
-                data-confirm-titulo="Confirmar cobro y entrega" data-confirm-ok="Cobrar y entregar">
-                <i class="bi bi-check2-all"></i> Cobrar y entregar</button>
-            </div>
-          </form>
+          {% set clave_mala = request.args.get('clave_error') == p.idPedido|string %}
+          <button type="button" class="btn-brasa w-100" data-bs-toggle="modal" data-bs-target="#cobroPedido{{ p.idPedido }}">
+            <i class="bi bi-cash-coin"></i> Cobrar y entregar
+          </button>
+          <div class="modal fade caja-modal" id="cobroPedido{{ p.idPedido }}" tabindex="-1" aria-labelledby="cobroPedidoTitulo{{ p.idPedido }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable"><div class="modal-content">
+              <div class="modal-header"><div><span class="caja-modal__eyebrow">Cobro y entrega</span><h2 class="modal-title" id="cobroPedidoTitulo{{ p.idPedido }}">Pedido #{{ p.idPedido }}</h2></div><button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+              <form method="post" action="{{ url_for('admin.pedidos.confirmar') }}" class="ped-confirmar">
+                {{ campo_csrf() }}<input type="hidden" name="idPedido" value="{{ p.idPedido }}"/><input type="hidden" name="estado" value="{{ estado }}"/>
+                <div class="modal-body">
+                  <div class="cobro-resumen"><div><small>Cliente</small><strong>{{ p.cliente }}</strong></div><div><small>Medio elegido</small><strong>{{ p.medioNombre }}</strong></div><div><small>Total a cobrar</small><strong>S/ {{ '%.2f'|format(p.totalCobrar) }}</strong></div></div>
+                  <div class="musa-alert mb-3">Verifica la palabra clave del cliente. Al confirmar se registrará el pago, se entregará el pedido y se emitirá el comprobante.</div>
+                  <div class="row g-3">
+                    <div class="col-md-6"><label class="musa-field-label">Comprobante</label><select class="musa-input" name="tipo_comprobante" required><option value="boleta_simple">Boleta simple (sin DNI)</option><option value="boleta_dni">Boleta con DNI</option><option value="factura">Factura (con RUC)</option></select></div>
+                    <div class="col-md-6"><label class="musa-field-label">Palabra clave</label><input class="musa-input {{ 'is-invalida' if clave_mala }}" type="text" name="key" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" data-solo-numeros placeholder="0000" required autocomplete="off" {{ 'data-enfocar aria-invalid=true' if clave_mala }}/></div>
+                    <div class="col-md-6" data-doc-wrap hidden><label class="musa-field-label">DNI o RUC</label><input class="musa-input" type="text" name="documento" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="DNI (8 dígitos)" autocomplete="off" disabled/></div>
+                    <div class="col-md-6" data-razon-social hidden><label class="musa-field-label">Razón social</label><input class="musa-input" type="text" name="razon_social" maxlength="200" placeholder="Razón social" disabled/></div>
+                  </div>
+                </div>
+                <div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn-brasa"><i class="bi bi-check2-all"></i> Confirmar cobro y entrega</button></div>
+              </form>
+            </div></div>
+          </div>
           {% endif %}
 
           <div class="ped-secundarias">
@@ -203,20 +206,20 @@
     <div class="adm-card__head">
       <div><h2>Recogidos hoy</h2><p>{{ total_recogidos }} pedidos entregados</p></div>
     </div>
-    <div class="ped-tabla-wrap">
-      <table class="ped-tabla">
+    <div class="ped-tabla-wrap ped-tabla-wrap--cards">
+      <table class="ped-tabla ped-tabla--cards">
         <thead>
           <tr><th>Pedido</th><th>Cliente</th><th>Hora</th><th>Detalle</th><th class="num">Total</th><th>Clave</th></tr>
         </thead>
         <tbody>
           {% for p in recogidos %}
             <tr>
-              <td>#{{ p.idPedido }}</td>
-              <td>{{ p.cliente }}<br /><span class="muted">Documento {{ p.dni or '—' }}</span></td>
-              <td>{{ p.hora }}</td>
-              <td class="muted">{{ p.lineas | map(attribute='nombre') | join(', ') | truncate(48) }}</td>
-              <td class="num">S/ {{ '%.2f'|format(p.total) }}</td>
-              <td><span class="ped-clave-chip">{{ p.keyPedido }}</span></td>
+              <td data-label="Pedido">#{{ p.idPedido }}</td>
+              <td data-label="Cliente">{{ p.cliente }}<br /><span class="muted">Documento {{ p.dni or '—' }}</span></td>
+              <td data-label="Hora">{{ p.hora }}</td>
+              <td class="muted" data-label="Detalle">{{ p.lineas | map(attribute='nombre') | join(', ') | truncate(48) }}</td>
+              <td class="num" data-label="Total">S/ {{ '%.2f'|format(p.total) }}</td>
+              <td data-label="Clave"><span class="ped-clave-chip">{{ p.keyPedido }}</span></td>
             </tr>
           {% endfor %}
         </tbody>

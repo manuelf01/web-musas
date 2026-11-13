@@ -35,7 +35,7 @@
     </div>
     <select name="medio" class="musa-input" aria-label="Medio de pago">
       <option value="">Todos los medios</option>
-      {% for m in medios %}<option value="{{ m }}" {{ 'selected' if filtros.medio == m }}>{{ m }}</option>{% endfor %}
+      {% for m in medios %}<option value="{{ m.codigo }}" {{ 'selected' if filtros.medio == m.codigo }}>{{ m.nombre }}</option>{% endfor %}
     </select>
     <select name="estado" class="musa-input" aria-label="Estado del pago">
       <option value="">Vigentes y anulados</option>

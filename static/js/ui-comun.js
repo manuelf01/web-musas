@@ -71,21 +71,75 @@
   document.querySelectorAll("[data-filtro-vivo]").forEach(conectar);
 
   // --- Búsqueda en el servidor mientras se escribe ------------------
-  // <input data-buscar-auto> dentro de un <form method=get>: al dejar de teclear
-  // envía el formulario (vuelve a la página 1) y recupera el foco al final del texto.
+  // Si data-buscar-destino apunta al contenedor del listado, se consulta la
+  // página con fetch y se reemplaza solo ese fragmento. No hay navegación y,
+  // por tanto, el loader global nunca interviene. El GET completo queda como
+  // respaldo cuando fetch/DOMParser no están disponibles.
   document.querySelectorAll("input[data-buscar-auto]").forEach(function (input) {
     var form = input.form;
     if (!form) return;
     form.setAttribute("data-loader-skip", "");
-    var espera = null;
     var previo = input.value;
+    var secuencia = 0;
+    var peticion = null;
+    var selectorDestino = input.getAttribute("data-buscar-destino");
+
+    function urlBusqueda() {
+      var parametros = new URLSearchParams(new FormData(form));
+      parametros.delete("page");
+      parametros.delete("rpage");
+      return form.action + (parametros.toString() ? "?" + parametros.toString() : "");
+    }
+
+    function navegarRespaldo() {
+      try { sessionStorage.setItem("musaFocoBuscar", location.pathname); } catch (e) {}
+      form.requestSubmit ? form.requestSubmit() : form.submit();
+    }
+
+    function buscarSinRecargar() {
+      var destino = selectorDestino && document.querySelector(selectorDestino);
+      if (!destino || !window.fetch || !window.DOMParser) {
+        navegarRespaldo();
+        return;
+      }
+      if (peticion) peticion.abort();
+      peticion = window.AbortController ? new AbortController() : null;
+      var turno = ++secuencia;
+      var url = urlBusqueda();
+      destino.setAttribute("aria-busy", "true");
+      fetch(url, {
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "busqueda-auto" },
+        signal: peticion ? peticion.signal : undefined
+      })
+        .then(function (respuesta) {
+          return respuesta.ok ? respuesta.text() : Promise.reject(new Error("respuesta"));
+        })
+        .then(function (html) {
+          if (turno !== secuencia) return;
+          var documento = new DOMParser().parseFromString(html, "text/html");
+          var nuevo = documento.querySelector(selectorDestino);
+          if (!nuevo) throw new Error("fragmento");
+          destino.innerHTML = nuevo.innerHTML;
+          destino.removeAttribute("aria-busy");
+          history.replaceState(null, "", url);
+        })
+        .catch(function (error) {
+          if (error && error.name === "AbortError") return;
+          destino.removeAttribute("aria-busy");
+          navegarRespaldo();
+        });
+    }
+
     input.addEventListener("input", function () {
-      clearTimeout(espera);
-      espera = setTimeout(function () {
-        if (input.value === previo) return;
-        try { sessionStorage.setItem("musaFocoBuscar", location.pathname); } catch (e) {}
-        form.requestSubmit ? form.requestSubmit() : form.submit();
-      }, 450);
+      if (input.value === previo) return;
+      previo = input.value;
+      buscarSinRecargar();
+    });
+    input.addEventListener("search", function () {
+      if (input.value === previo) return;
+      previo = input.value;
+      buscarSinRecargar();
     });
     try {
       if (sessionStorage.getItem("musaFocoBuscar") === location.pathname) {
@@ -220,7 +274,6 @@
     e.stopPropagation();
     pedir(opcionesDe(a)).then(function (ok) {
       if (ok) {
-        if (window.MusasLoader) window.MusasLoader.mostrar();
         window.location.href = a.href;
       }
     });

@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+{% block title %}Medios de pago · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Ventas y caja', None, 'bi-cash-stack'), ('Medios de pago', None, 'bi-wallet2')] %}
+{% block content %}
+<div class="adm-head">
+  <div><h1>Medios de pago <span class="adm-count-pill">{{ medios|length }} configurados</span></h1>
+    <p>Descuentos para el cliente y comisiones del proveedor se calculan al cobrar.</p></div>
+  <button class="btn-brasa" type="button" data-medio-nuevo><i class="bi bi-plus-lg"></i> Agregar medio</button>
+</div>
+
+<section class="adm-card">
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+    <thead><tr><th>Medio</th><th>Tipo</th><th class="num">Descuento</th><th class="num">Comisión</th><th>Efectivo</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>{% for m in medios %}<tr style="{{ 'opacity:.55' if not m.activo }}">
+      <td data-label="Medio"><div class="adm-prod-cel">{% if m.imagen %}<img class="adm-thumb" src="{{ url_for('static', filename='img/' ~ miniatura_imagen(m.imagen)) }}" alt="" loading="lazy" decoding="async" />{% else %}<span class="adm-thumb"><i class="bi bi-wallet2"></i></span>{% endif %}<div><strong>{{ m.nombre }}</strong><p>{{ m.codigo }}</p></div></div></td>
+      <td data-label="Tipo">{{ m.tipo|capitalize }}</td><td class="num" data-label="Descuento">{{ '%.2f'|format(m.descuentoPct) }}%</td>
+      <td class="num" data-label="Comisión">{{ '%.2f'|format(m.comisionPct) }}% + S/ {{ '%.2f'|format(m.comisionFija) }}</td>
+      <td data-label="Afecta efectivo">{{ 'Sí' if m.afectaEfectivo else 'No' }}</td>
+      <td data-label="Estado"><form class="adm-switch" method="post" action="{{ url_for('admin.medios_pago.estado') }}"{% if m.activo %} data-confirm="El medio {{ m.nombre }} dejará de estar disponible para pedidos nuevos." data-confirm-titulo="Desactivar medio de pago" data-confirm-ok="Desactivar" data-confirm-tono="peligro"{% endif %}>{{ campo_csrf() }}<input type="hidden" name="id" value="{{ m.id }}"/><input type="hidden" name="activo" value="{{ 0 if m.activo else 1 }}"/><button class="adm-switch__btn {{ 'is-on' if m.activo }}" type="submit" role="switch" aria-checked="{{ 'true' if m.activo else 'false' }}" aria-label="{{ 'Desactivar' if m.activo else 'Activar' }} {{ m.nombre }}"><span class="adm-switch__track" aria-hidden="true"><span></span></span><span class="adm-switch__estado">{{ 'Activo' if m.activo else 'Inactivo' }}</span></button></form></td>
+      <td data-label="Acciones"><div class="acciones"><button type="button" class="adm-btn-sm" data-medio-editar
+        data-id="{{ m.id }}" data-nombre="{{ m.nombre }}" data-tipo="{{ m.tipo }}"
+        data-descuento="{{ m.descuentoPct }}" data-comision="{{ m.comisionPct }}"
+        data-fija="{{ m.comisionFija }}" data-efectivo="{{ 1 if m.afectaEfectivo else 0 }}"
+        data-activo="{{ 1 if m.activo else 0 }}"><i class="bi bi-pencil"></i> Editar</button>
+      </div></td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+<div class="adm-panel__backdrop" data-medio-cerrar></div>
+<aside class="adm-panel" id="panelMedio" role="dialog" aria-modal="true" aria-labelledby="medio-titulo" aria-hidden="true">
+  <div class="adm-panel__head" data-eyebrow="Configuración de cobro"><button class="adm-panel__cerrar" type="button" data-medio-cerrar aria-label="Cerrar">&times;</button><h2 id="medio-titulo">Agregar medio</h2><p>Configuración aplicada a ventas futuras.</p></div>
+  <form method="post" enctype="multipart/form-data" action="{{ url_for('admin.medios_pago.guardar') }}">{{ campo_csrf() }}<input type="hidden" name="id" id="medio-id"/>
+    <div class="adm-panel__body">
+      <label class="musa-field-label">Nombre</label><input class="musa-input" name="nombre" id="medio-nombre" required maxlength="60" />
+      <label class="musa-field-label mt-3">Tipo</label><select class="musa-input" name="tipo" id="medio-tipo">{% for t in tipos %}<option value="{{ t }}">{{ t|capitalize }}</option>{% endfor %}</select>
+      <div class="row g-3 mt-1"><div class="col-6"><label class="musa-field-label">Descuento %</label><input class="musa-input" name="descuento" id="medio-descuento" type="number" min="0" max="100" step="0.01" value="0" /></div><div class="col-6"><label class="musa-field-label">Comisión %</label><input class="musa-input" name="comision" id="medio-comision" type="number" min="0" max="100" step="0.01" value="0" /></div></div>
+      <label class="musa-field-label mt-3">Comisión fija</label><input class="musa-input" name="comision_fija" id="medio-fija" type="number" min="0" step="0.01" value="0" />
+      <label class="musa-field-label mt-3">Afecta el efectivo físico</label><select class="musa-input" name="afecta_efectivo" id="medio-efectivo"><option value="0">No</option><option value="1">Sí</option></select>
+      <label class="musa-field-label mt-3">Imagen</label><input class="musa-input" type="file" name="imagen" accept="image/jpeg,image/png,image/webp,image/gif" />
+      <input class="musa-input mt-2" type="url" name="imagen_url" placeholder="o enlace directo HTTPS" />
+    </div>
+    <div class="adm-panel__foot"><button class="btn-brasa" type="submit" data-confirm="Se guardará la configuración del medio de pago.">Guardar</button><button class="adm-cancelar" type="button" data-medio-cerrar>Cancelar</button></div>
+  </form>
+</aside>
+{% endblock %}
+{% block scripts %}<script>
+(function(){var p=document.getElementById('panelMedio'),b=document.querySelector('.adm-panel__backdrop');function abrir(){p.classList.add('abierto');b.classList.add('abierto')}function cerrar(){p.classList.remove('abierto');b.classList.remove('abierto')}document.querySelector('[data-medio-nuevo]').onclick=function(){p.querySelector('form').reset();document.getElementById('medio-id').value='';document.getElementById('medio-titulo').textContent='Agregar medio';abrir()};document.querySelectorAll('[data-medio-editar]').forEach(function(x){x.onclick=function(){document.getElementById('medio-titulo').textContent='Editar '+x.dataset.nombre;document.getElementById('medio-id').value=x.dataset.id;document.getElementById('medio-nombre').value=x.dataset.nombre;document.getElementById('medio-tipo').value=x.dataset.tipo;document.getElementById('medio-descuento').value=x.dataset.descuento;document.getElementById('medio-comision').value=x.dataset.comision;document.getElementById('medio-fija').value=x.dataset.fija;document.getElementById('medio-efectivo').value=x.dataset.efectivo;abrir()}});document.querySelectorAll('[data-medio-cerrar]').forEach(function(x){x.onclick=cerrar})})();
+</script>{% endblock %}

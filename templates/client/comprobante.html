@@ -65,6 +65,8 @@
         </div>
 
         <div class="adm-recibo__tot"><dl>
+          {% if c.descuento %}<div class="fila"><span>Importe de productos</span><span>S/ {{ '%.2f'|format(c.montoBruto) }}</span></div>
+          <div class="fila"><span>Descuento por medio de pago</span><span>− S/ {{ '%.2f'|format(c.descuento) }}</span></div>{% endif %}
           <div class="fila"><span>Op. gravada</span><span>S/ {{ '%.2f'|format(c.subTotal) }}</span></div>
           <div class="fila"><span>IGV (18%) incluido</span><span>S/ {{ '%.2f'|format(c.igv) }}</span></div>
           <div class="fila grande"><span>Total pagado</span><strong>S/ {{ '%.2f'|format(c.montoTotal) }}</strong></div>

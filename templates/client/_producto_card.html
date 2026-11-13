@@ -16,7 +16,7 @@
          data-reveal data-reveal-delay="{{ (loop.index0 % 4) if loop is defined else 0 }}">
   <div class="producto-card__media">
     {% if p.imagen %}
-      <img src="{{ url_for('static', filename='img/' ~ p.imagen) }}" alt="{{ p.nombre }}" loading="lazy" />
+      <img src="{{ url_for('static', filename='img/' ~ miniatura_imagen(p.imagen)) }}" alt="{{ p.nombre }}" loading="lazy" decoding="async" />
     {% else %}
       <div class="producto-card__ph" data-cat="{{ p.nombreCategoria or '' }}">
         <i class="bi {{ _ph_ico.get(p.nombreCategoria, 'bi-fire') }}"></i>

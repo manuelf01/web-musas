@@ -82,12 +82,13 @@ def login():
         identificador = (request.form.get("usuario") or "").strip()
         contraseña = request.form.get("contraseña") or ""
 
-        def _rerender():
-            es_admin = Autenticacion.identificador_es_admin(identificador)
+        def _rerender(mostrar_captcha=None):
+            if mostrar_captcha is None:
+                mostrar_captcha = bool(RE_DNI.fullmatch(identificador))
             return render_template(
                 "client/login.html",
                 form=request.form.to_dict(),
-                mostrar_captcha=es_admin,
+                mostrar_captcha=mostrar_captcha,
                 next=request.values.get("next", ""),
             )
 
@@ -96,7 +97,7 @@ def login():
             return _rerender()
 
         if not (RE_DNI.match(identificador) or RE_CORREO.match(identificador)):
-            error_en_formulario("Ingresa tu correo electrónico o el DNI de administrador.", "pagina",
+            error_en_formulario("Ingresa tu correo electrónico o el DNI del personal.", "pagina",
                                 request.form, campo="usuario")
             return _rerender()
         if not contraseña:
@@ -106,9 +107,9 @@ def login():
         resultado = Autenticacion.login_unificado(identificador, contraseña)
         if isinstance(resultado, str):
             _registrar_fallo_login()
-            # «No encontramos una cuenta…» o «dada de baja» -> el usuario; «contraseña incorrecta» -> la clave.
-            campo = "contraseña" if "contraseña" in resultado.lower() else "usuario"
-            error_en_formulario(resultado, "pagina", request.form, campo=campo)
+            # Mensaje uniforme: no revela si existe la cuenta, si está inactiva
+            # ni cuál de las dos credenciales fue incorrecta.
+            flash("No pudimos iniciar sesión con esos datos. Revisa tus credenciales e inténtalo de nuevo.", "error")
             return _rerender()
 
         fila, tipo = resultado
@@ -122,9 +123,8 @@ def login():
             ingresado = (request.form.get("captcha") or "").strip().upper()
             if not esperado or ingresado != esperado:
                 _registrar_fallo_login()
-                error_en_formulario("El código de verificación no coincide. Intenta de nuevo.", "pagina",
-                                    request.form, campo="captcha")
-                return _rerender()
+                flash("No pudimos iniciar sesión con esos datos. Revisa las credenciales y el código de seguridad.", "error")
+                return _rerender(mostrar_captcha=True)
 
             _limpiar_fallos_login()
             session.pop("cliente.auth", None)
@@ -149,14 +149,6 @@ def login_captcha():
     respuesta = send_file(generar_imagen_captcha(texto), mimetype="image/png")
     respuesta.headers["Cache-Control"] = "no-store, max-age=0"
     return respuesta
-
-
-@auth.route("/login/tipo-dni")
-def login_tipo_dni():
-    """Dice si el identificador pertenece al panel (para mostrar el captcha)."""
-    identificador = (request.args.get("identificador") or request.args.get("dni") or "").strip()
-    es_admin = Autenticacion.identificador_es_admin(identificador) if identificador else False
-    return {"admin": es_admin}
 
 
 # ----------------------------------------------------------------------

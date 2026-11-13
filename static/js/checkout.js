@@ -13,6 +13,10 @@
   var inputCarrito = document.getElementById("carrito_json");
   var vacioAviso = document.getElementById("ck-vacio");
   var contenido = document.getElementById("ck-contenido");
+  var pasos = Array.prototype.slice.call(form.querySelectorAll("[data-ck-paso]"));
+  var indicadores = Array.prototype.slice.call(form.querySelectorAll("[data-ck-indicador]"));
+  var pasoActual = 1;
+  var pasoMaximo = 1;
 
   function money(n) {
     return "S/ " + Number(n).toFixed(2);
@@ -121,7 +125,7 @@
   function syncYape() {
     var yape = document.getElementById("ck-yape-info");
     var sel = document.querySelector('input[name="pago"]:checked');
-    if (yape && sel) yape.hidden = sel.value !== "yape" && sel.value !== "plin";
+    if (yape && sel) yape.hidden = sel.dataset.tipo !== "billetera";
     // Fallback de :has() (Firefox < 121): marca la opción elegida.
     document.querySelectorAll(".ck-opcion").forEach(function (op) {
       var input = op.querySelector("input");
@@ -133,15 +137,113 @@
   });
   syncYape();
 
+  function mostrarErrorPaso(numero, mensaje) {
+    var error = form.querySelector('[data-ck-error="' + numero + '"]');
+    if (!error) return;
+    error.textContent = mensaje || "";
+    error.hidden = !mensaje;
+  }
+
+  function validarPaso(numero) {
+    mostrarErrorPaso(numero, "");
+    var panel = form.querySelector('[data-ck-paso="' + numero + '"]');
+    if (!panel) return false;
+
+    var campos = panel.querySelectorAll("input[required], textarea[required], select[required]");
+    for (var i = 0; i < campos.length; i++) {
+      if (!campos[i].checkValidity()) {
+        campos[i].reportValidity();
+        mostrarErrorPaso(numero, "Revisa el campo indicado antes de continuar.");
+        return false;
+      }
+    }
+
+    if (numero === 1 && (!inputHora || !inputHora.value)) {
+      mostrarErrorPaso(numero, "Selecciona una hora de recojo disponible para continuar.");
+      return false;
+    }
+    if (numero === 2 && !panel.querySelector('input[name="pago"]:checked')) {
+      mostrarErrorPaso(numero, "Elige cómo prefieres pagar al recoger tu pedido.");
+      return false;
+    }
+    return true;
+  }
+
+  function mostrarPaso(numero, moverFoco) {
+    numero = Number(numero);
+    if (numero < 1 || numero > 3 || numero > pasoMaximo) return;
+    pasoActual = numero;
+
+    pasos.forEach(function (panel) {
+      var activo = Number(panel.dataset.ckPaso) === numero;
+      panel.hidden = !activo;
+      panel.classList.toggle("is-active", activo);
+    });
+    indicadores.forEach(function (item) {
+      var n = Number(item.dataset.ckIndicador);
+      var boton = item.querySelector("button");
+      item.classList.toggle("is-active", n === numero);
+      item.classList.toggle("is-complete", n !== numero && (n < numero || n < pasoMaximo));
+      if (boton) {
+        boton.disabled = n > pasoMaximo;
+        if (n === numero) boton.setAttribute("aria-current", "step");
+        else boton.removeAttribute("aria-current");
+      }
+    });
+
+    if (moverFoco) {
+      var actual = form.querySelector('[data-ck-paso="' + numero + '"]');
+      if (actual) {
+        actual.scrollIntoView({ behavior: "smooth", block: "start" });
+        var titulo = actual.querySelector("h2");
+        if (titulo) {
+          titulo.setAttribute("tabindex", "-1");
+          window.setTimeout(function () { titulo.focus({ preventScroll: true }); }, 250);
+        }
+      }
+    }
+  }
+
+  form.querySelectorAll("[data-ck-siguiente]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      if (!validarPaso(pasoActual)) return;
+      var destino = Number(boton.dataset.ckSiguiente);
+      pasoMaximo = Math.max(pasoMaximo, destino);
+      mostrarPaso(destino, true);
+    });
+  });
+  form.querySelectorAll("[data-ck-anterior]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      mostrarPaso(Number(boton.dataset.ckAnterior), true);
+    });
+  });
+  form.querySelectorAll("[data-ck-ir]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      mostrarPaso(Number(boton.dataset.ckIr), true);
+    });
+  });
+
   form.addEventListener("submit", function (e) {
     if (!window.MusasCarrito.leer().length) {
       e.preventDefault();
       alert("Tu carrito está vacío.");
       return;
     }
+    if (!validarPaso(1)) {
+      e.preventDefault();
+      mostrarPaso(1, true);
+      return;
+    }
+    if (!validarPaso(2)) {
+      e.preventDefault();
+      pasoMaximo = Math.max(pasoMaximo, 2);
+      mostrarPaso(2, true);
+      return;
+    }
     pintarResumen(); // asegura carrito_json actualizado
   });
 
   pintarResumen();
+  mostrarPaso(1, false);
   if (window.MusasCarrito.leer().length) reconciliarConServidor();
 })();

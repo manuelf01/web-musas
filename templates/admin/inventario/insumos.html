@@ -1,0 +1,96 @@
+{% extends "admin/base.html" %}
+{% block title %}Insumos · {{ nombre_negocio }}{% endblock %}
+{% set migas = [('Gestión', None, 'bi-box-seam'), ('Inventario', url_for('admin.inventario.home'), 'bi-boxes'), ('Insumos', None, 'bi-basket')] %}
+{% block content %}
+<div class="adm-head">
+  <div><h1>Insumos</h1><p>Ingredientes, bebidas y materiales que se compran y consumen durante la operación.</p></div>
+  {% if puede_modificar %}<button class="btn-brasa" data-bs-toggle="modal" data-bs-target="#insumoModal"><i class="bi bi-plus-lg"></i> Nuevo insumo</button>{% endif %}
+</div>
+<nav class="adm-filtros mb-3" aria-label="Secciones del inventario">
+  <a class="musa-chip" href="{{ url_for('admin.inventario.home') }}">Productos terminados</a>
+  <a class="musa-chip is-active" href="{{ url_for('admin.inventario.insumos') }}" aria-current="page">Insumos</a>
+  <a class="musa-chip" href="{{ url_for('admin.inventario.recetas') }}">Recetas y producción</a>
+  <a class="musa-chip" href="{{ url_for('admin.inventario.movimientos') }}">Movimientos</a>
+  <a class="musa-chip" href="{{ url_for('admin.inventario.kardex') }}">Kardex</a>
+</nav>
+<section class="adm-card mb-4">
+  <div class="adm-card__head"><div><h2>Consumo de ingredientes del día</h2><p>Unidades descontadas al enviar pedidos a cocina; las mermas manuales se consultan en Movimientos.</p></div></div>
+  <form method="get" class="vbuscador mb-3"><label class="musa-field-label" for="consumoDia">Día</label><input class="musa-input" id="consumoDia" type="date" name="dia" value="{{ dia }}"/><input type="hidden" name="almacen" value="{{ almacen_id }}"/><button class="btn-contorno">Consultar consumo</button></form>
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards"><thead><tr><th>Ingrediente</th><th class="num">Cantidad consumida</th></tr></thead><tbody>
+    {% for c in consumo_dia %}<tr><td data-label="Ingrediente"><strong>{{ c.nombre }}</strong></td><td class="num" data-label="Cantidad consumida">{{ '%.3f'|format(c.cantidad) }} {{ c.unidad }}</td></tr>
+    {% else %}<tr><td colspan="2" class="adm-vacio">No hay consumo asociado a pedidos enviados a cocina en esta fecha.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+<section class="adm-card">
+  <form method="get" class="vbuscador" role="search">
+    <input class="musa-input vbuscador__q" type="search" name="q" value="{{ q }}" placeholder="Buscar insumo o categoría" aria-label="Buscar insumo o categoría" />
+    <select class="musa-input" name="almacen" aria-label="Filtrar por almacén">{% for a in almacenes %}<option value="{{ a.id }}" {{ 'selected' if almacen_id == a.id }}>{{ a.nombre }}</option>{% endfor %}</select>
+    <select class="musa-input" name="estado" aria-label="Filtrar por nivel de stock">
+      <option value="">Todos los niveles</option><option value="bajo" {{ 'selected' if estado == 'bajo' }}>Stock bajo</option><option value="agotado" {{ 'selected' if estado == 'agotado' }}>Agotados</option>
+    </select>
+    <button class="btn-contorno"><i class="bi bi-search"></i> Filtrar</button>
+    {% if q or estado %}<a class="btn-contorno vbuscador__limpiar" href="{{ url_for('admin.inventario.insumos', almacen=almacen_id) }}">Limpiar</a>{% endif %}
+  </form>
+  <div class="adm-tabla-wrap adm-tabla-wrap--cards"><table class="adm-tabla adm-tabla--cards">
+    <thead><tr><th>Insumo</th><th>Categoría</th><th>Unidad</th><th class="num">Físico</th><th class="num">Reservado</th><th class="num">Disponible</th><th class="num">Mínimo</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody>{% for i in insumos %}<tr>
+      <td data-label="Insumo"><strong>{{ i.nombre }}</strong></td><td data-label="Categoría">{{ i.categoria }}</td><td data-label="Unidad">{{ i.unidad }}</td>
+      <td class="num" data-label="Físico">{{ '%.3f'|format(i.fisico) }}</td><td class="num" data-label="Reservado">{{ '%.3f'|format(i.reservado) }}</td>
+      <td class="num" data-label="Disponible"><strong>{{ '%.3f'|format(i.disponible) }} {{ i.unidad }}</strong></td><td class="num" data-label="Mínimo">{{ '%.3f'|format(i.minimo) }} {{ i.unidad }}</td>
+      <td data-label="Estado"><span class="adm-badge-stock {{ 'cero' if i.agotado or i.bajo }}">{{ 'Agotado' if i.agotado else 'Stock bajo' if i.bajo else 'Suficiente' }}</span></td>
+      <td data-label="Acciones"><div class="acciones">
+        {% if puede_modificar %}
+        <button type="button" class="adm-btn-sm" data-insumo-editar data-id="{{ i.id }}" data-nombre="{{ i.nombre }}" data-categoria="{{ i.categoria }}" data-unidad="{{ i.unidad }}" data-minimo="{{ i.minimo }}" data-bs-toggle="modal" data-bs-target="#insumoModal"><i class="bi bi-pencil"></i> Editar</button>
+        <button type="button" class="adm-btn-sm" data-insumo-movimiento data-id="{{ i.id }}" data-nombre="{{ i.nombre }}" data-bs-toggle="modal" data-bs-target="#movInsumoModal"><i class="bi bi-arrow-left-right"></i> Movimiento</button>
+        {% else %}<span class="text-muted">Solo consulta</span>{% endif %}
+      </div></td>
+    </tr>{% else %}<tr><td colspan="9" class="adm-vacio">No hay insumos con estos filtros. Registra uno o cambia la búsqueda.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+
+{% if puede_modificar %}
+<div class="modal fade caja-modal" id="insumoModal" tabindex="-1" aria-labelledby="insumoModalTitulo" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><div><h2 class="modal-title" id="insumoModalTitulo">Nuevo insumo</h2><p class="mb-0 text-muted">Usa siempre la misma unidad para registrar compras y recetas.</p></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <form method="post" action="{{ url_for('admin.inventario.guardar_insumo') }}">{{ campo_csrf() }}<input type="hidden" name="idInsumo" id="insumoId" />
+    <div class="modal-body"><div class="mb-3"><label class="musa-field-label" for="insumoNombre">Nombre</label><input class="musa-input" id="insumoNombre" name="nombre" maxlength="120" required /></div>
+      <div class="row g-3"><div class="col-md-6"><label class="musa-field-label" for="insumoCategoria">Categoría del insumo</label><select class="musa-input" id="insumoCategoria" name="categoria" required>{% for categoria in categorias_insumo %}<option value="{{ categoria }}">{{ categoria }}</option>{% endfor %}<option value="__nueva__">+ Crear otra categoría…</option></select><input class="musa-input mt-2" id="insumoCategoriaNueva" name="categoria_nueva" maxlength="80" placeholder="Escribe la nueva categoría" hidden disabled /><small class="text-muted">Clasifica ingredientes y materiales; es independiente de las categorías de la carta.</small></div>
+      <div class="col-md-6"><label class="musa-field-label" for="insumoUnidad">Unidad base</label><select class="musa-input" id="insumoUnidad" name="unidad" required>{% for u in unidades %}<option value="{{ u }}">{{ u }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="musa-field-label" for="insumoMinimo">Avisar cuando el disponible llegue a</label><input class="musa-input" id="insumoMinimo" name="stockMinimo" type="number" min="0" step="0.001" value="0" required /></div></div>
+    </div><div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa">Guardar insumo</button></div>
+  </form>
+</div></div></div>
+
+<div class="modal fade caja-modal" id="movInsumoModal" tabindex="-1" aria-labelledby="movInsumoTitulo" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><div><h2 class="modal-title" id="movInsumoTitulo">Registrar movimiento</h2><p class="mb-0 text-muted" id="movInsumoNombre">Actualiza el saldo físico del insumo.</p></div><button class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+  <form method="post" action="{{ url_for('admin.inventario.movimiento_insumo') }}">{{ campo_csrf() }}<input type="hidden" name="idInsumo" id="movInsumoId" />
+    <div class="modal-body"><div class="row g-3"><div class="col-md-6"><label class="musa-field-label" for="movInsumoAlmacen">Almacén</label><select class="musa-input" id="movInsumoAlmacen" name="almacen">{% for a in almacenes %}<option value="{{ a.id }}" {{ 'selected' if almacen_id == a.id }}>{{ a.nombre }}</option>{% endfor %}</select></div><div class="col-md-6"><label class="musa-field-label" for="movInsumoTipo">Qué ocurrió</label><select class="musa-input" id="movInsumoTipo" name="tipo"><option value="entrada">Entrada o conteo inicial</option><option value="merma">Merma o consumo no asociado a venta</option><option value="ajuste_entrada">Ajuste: hay más de lo registrado</option><option value="ajuste_salida">Ajuste: hay menos de lo registrado</option></select></div>
+      <div class="col-md-6"><label class="musa-field-label" for="movInsumoCantidad">Cantidad</label><input class="musa-input" id="movInsumoCantidad" name="cantidad" type="number" min="0.001" step="0.001" required /></div>
+      <div class="col-md-6"><label class="musa-field-label" for="movInsumoCosto">Costo por unidad (solo entradas)</label><input class="musa-input" id="movInsumoCosto" name="costo" type="number" min="0" step="0.0001" /></div>
+      <div class="col-md-6"><label class="musa-field-label" for="movInsumoDocumento">Documento</label><input class="musa-input" id="movInsumoDocumento" name="documento" maxlength="100" placeholder="Boleta, factura o referencia" /></div>
+      <div class="col-12"><label class="musa-field-label" for="movInsumoMotivo">Motivo</label><textarea class="musa-input" id="movInsumoMotivo" name="motivo" minlength="3" required placeholder="Ej.: conteo de apertura del turno"></textarea></div></div></div>
+    <div class="modal-footer"><button type="button" class="btn-contorno" data-bs-dismiss="modal">Cancelar</button><button class="btn-brasa" data-confirm="El saldo y el historial del insumo se actualizarán juntos.">Guardar movimiento</button></div>
+  </form>
+</div></div></div>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script>
+(function(){
+  var nuevo=document.querySelector('[data-bs-target="#insumoModal"]:not([data-insumo-editar])');
+  var titulo=document.getElementById('insumoModalTitulo');
+  var form=document.querySelector('#insumoModal form');
+  var categoria=document.getElementById('insumoCategoria'),categoriaNueva=document.getElementById('insumoCategoriaNueva');
+  function alternarCategoriaNueva(){var otra=categoria.value==='__nueva__';categoriaNueva.hidden=!otra;categoriaNueva.disabled=!otra;categoriaNueva.required=otra;if(!otra)categoriaNueva.value='';}
+  categoria?.addEventListener('change',alternarCategoriaNueva);
+  if(nuevo){nuevo.addEventListener('click',function(){form.reset();document.getElementById('insumoId').value='';titulo.textContent='Nuevo insumo';alternarCategoriaNueva();});}
+  document.querySelectorAll('[data-insumo-editar]').forEach(function(b){b.addEventListener('click',function(){
+    document.getElementById('insumoId').value=b.dataset.id;document.getElementById('insumoNombre').value=b.dataset.nombre;
+    categoria.value=b.dataset.categoria;alternarCategoriaNueva();document.getElementById('insumoUnidad').value=b.dataset.unidad;
+    document.getElementById('insumoMinimo').value=b.dataset.minimo;titulo.textContent='Editar insumo';
+  });});
+  document.querySelectorAll('[data-insumo-movimiento]').forEach(function(b){b.addEventListener('click',function(){
+    document.getElementById('movInsumoId').value=b.dataset.id;document.getElementById('movInsumoNombre').textContent=b.dataset.nombre;
+  });});
+  var tipo=document.getElementById('movInsumoTipo'), costo=document.getElementById('movInsumoCosto');
+  if(tipo&&costo){tipo.addEventListener('change',function(){costo.disabled=tipo.value==='merma'||tipo.value==='ajuste_salida';});}
+})();
+</script>{% endblock %}

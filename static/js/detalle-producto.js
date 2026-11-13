@@ -32,6 +32,10 @@
   }
 
   var admitePersonalizacion = root.dataset.admiteCremas === "1";
+  var pasosPersonalizacion = Array.prototype.slice.call(root.querySelectorAll("[data-dp-paso]"));
+  var indicadoresPersonalizacion = Array.prototype.slice.call(root.querySelectorAll("[data-dp-indicador]"));
+  var pasoPersonalizacionActual = 1;
+  var pasoPersonalizacionMaximo = 1;
 
   // --- Borrador de la personalización ---------------------------------
   var CLAVE_BORRADOR = "musas_borrador_" + root.dataset.id;
@@ -76,19 +80,21 @@
     } catch (e) {}
   }
 
+  function validarGrupo(grupo) {
+    var panel = document.querySelector('[data-grupo-req="' + grupo + '"]');
+    if (!panel) return true;
+    var valido = panel.querySelectorAll(".crema-check:checked").length >= 1;
+    panel.classList.toggle("is-invalido", !valido);
+    var error = panel.querySelector("[data-grupo-error]");
+    if (error) error.hidden = valido;
+    return valido;
+  }
+
   function validarPersonalizacion() {
     if (!admitePersonalizacion) return true;
-    var ok = true;
-    document.querySelectorAll("[data-grupo-req]").forEach(function (grupo) {
-      var req = grupo.dataset.grupoReq;
-      var marcados = grupo.querySelectorAll(".crema-check:checked").length;
-      var valido = marcados >= 1;
-      grupo.classList.toggle("is-invalido", !valido);
-      var error = grupo.querySelector("[data-grupo-error]");
-      if (error) error.hidden = valido;
-      if (!valido) ok = false;
-    });
-    return ok;
+    var salsaOk = validarGrupo("salsa");
+    var papasOk = validarGrupo("papas");
+    return salsaOk && papasOk;
   }
 
   document.querySelectorAll("[data-grupo-req] .crema-check").forEach(function (c) {
@@ -118,6 +124,34 @@
     return (base + cremas) * qty;
   }
 
+  function renderResumenPersonalizacion() {
+    var resumen = root.querySelector("[data-dp-resumen]");
+    if (!resumen) return;
+    resumen.innerHTML = "";
+    [
+      { grupo: "salsa", titulo: "Salsas", vacio: "Sin seleccionar" },
+      { grupo: "papas", titulo: "Papas", vacio: "Sin seleccionar" },
+      { grupo: "agregado", titulo: "Agregados", vacio: "Sin agregados" },
+    ].forEach(function (seccion) {
+      var elegidos = Array.prototype.slice.call(
+        root.querySelectorAll('.crema-check[data-grupo="' + seccion.grupo + '"]:checked')
+      );
+      var fila = document.createElement("div");
+      var titulo = document.createElement("strong");
+      var detalle = document.createElement("span");
+      titulo.textContent = seccion.titulo;
+      detalle.textContent = elegidos.length
+        ? elegidos.map(function (item) {
+            var precio = Number(item.dataset.precio) || 0;
+            return item.dataset.nombre + (precio ? " (+ S/ " + precio.toFixed(2) + ")" : "");
+          }).join(", ")
+        : seccion.vacio;
+      fila.appendChild(titulo);
+      fila.appendChild(detalle);
+      resumen.appendChild(fila);
+    });
+  }
+
   function render() {
     if (qtyEl) qtyEl.textContent = qty;
     if (mobQty) mobQty.textContent = qty;
@@ -136,7 +170,64 @@
       }
     });
     if (verCarrito) verCarrito.hidden = !enCarrito;
+    renderResumenPersonalizacion();
   }
+
+  function mostrarPasoPersonalizacion(numero, moverFoco) {
+    numero = Number(numero);
+    if (!admitePersonalizacion || numero < 1 || numero > 4 || numero > pasoPersonalizacionMaximo) return;
+    pasoPersonalizacionActual = numero;
+    pasosPersonalizacion.forEach(function (panel) {
+      var activo = Number(panel.dataset.dpPaso) === numero;
+      panel.hidden = !activo;
+      panel.classList.toggle("is-active", activo);
+    });
+    indicadoresPersonalizacion.forEach(function (item) {
+      var n = Number(item.dataset.dpIndicador);
+      var boton = item.querySelector("button");
+      item.classList.toggle("is-active", n === numero);
+      item.classList.toggle("is-complete", n !== numero && (n < numero || n < pasoPersonalizacionMaximo));
+      if (boton) {
+        boton.disabled = n > pasoPersonalizacionMaximo;
+        if (n === numero) boton.setAttribute("aria-current", "step");
+        else boton.removeAttribute("aria-current");
+      }
+    });
+    if (numero === 4) renderResumenPersonalizacion();
+    if (moverFoco) {
+      var panelActivo = root.querySelector('[data-dp-paso="' + numero + '"]');
+      if (panelActivo) {
+        panelActivo.scrollIntoView({ block: "start", behavior: "smooth" });
+        panelActivo.setAttribute("tabindex", "-1");
+        window.setTimeout(function () { panelActivo.focus({ preventScroll: true }); }, 250);
+      }
+    }
+  }
+
+  function validarPasoPersonalizacion(numero) {
+    if (numero === 1) return validarGrupo("salsa");
+    if (numero === 2) return validarGrupo("papas");
+    return true;
+  }
+
+  root.querySelectorAll("[data-dp-siguiente]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      if (!validarPasoPersonalizacion(pasoPersonalizacionActual)) return;
+      var destino = Number(boton.dataset.dpSiguiente);
+      pasoPersonalizacionMaximo = Math.max(pasoPersonalizacionMaximo, destino);
+      mostrarPasoPersonalizacion(destino, true);
+    });
+  });
+  root.querySelectorAll("[data-dp-anterior]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      mostrarPasoPersonalizacion(Number(boton.dataset.dpAnterior), true);
+    });
+  });
+  root.querySelectorAll("[data-dp-ir]").forEach(function (boton) {
+    boton.addEventListener("click", function () {
+      mostrarPasoPersonalizacion(Number(boton.dataset.dpIr), true);
+    });
+  });
 
   // Cambiar cantidad o cremas = otra combinación -> se puede volver a agregar.
   function reactivar() {
@@ -147,7 +238,7 @@
 
   document.querySelectorAll("[data-step]").forEach(function (b) {
     b.addEventListener("click", function () {
-      qty = Math.max(1, qty + Number(b.dataset.step));
+      qty = Math.max(1, Math.min(99, qty + Number(b.dataset.step)));
       reactivar();
     });
   });
@@ -170,7 +261,11 @@
       if (enCarrito) return;
       if (!validarPersonalizacion()) {
         var primero = document.querySelector(".dp-personaliza__grupo.is-invalido");
-        if (primero) primero.scrollIntoView({ block: "center", behavior: "smooth" });
+        if (primero) {
+          var pasoInvalido = Number(primero.dataset.dpPaso) || 1;
+          pasoPersonalizacionMaximo = Math.max(pasoPersonalizacionMaximo, pasoInvalido);
+          mostrarPasoPersonalizacion(pasoInvalido, true);
+        }
         return;
       }
       var unidades = qty;
@@ -194,6 +289,10 @@
         {
           href: carritoUrl,
           mensaje: unidades + "× " + root.dataset.nombre + " en el carrito",
+          onDeshacer: function () {
+            enCarrito = false;
+            render();
+          },
         }
       );
       borrarBorrador();
@@ -203,4 +302,5 @@
   });
 
   render();
+  if (admitePersonalizacion) mostrarPasoPersonalizacion(1, false);
 })();

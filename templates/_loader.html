@@ -1,3 +1,19 @@
+<script>
+  // El loader global se reserva para la primera entrada de esta pestaña.
+  // Las siguientes navegaciones son vistas renderizadas por Flask y no deben
+  // volver a cubrir la pantalla. Las búsquedas automáticas conservan además
+  // su comportamiento especial de foco.
+  try {
+    if (sessionStorage.getItem("musa.loader.inicial") === "1") {
+      document.documentElement.classList.add("musa-sin-loader-inicial");
+    } else {
+      sessionStorage.setItem("musa.loader.inicial", "1");
+    }
+    if (sessionStorage.getItem("musaFocoBuscar") === location.pathname) {
+      document.documentElement.classList.add("musa-sin-loader-inicial");
+    }
+  } catch (e) {}
+</script>
 <div class="musa-loader" data-musa-loader role="status" aria-live="polite" aria-label="Cargando página">
   <div class="musa-loader__panel">
     <span class="musa-loader__halo" aria-hidden="true"></span>
